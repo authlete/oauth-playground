@@ -10,7 +10,7 @@ import {
   StepHeader,
   type StatusTone,
 } from "../components/step";
-import { formatValue } from "../lib/format";
+import { formatBytes, formatValue } from "../lib/format";
 import { fetchUserInfo } from "../lib/userInfo";
 
 export function UserInfoStep() {
@@ -179,12 +179,91 @@ function ClaimsPanel({
               <td className="w-44 py-1.5 pr-3 align-top font-mono text-muted-foreground">
                 {k}
               </td>
-              <td className="break-all py-1.5 font-mono">{formatValue(v)}</td>
+              <td className="break-all py-1.5 font-mono">
+                <ClaimValue value={v} />
+              </td>
             </tr>
           ))}
         </tbody>
       </table>
     </Banner>
+  );
+}
+
+function ClaimValue({ value }: { value: unknown }) {
+  if (typeof value === "string") {
+    const image = parseImageValue(value);
+    if (image) return <ImageClaim {...image} raw={value} />;
+  }
+  return <>{formatValue(value)}</>;
+}
+
+interface ImageInfo {
+  src: string;
+  mime?: string;
+  sizeLabel?: string;
+}
+
+function parseImageValue(value: string): ImageInfo | null {
+  // Inline data URI — safe to render directly.
+  const dataMatch = value.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,([A-Za-z0-9+/=]+)$/);
+  if (dataMatch) {
+    const [, mime, b64] = dataMatch;
+    // Approximate decoded byte count from base64 length.
+    const bytes = Math.floor((b64.length * 3) / 4) - (b64.endsWith("==") ? 2 : b64.endsWith("=") ? 1 : 0);
+    return { src: value, mime, sizeLabel: formatBytes(bytes) };
+  }
+  // External image URL — must be https and end in a known image extension.
+  if (/^https:\/\/[^\s]+\.(png|jpg|jpeg|gif|webp|svg)(\?[^\s]*)?$/i.test(value)) {
+    return { src: value };
+  }
+  return null;
+}
+
+function ImageClaim({
+  src,
+  mime,
+  sizeLabel,
+  raw,
+}: ImageInfo & { raw: string }) {
+  const [showRaw, setShowRaw] = useState(false);
+  if (showRaw) {
+    return (
+      <div>
+        <div className="rounded-sm bg-background/60 p-2 font-mono text-[11.5px] leading-relaxed break-all max-h-[160px] overflow-auto">
+          {raw}
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowRaw(false)}
+          className="mt-1 text-[11px] text-[var(--playground-accent)] hover:underline"
+        >
+          ← show image
+        </button>
+      </div>
+    );
+  }
+  return (
+    <div className="flex items-start gap-3">
+      <img
+        src={src}
+        alt="claim"
+        referrerPolicy="no-referrer"
+        className="h-16 w-16 shrink-0 rounded-full bg-muted object-cover ring-1 ring-border"
+        loading="lazy"
+      />
+      <div className="flex flex-col gap-1 text-[11.5px] text-muted-foreground">
+        <span>{mime ?? src}</span>
+        {sizeLabel && <span>{sizeLabel}</span>}
+        <button
+          type="button"
+          onClick={() => setShowRaw(true)}
+          className="self-start text-[var(--playground-accent)] hover:underline"
+        >
+          Show raw →
+        </button>
+      </div>
+    </div>
   );
 }
 

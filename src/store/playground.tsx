@@ -8,6 +8,8 @@ import {
   type ReactNode,
 } from "react";
 import { computeStepStatuses } from "../lib/stepCascade";
+import { computeCodeChallenge, generateCodeVerifier } from "../lib/pkce";
+import { randomBase64Url } from "../lib/random";
 import {
   clearShareFromUrl,
   readShareFromUrl,
@@ -454,6 +456,59 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
     state.authRequest.prompt,
     state.authRequest.loginHint,
     state.authRequest.maxAge,
+  ]);
+
+  // Seed state, nonce, and PKCE globally so the Authorize URL is complete
+  // even when the user jumps straight from Discovery to step 5.
+  useEffect(() => {
+    const patch: Partial<AuthRequestState> = {};
+    if (!state.authRequest.state) patch.state = randomBase64Url(16);
+    if (!state.authRequest.nonce) patch.nonce = randomBase64Url(16);
+    if (Object.keys(patch).length) {
+      dispatch({ type: "auth-request-update", patch });
+    }
+  }, [state.authRequest.state, state.authRequest.nonce]);
+
+  useEffect(() => {
+    if (!state.authRequest.pkceEnabled) {
+      if (state.authRequest.codeVerifier || state.authRequest.codeChallenge) {
+        dispatch({
+          type: "auth-request-update",
+          patch: { codeVerifier: "", codeChallenge: "" },
+        });
+      }
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      if (!state.authRequest.codeVerifier) {
+        const v = generateCodeVerifier();
+        const c = await computeCodeChallenge(v);
+        if (!cancelled) {
+          dispatch({
+            type: "auth-request-update",
+            patch: { codeVerifier: v, codeChallenge: c },
+          });
+        }
+        return;
+      }
+      if (state.authRequest.codeVerifier && !state.authRequest.codeChallenge) {
+        const c = await computeCodeChallenge(state.authRequest.codeVerifier);
+        if (!cancelled) {
+          dispatch({
+            type: "auth-request-update",
+            patch: { codeChallenge: c },
+          });
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    state.authRequest.pkceEnabled,
+    state.authRequest.codeVerifier,
+    state.authRequest.codeChallenge,
   ]);
 
   // Derive step statuses from data and dispatch only when something changes.

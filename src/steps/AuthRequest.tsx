@@ -1,6 +1,5 @@
 import {
   useCallback,
-  useEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -44,42 +43,6 @@ export function AuthRequestStep() {
   const parSupported = !!metadata?.pushed_authorization_request_endpoint;
   const [pkceRegenerating, setPkceRegenerating] = useState(false);
   const [copied, setCopied] = useState<"url" | "curl" | null>(null);
-
-  // Generate state, nonce, and PKCE verifier on first activation (or when
-  // missing). Values live in memory only (§8).
-  useEffect(() => {
-    const patch: Partial<AuthRequestState> = {};
-    if (!req.state) patch.state = randomBase64Url(16);
-    if (!req.nonce) patch.nonce = randomBase64Url(16);
-    if (Object.keys(patch).length) authRequestUpdate(patch);
-  }, [req.state, req.nonce, authRequestUpdate]);
-
-  // Recompute PKCE challenge whenever PKCE is enabled and the verifier
-  // exists. If no verifier yet, generate one.
-  useEffect(() => {
-    if (!req.pkceEnabled) {
-      if (req.codeVerifier || req.codeChallenge) {
-        authRequestUpdate({ codeVerifier: "", codeChallenge: "" });
-      }
-      return;
-    }
-    let cancelled = false;
-    (async () => {
-      if (!req.codeVerifier) {
-        const v = generateCodeVerifier();
-        const c = await computeCodeChallenge(v);
-        if (!cancelled) authRequestUpdate({ codeVerifier: v, codeChallenge: c });
-        return;
-      }
-      if (req.codeVerifier && !req.codeChallenge) {
-        const c = await computeCodeChallenge(req.codeVerifier);
-        if (!cancelled) authRequestUpdate({ codeChallenge: c });
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [req.pkceEnabled, req.codeVerifier, req.codeChallenge, authRequestUpdate]);
 
   const parRequestUri =
     state.par.status === "success" && state.par.requestUri

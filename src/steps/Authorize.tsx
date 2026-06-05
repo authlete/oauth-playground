@@ -25,6 +25,8 @@ import { shorten } from "../lib/format";
 import { cn } from "../lib/cn";
 import { buildAuthorizeUrl } from "../lib/authorizeUrl";
 import { previewAuthorize } from "../lib/requestPreview";
+import { computeCodeChallenge, generateCodeVerifier } from "../lib/pkce";
+import { randomBase64Url } from "../lib/random";
 import {
   listenForCallback,
   openAuthorizeTab,
@@ -32,7 +34,7 @@ import {
 } from "../lib/authorizeFlow";
 
 export function AuthorizeStep() {
-  const { state, authorizeUpdate, setActiveStep } = usePlayground();
+  const { state, authorizeUpdate, authRequestUpdate, setActiveStep } = usePlayground();
   const auth = state.authorize;
   const popupRef = useRef<Window | null>(null);
   const stopRef = useRef<(() => void) | null>(null);
@@ -55,9 +57,38 @@ export function AuthorizeStep() {
     };
   }, []);
 
-  const start = () => {
+  const start = async () => {
     if (!built.ok) return;
     stopRef.current?.();
+
+    // On retry without PAR, regenerate state / nonce / code_verifier so the
+    // request isn't a replay of the previous (possibly already-consumed)
+    // attempt. With PAR, the AS has already bound the params to request_uri,
+    // so we must keep the existing values.
+    let freshUrl = built.url;
+    let freshState = state.authRequest.state;
+    if (!parRequestUri) {
+      freshState = randomBase64Url(16);
+      const freshNonce = randomBase64Url(16);
+      const patch: Partial<typeof state.authRequest> = {
+        state: freshState,
+        nonce: freshNonce,
+      };
+      if (state.authRequest.pkceEnabled) {
+        const verifier = generateCodeVerifier();
+        const challenge = await computeCodeChallenge(verifier);
+        patch.codeVerifier = verifier;
+        patch.codeChallenge = challenge;
+      }
+      authRequestUpdate(patch);
+      const rebuilt = buildAuthorizeUrl(
+        state.discovery.metadata,
+        state.client,
+        { ...state.authRequest, ...patch },
+      );
+      if (rebuilt.ok) freshUrl = rebuilt.url;
+    }
+
     authorizeUpdate({
       status: "waiting",
       code: undefined,
@@ -70,16 +101,16 @@ export function AuthorizeStep() {
       errorUri: undefined,
       rawCallbackUrl: undefined,
       receivedAt: undefined,
-      openedUrl: built.url,
+      openedUrl: freshUrl,
     });
 
     stopRef.current = listenForCallback({
-      expectedState: state.authRequest.state,
+      expectedState: freshState,
       expectedIssuer: state.discovery.metadata?.issuer,
       onResult: handleResult,
     });
 
-    popupRef.current = openAuthorizeTab(built.url);
+    popupRef.current = openAuthorizeTab(freshUrl);
   };
 
   const cancel = () => {
