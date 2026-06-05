@@ -1,0 +1,177 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-sans);
+}
+
+/* Console design-system tokens. Color values are HSL (matching the
+   `authlete/console` repo). Primary flips between modes — navy in light,
+   amber in dark — that's the brand's distinguishing move. */
+
+@theme inline {
+  --font-sans:
+    "Quicksand Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    Roboto, sans-serif;
+  --font-mono:
+    "Geist Mono Variable", ui-monospace, "SF Mono", "JetBrains Mono", Menlo,
+    Consolas, monospace;
+
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+
+  /* Authlete brand palette (named tokens for direct use). */
+  --color-authlete-blue-1: #20477c;
+  --color-authlete-blue-2: #106cb6;
+  --color-authlete-blue-3: #c9d5e3;
+  --color-authlete-black: #0c132a;
+  --color-authlete-yellow: #fbab01;
+
+  /* Status colors (playground-local — console doesn't define warn/success). */
+  --color-status-success: var(--status-success);
+  --color-status-warn: var(--status-warn);
+  --color-status-error: var(--status-error);
+  --color-method-get: var(--status-success);
+  --color-method-post: hsl(var(--primary));
+  --color-method-put: var(--status-warn);
+  --color-method-delete: var(--status-error);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+:root {
+  --background: 0 0% 100%;
+  --foreground: 222.2 84% 4.9%;
+
+  --card: 0 0% 100%;
+  --card-foreground: 222.2 84% 4.9%;
+
+  --popover: 0 0% 100%;
+  --popover-foreground: 222.2 84% 4.9%;
+
+  --primary: 215 59% 31%;
+  --primary-foreground: 210 40% 98%;
+
+  --secondary: 210 40% 96.1%;
+  --secondary-foreground: 222.2 47.4% 11.2%;
+
+  --muted: 210 40% 96.1%;
+  --muted-foreground: 215.4 16.3% 46.9%;
+
+  --accent: 41 99% 49%;
+  --accent-foreground: 222.2 47.4% 11.2%;
+
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+
+  --border: 214.3 31.8% 91.4%;
+  --input: 214.3 31.8% 91.4%;
+  --ring: 222.2 84% 4.9%;
+
+  --radius: 0.5rem;
+
+  /* Status colors — full hsl() values so they work with `text-[var(--X)]`,
+     `border-[var(--X)]/40`, and `color-mix(in_oklch, var(--X) N%, ...)`
+     without needing per-call wrapping. */
+  --status-success: hsl(142 71% 36%);
+  --status-warn: hsl(38 92% 50%);
+  --status-error: hsl(var(--destructive));
+
+  /* Back-compat alias: existing components reference --playground-accent.
+     Resolves to the brand primary so the active-step bar / primary buttons
+     pick up the console's navy in light, amber in dark. */
+  --playground-accent: hsl(var(--primary));
+  --playground-accent-foreground: hsl(var(--primary-foreground));
+}
+
+.dark {
+  --background: 222.2 84% 4.9%;
+  --foreground: 210 40% 98%;
+
+  --card: 222.2 84% 4.9%;
+  --card-foreground: 210 40% 98%;
+
+  --popover: 222.2 84% 4.9%;
+  --popover-foreground: 210 40% 98%;
+
+  --primary: 41 99% 49%;
+  --primary-foreground: 229 84% 5%;
+
+  --secondary: 217.2 32.6% 17.5%;
+  --secondary-foreground: 210 40% 98%;
+
+  --muted: 217.2 32.6% 17.5%;
+  --muted-foreground: 215 20.2% 65.1%;
+
+  --accent: 217.2 32.6% 17.5%;
+  --accent-foreground: 210 40% 98%;
+
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 210 40% 98%;
+
+  --border: 217.2 32.6% 17.5%;
+  --input: 217.2 32.6% 17.5%;
+  --ring: 212.7 26.8% 83.9%;
+
+  --status-success: hsl(142 60% 50%);
+  --status-warn: hsl(38 92% 60%);
+  --status-error: hsl(var(--destructive));
+
+  --playground-accent: hsl(var(--primary));
+  --playground-accent-foreground: hsl(var(--primary-foreground));
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+  }
+
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  ::selection {
+    background: hsl(var(--primary) / 0.25);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
