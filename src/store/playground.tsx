@@ -19,6 +19,7 @@ import {
   DEFAULT_AUTHORIZE,
   DEFAULT_AUTH_REQUEST,
   DEFAULT_CLIENT_CONFIG,
+  DEFAULT_FEDERATION_REGISTER,
   DEFAULT_INSPECTOR,
   DEFAULT_INTROSPECT,
   DEFAULT_PAR,
@@ -32,6 +33,7 @@ import {
   type AuthorizeState,
   type ClientConfigState,
   type DiscoveryState,
+  type FederationRegisterState,
   type InspectorState,
   type IntrospectState,
   type ManualEndpoints,
@@ -53,6 +55,7 @@ interface State {
   network: NetworkEntry[];
   discovery: DiscoveryState;
   client: ClientConfigState;
+  federationRegister: FederationRegisterState;
   authRequest: AuthRequestState;
   par: ParState;
   authorize: AuthorizeState;
@@ -75,6 +78,7 @@ type Action =
   | { type: "discovery-update"; patch: Partial<DiscoveryState> }
   | { type: "discovery-reset" }
   | { type: "client-update"; patch: Partial<ClientConfigState> }
+  | { type: "federation-register-update"; patch: Partial<FederationRegisterState> }
   | { type: "auth-request-update"; patch: Partial<AuthRequestState> }
   | { type: "par-update"; patch: Partial<ParState> }
   | { type: "authorize-update"; patch: Partial<AuthorizeState> }
@@ -214,6 +218,7 @@ const initialState: State = {
   stepStatus: {
     discovery: "active",
     client: "locked",
+    "federation-register": "hidden",
     "auth-request": "locked",
     par: "locked",
     authorize: "locked",
@@ -233,6 +238,7 @@ const initialState: State = {
     manual: { ...EMPTY_MANUAL_ENDPOINTS },
   },
   client: DEFAULT_CLIENT_CONFIG,
+  federationRegister: DEFAULT_FEDERATION_REGISTER,
   authRequest: DEFAULT_AUTH_REQUEST,
   par: DEFAULT_PAR,
   authorize: DEFAULT_AUTHORIZE,
@@ -300,6 +306,11 @@ function reducer(state: State, action: Action): State {
       };
     case "client-update":
       return { ...state, client: { ...state.client, ...action.patch } };
+    case "federation-register-update":
+      return {
+        ...state,
+        federationRegister: { ...state.federationRegister, ...action.patch },
+      };
     case "auth-request-update":
       return {
         ...state,
@@ -341,6 +352,7 @@ interface PlaygroundContextValue {
   discoveryUpdate: (patch: Partial<DiscoveryState>) => void;
   discoveryReset: () => void;
   clientUpdate: (patch: Partial<ClientConfigState>) => void;
+  federationRegisterUpdate: (patch: Partial<FederationRegisterState>) => void;
   authRequestUpdate: (patch: Partial<AuthRequestState>) => void;
   parUpdate: (patch: Partial<ParState>) => void;
   authorizeUpdate: (patch: Partial<AuthorizeState>) => void;
@@ -520,6 +532,7 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
       discovery: state.discovery,
       discoveryMetadata: state.discovery.metadata,
       client: state.client,
+      federationRegister: state.federationRegister,
       authRequest: state.authRequest,
       par: state.par,
       authorize: state.authorize,
@@ -538,6 +551,7 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
   }, [
     state.discovery,
     state.client,
+    state.federationRegister,
     state.authRequest,
     state.par,
     state.authorize,
@@ -604,6 +618,11 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
       dispatch({ type: "client-update", patch }),
     [],
   );
+  const federationRegisterUpdate = useCallback(
+    (patch: Partial<FederationRegisterState>) =>
+      dispatch({ type: "federation-register-update", patch }),
+    [],
+  );
   const authRequestUpdate = useCallback(
     (patch: Partial<AuthRequestState>) =>
       dispatch({ type: "auth-request-update", patch }),
@@ -665,6 +684,7 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
       discoveryUpdate,
       discoveryReset,
       clientUpdate,
+      federationRegisterUpdate,
       authRequestUpdate,
       parUpdate,
       authorizeUpdate,
@@ -688,6 +708,7 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
       discoveryUpdate,
       discoveryReset,
       clientUpdate,
+      federationRegisterUpdate,
       authRequestUpdate,
       parUpdate,
       authorizeUpdate,

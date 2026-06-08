@@ -38,6 +38,8 @@ export function buildAuthorizeParams(
   if (req.prompt.trim()) params.set("prompt", req.prompt.trim());
   if (req.maxAge.trim()) params.set("max_age", req.maxAge.trim());
   if (req.loginHint.trim()) params.set("login_hint", req.loginHint.trim());
+  // OpenID Federation 1.0: pass through verbatim (already a JSON array string).
+  if (req.trustChain.trim()) params.set("trust_chain", req.trustChain.trim());
   return params;
 }
 

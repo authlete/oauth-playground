@@ -1,6 +1,7 @@
 export type StepId =
   | "discovery"
   | "client"
+  | "federation-register"
   | "auth-request"
   | "par"
   | "authorize"
@@ -12,17 +13,34 @@ export type StepId =
   | "refresh"
   | "revoke";
 
-export type StepStatus = "locked" | "ready" | "active" | "done" | "stale";
+// "hidden" steps are filtered from the rail entirely — used for federation
+// registration when the AS doesn't advertise the endpoint.
+export type StepStatus =
+  | "locked"
+  | "ready"
+  | "active"
+  | "done"
+  | "stale"
+  | "hidden";
 
 export interface StepDef {
   id: StepId;
-  number: number;
+  /** Sequential number. Omitted for auxiliary / nested steps that aren't on
+   * the main 1→12 path. */
+  number?: number;
   name: string;
+  /** Nested under the previous step in the rail (renders indented, no
+   * number, with an icon). Used for optional / out-of-sequence paths. */
+  nested?: boolean;
 }
 
 export const STEPS: StepDef[] = [
   { id: "discovery", number: 1, name: "Discovery" },
   { id: "client", number: 2, name: "Client config" },
+  // Auxiliary path under Client: visible only when the AS advertises a
+  // federation_registration_endpoint. Nested + numberless so it reads as an
+  // optional branch off step 2 rather than an inline step.
+  { id: "federation-register", name: "Federation register", nested: true },
   { id: "auth-request", number: 3, name: "Auth request" },
   { id: "par", number: 4, name: "PAR" },
   { id: "authorize", number: 5, name: "Authorize" },
@@ -73,6 +91,7 @@ export interface OidcMetadata {
   revocation_endpoint?: string;
   registration_endpoint?: string;
   pushed_authorization_request_endpoint?: string;
+  federation_registration_endpoint?: string;
   [key: string]: unknown;
 }
 
@@ -102,6 +121,7 @@ export interface ManualEndpoints {
   introspection_endpoint: string;
   revocation_endpoint: string;
   pushed_authorization_request_endpoint: string;
+  federation_registration_endpoint: string;
 }
 
 export const EMPTY_MANUAL_ENDPOINTS: ManualEndpoints = {
@@ -113,6 +133,7 @@ export const EMPTY_MANUAL_ENDPOINTS: ManualEndpoints = {
   introspection_endpoint: "",
   revocation_endpoint: "",
   pushed_authorization_request_endpoint: "",
+  federation_registration_endpoint: "",
 };
 
 export type ClientAuthMethod =
@@ -160,6 +181,10 @@ export interface AuthRequestState {
   prompt: string;
   loginHint: string;
   maxAge: string;
+  // OpenID Federation: a JSON array of signed-JWT strings (RP entity statement,
+  // intermediates, Trust Anchor entity configuration). Sent verbatim as the
+  // value of the `trust_chain` request parameter.
+  trustChain: string;
 }
 
 export const COMMON_SCOPES = [
@@ -184,6 +209,7 @@ export const DEFAULT_AUTH_REQUEST: AuthRequestState = {
   prompt: "",
   loginHint: "",
   maxAge: "",
+  trustChain: "",
 };
 
 export type AuthorizeStatus = "idle" | "waiting" | "received" | "error";
@@ -340,4 +366,33 @@ export interface RevokeState {
 export const DEFAULT_REVOKE: RevokeState = {
   status: "idle",
   tokenSource: "access",
+};
+
+export type FederationRegisterMode = "entity-config" | "trust-chain";
+
+export type FederationRegisterStatus =
+  | "idle"
+  | "loading"
+  | "success"
+  | "error";
+
+export interface FederationRegisterState {
+  status: FederationRegisterStatus;
+  mode: FederationRegisterMode;
+  // Raw textarea contents — an entity-configuration JWT or a JSON array of JWTs.
+  payload: string;
+  // Signed entity statement returned by the AS on success.
+  responseJwt?: string;
+  // Convenience: client_id parsed from the response (the `sub` claim).
+  issuedClientId?: string;
+  registeredAt?: number;
+  errorMessage?: string;
+  errorStatus?: number;
+  errorBody?: string;
+}
+
+export const DEFAULT_FEDERATION_REGISTER: FederationRegisterState = {
+  status: "idle",
+  mode: "entity-config",
+  payload: "",
 };

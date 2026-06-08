@@ -3,6 +3,7 @@ import { usePlayground } from "../store/playground";
 import { STEPS, type StepId } from "../types";
 import { DiscoveryStep } from "../steps/Discovery";
 import { ClientStep } from "../steps/Client";
+import { FederationRegisterStep } from "../steps/FederationRegister";
 import { AuthRequestStep } from "../steps/AuthRequest";
 import { ParStep } from "../steps/Par";
 import { AuthorizeStep } from "../steps/Authorize";
@@ -17,6 +18,7 @@ import { RevokeStep } from "../steps/Revoke";
 const STEP_COMPONENTS: Record<StepId, ComponentType> = {
   discovery: DiscoveryStep,
   client: ClientStep,
+  "federation-register": FederationRegisterStep,
   "auth-request": AuthRequestStep,
   par: ParStep,
   authorize: AuthorizeStep,

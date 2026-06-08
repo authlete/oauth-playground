@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, Copy, Lock, RotateCw } from "lucide-react";
+import { Check, Copy, Link2, Lock, RotateCw } from "lucide-react";
 import { usePlayground } from "../store/playground";
 import { STEPS, type StepDef, type StepId, type StepStatus } from "../types";
 import { cn } from "../lib/cn";
@@ -39,6 +39,7 @@ export function LeftRail() {
   const summaries: Partial<Record<StepId, string>> = {
     discovery: discoverySummary(state),
     client: clientSummary(state),
+    "federation-register": federationRegisterSummary(state),
     "auth-request": authRequestSummary(state),
     par: parSummary(state),
     authorize: authorizeSummary(state),
@@ -50,13 +51,17 @@ export function LeftRail() {
     revoke: revokeSummary(state),
   };
 
+  const visibleSteps = STEPS.filter(
+    (step) => state.stepStatus[step.id] !== "hidden",
+  );
+
   return (
     <nav
       aria-label="Steps"
       className="flex h-full w-60 shrink-0 flex-col border-r border-border bg-card"
     >
       <ul className="flex-1 overflow-y-auto py-2">
-        {STEPS.map((step) => (
+        {visibleSteps.map((step) => (
           <StepRow
             key={step.id}
             step={step}
@@ -97,6 +102,7 @@ function StepRow({
   onClick: () => void;
 }) {
   const locked = status === "locked";
+  const nested = step.nested === true;
   return (
     <li>
       <button
@@ -107,7 +113,7 @@ function StepRow({
         aria-disabled={locked || undefined}
         className={cn(
           "relative flex w-full items-start gap-2 px-3 py-2 text-left transition-colors",
-          "h-14",
+          nested ? "h-10 pl-10" : "h-14",
           !locked && "hover:bg-accent/60 cursor-pointer",
           locked && "opacity-50 cursor-not-allowed",
         )}
@@ -118,18 +124,38 @@ function StepRow({
             aria-hidden
           />
         )}
-        <span
-          className={cn(
-            "mt-0.5 inline-block w-5 shrink-0 text-center font-mono text-[11px]",
-            active ? "text-foreground" : "text-muted-foreground",
-          )}
-        >
-          {step.number}
-        </span>
+        {nested && (
+          // Tree connector — a quiet L-shape that visibly starts inside the
+          // parent row (negative top) and bends into the icon. Muted color +
+          // 1px stroke so the auxiliary path stays subordinate to the main
+          // 1→12 backbone.
+          <span
+            className="pointer-events-none absolute left-[22px] -top-7 h-[48px] w-4 rounded-bl-md border-b border-l border-border"
+            aria-hidden
+          />
+        )}
+        {nested ? (
+          <span
+            className="mt-0.5 inline-flex w-5 shrink-0 items-center justify-center text-muted-foreground"
+            aria-hidden
+          >
+            <Link2 className="h-3 w-3" />
+          </span>
+        ) : (
+          <span
+            className={cn(
+              "mt-0.5 inline-block w-5 shrink-0 text-center font-mono text-[11px]",
+              active ? "text-foreground" : "text-muted-foreground",
+            )}
+          >
+            {step.number}
+          </span>
+        )}
         <span className="flex min-w-0 flex-1 flex-col">
           <span
             className={cn(
-              "truncate text-[14px] font-medium leading-5",
+              "truncate font-medium leading-5",
+              nested ? "text-[13px]" : "text-[14px]",
               active ? "text-foreground" : "text-foreground/90",
             )}
           >
@@ -205,6 +231,14 @@ function clientSummary(state: ReturnType<typeof usePlayground>["state"]): string
       ? ` (${c.privateKey.alg})`
       : "";
   return `${c.clientId} · ${method}${alg}`;
+}
+
+function federationRegisterSummary(
+  state: ReturnType<typeof usePlayground>["state"],
+): string | undefined {
+  if (state.stepStatus["federation-register"] !== "done") return undefined;
+  const id = state.federationRegister.issuedClientId;
+  return id ? `client_id: ${shortStr(id, 12)}` : "registered";
 }
 
 function authRequestSummary(state: ReturnType<typeof usePlayground>["state"]): string | undefined {

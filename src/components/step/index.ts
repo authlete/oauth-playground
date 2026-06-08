@@ -5,3 +5,4 @@ export { KV, KVList, KVGrid, KVRow } from "./KV";
 export { StatusPill, type StatusTone, type StatusPillProps } from "./StatusPill";
 export { StepHeader, type StepHeaderProps } from "./StepHeader";
 export { RequestPreview } from "./RequestPreview";
+export { JwtPanel } from "./JwtPanel";

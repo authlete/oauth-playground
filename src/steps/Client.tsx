@@ -100,7 +100,10 @@ export function ClientStep() {
       />
 
       <div className="mt-6 space-y-5">
-        <Field label="Client ID" hint="The client identifier registered at the AS.">
+        <Field
+          label="Client ID"
+          hint="Accepts a plain ID or a URL. ASes that support OpenID Federation or Client ID Metadata Document will resolve a URL automatically."
+        >
           <Input
             mono
             value={cfg.clientId}
@@ -109,6 +112,11 @@ export function ClientStep() {
             autoComplete="off"
             spellCheck={false}
           />
+          {looksUrlShaped(cfg.clientId) && (
+            <span className="mt-1 inline-block rounded-sm bg-[color-mix(in_oklch,var(--playground-accent)_12%,transparent)] px-1.5 py-0.5 font-mono text-[10.5px] text-[var(--playground-accent)]">
+              URL identifier
+            </span>
+          )}
         </Field>
 
         <Field
@@ -218,6 +226,10 @@ function Field({
       )}
     </div>
   );
+}
+
+function looksUrlShaped(value: string): boolean {
+  return /^https?:\/\//i.test(value.trim());
 }
 
 function JwkStatusLine({

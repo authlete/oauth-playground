@@ -3,13 +3,11 @@ import {
   AlertTriangle,
   Check,
   CircleAlert,
-  Copy,
   KeyRound,
 } from "lucide-react";
 import { usePlayground } from "../store/playground";
-import { Button } from "../components/ui/Button";
 import { Textarea } from "../components/ui/Textarea";
-import { Banner, StepHeader } from "../components/step";
+import { Banner, JwtPanel, StepHeader } from "../components/step";
 import { cn } from "../lib/cn";
 import { formatDuration, formatLocalTime, shorten } from "../lib/format";
 import {
@@ -254,33 +252,13 @@ function DecodedView({
   audienceMatches: boolean | null;
   expectedIss?: string;
 }) {
-  const [copied, setCopied] = useState<"raw" | null>(null);
-  const onCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(jwt.raw);
-      setCopied("raw");
-      window.setTimeout(() => setCopied(null), 1500);
-    } catch {
-      // ignore
-    }
-  };
-
   return (
     <div className="mt-5 space-y-4">
       <VerificationBanner verify={verify} />
 
-      <div className="grid grid-cols-2 gap-3">
-        <DecodedBlock
-          title="Header"
-          subtitle={`alg=${jwt.header.alg ?? "?"}${jwt.header.kid ? ` · kid=${jwt.header.kid}` : ""}`}
-          json={jwt.header}
-        />
-        <DecodedBlock title="Payload" subtitle={payloadSubtitle(jwt.payload)} json={jwt.payload} />
-      </div>
+      <JwtPanel jwt={jwt} payloadSubtitle={payloadSubtitle(jwt.payload)} />
 
-      {timings && timings.expAt && (
-        <TimingsRow timings={timings} />
-      )}
+      {timings && timings.expAt && <TimingsRow timings={timings} />}
 
       {(expectedIss || audienceMatches !== null) && (
         <ClaimsRow
@@ -289,22 +267,6 @@ function DecodedView({
           audienceMatches={audienceMatches}
         />
       )}
-
-      <div className="flex items-center gap-2 rounded-md border border-border bg-card/40 p-3 text-[12px]">
-        <span className="text-muted-foreground">Raw JWT</span>
-        <code className="flex-1 truncate font-mono text-[11.5px]">{jwt.raw}</code>
-        <Button variant="ghost" size="sm" onClick={onCopy}>
-          {copied ? (
-            <>
-              <Check className="h-3.5 w-3.5" /> Copied
-            </>
-          ) : (
-            <>
-              <Copy className="h-3.5 w-3.5" /> Copy
-            </>
-          )}
-        </Button>
-      </div>
     </div>
   );
 }
@@ -344,30 +306,6 @@ function VerificationBanner({
         <span className="font-medium">Signature did not verify.</span>
       </p>
       <p className="mt-1 text-[12px] text-muted-foreground">{verify.reason}</p>
-    </div>
-  );
-}
-
-function DecodedBlock({
-  title,
-  subtitle,
-  json,
-}: {
-  title: string;
-  subtitle: string;
-  json: Record<string, unknown>;
-}) {
-  return (
-    <div className="rounded-md border border-border bg-card/40 p-3">
-      <div className="flex items-baseline justify-between">
-        <h3 className="text-[12.5px] font-medium">{title}</h3>
-        <span className="font-mono text-[10.5px] text-muted-foreground">
-          {subtitle}
-        </span>
-      </div>
-      <pre className="mt-2 max-h-[280px] overflow-auto rounded-sm bg-background/60 p-2 font-mono text-[11.5px] leading-relaxed">
-        {JSON.stringify(json, null, 2)}
-      </pre>
     </div>
   );
 }

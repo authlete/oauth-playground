@@ -88,6 +88,9 @@ export function DiscoveryStep() {
         pushed_authorization_request_endpoint:
           asString(result.metadata.pushed_authorization_request_endpoint) ||
           discovery.manual.pushed_authorization_request_endpoint,
+        federation_registration_endpoint:
+          asString(result.metadata.federation_registration_endpoint) ||
+          discovery.manual.federation_registration_endpoint,
       },
     });
   };
@@ -387,6 +390,17 @@ function ManualForm({
           onChange={(e) =>
             onChange({
               pushed_authorization_request_endpoint: e.target.value,
+            })
+          }
+        />
+      </ManualField>
+      <ManualField label="federation_registration_endpoint">
+        <Input
+          mono
+          value={endpoints.federation_registration_endpoint}
+          onChange={(e) =>
+            onChange({
+              federation_registration_endpoint: e.target.value,
             })
           }
         />

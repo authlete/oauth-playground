@@ -11,6 +11,7 @@ import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 import { Checkbox } from "../components/ui/Checkbox";
 import { Select } from "../components/ui/Select";
+import { Textarea } from "../components/ui/Textarea";
 import { StatusPill, StepHeader } from "../components/step";
 import { computeCodeChallenge, generateCodeVerifier } from "../lib/pkce";
 import { randomBase64Url } from "../lib/random";
@@ -363,10 +364,14 @@ function AdvancedExpander({
   req: AuthRequestState;
   update: (patch: Partial<AuthRequestState>) => void;
 }) {
+  const trustChainWarning = useMemo(
+    () => validateTrustChain(req.trustChain),
+    [req.trustChain],
+  );
   return (
     <details className="rounded-md border border-border bg-card/40 px-3 py-2 text-[13px]">
       <summary className="cursor-pointer select-none text-muted-foreground hover:text-foreground">
-        Advanced (prompt, max_age, login_hint)
+        Advanced (prompt, max_age, login_hint, trust_chain)
       </summary>
       <div className="mt-3 grid grid-cols-3 gap-3">
         <Field label="prompt" hint="none, login, consent, select_account">
@@ -398,7 +403,44 @@ function AdvancedExpander({
           />
         </Field>
       </div>
+      <div className="mt-3">
+        <Field
+          label="trust_chain"
+          hint="OpenID Federation: JSON array of entity statement JWTs — [RP, intermediates…, Trust Anchor]."
+        >
+          <Textarea
+            rows={4}
+            spellCheck={false}
+            className="font-mono text-[11.5px]"
+            value={req.trustChain}
+            onChange={(e) => update({ trustChain: e.target.value })}
+            placeholder='[ "eyJhbGciOi...", "eyJhbGciOi..." ]'
+          />
+          {trustChainWarning && (
+            <p className="mt-1 text-[11.5px] text-[var(--status-warn)]">
+              {trustChainWarning}
+            </p>
+          )}
+        </Field>
+      </div>
     </details>
   );
+}
+
+// Soft validation — surface a warning but never block. The AS rejects malformed
+// chains; the Playground stays generic.
+function validateTrustChain(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(trimmed);
+  } catch {
+    return "Not valid JSON.";
+  }
+  if (!Array.isArray(parsed) || parsed.some((v) => typeof v !== "string")) {
+    return "Expected a JSON array of JWT strings.";
+  }
+  return null;
 }
 
