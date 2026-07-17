@@ -74,8 +74,30 @@ export function buildAuthorizeUrl(
     return { ok: true, url: `${base}${sep}${p.toString()}` };
   }
 
+  if (req.jarEnabled && req.requestObjectJwt) {
+    // JAR by value (RFC 9101 §6.1) — params ride inside the signed request
+    // object; only client_id/response_type/scope stay in the clear.
+    const params = buildJarParams(client, req, req.requestObjectJwt);
+    return { ok: true, url: `${base}${sep}${params.toString()}` };
+  }
+
   const params = buildAuthorizeParams(client, req);
   return { ok: true, url: `${base}${sep}${params.toString()}` };
+}
+
+// Outer params for a by-value JAR request. client_id + response_type + scope
+// stay in the clear (OIDC Core §6.1); everything else rides inside `request`.
+export function buildJarParams(
+  client: ClientConfigState,
+  req: AuthRequestState,
+  requestJwt: string,
+): URLSearchParams {
+  const p = new URLSearchParams();
+  p.set("client_id", client.clientId);
+  p.set("response_type", req.responseType);
+  p.set("scope", req.scopes.join(" "));
+  p.set("request", requestJwt);
+  return p;
 }
 
 export function defaultResponseMode(responseType: string): ResponseMode {

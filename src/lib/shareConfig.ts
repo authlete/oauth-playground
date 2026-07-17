@@ -28,6 +28,7 @@ export interface SharePayload {
   responseMode?: ResponseMode;
   pkce?: boolean;
   par?: boolean;
+  jar?: boolean;
   prompt?: string;
   loginHint?: string;
   maxAge?: string;
@@ -96,6 +97,7 @@ export function buildPayloadFromState(state: {
     responseMode: state.authRequest.responseMode,
     pkce: state.authRequest.pkceEnabled,
     par: state.par.enabled || undefined,
+    jar: state.authRequest.jarEnabled || undefined,
     prompt: state.authRequest.prompt || undefined,
     loginHint: state.authRequest.loginHint || undefined,
     maxAge: state.authRequest.maxAge || undefined,

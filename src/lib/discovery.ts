@@ -23,11 +23,11 @@ export interface DiscoveryFetchErr {
 
 export type DiscoveryFetchResult = DiscoveryFetchOk | DiscoveryFetchErr;
 
+// jwks_uri is optional per RFC 8414; the JWKS fetch below is guarded on it.
 const REQUIRED_OIDC_FIELDS = [
   "issuer",
   "authorization_endpoint",
   "token_endpoint",
-  "jwks_uri",
 ] as const;
 
 function normalizeIssuer(input: string): string | null {

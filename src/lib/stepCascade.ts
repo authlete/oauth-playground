@@ -5,6 +5,7 @@
 
 import { buildAuthorizeUrl } from "./authorizeUrl";
 import { validateClientConfig } from "./clientConfig";
+import { jarReadiness } from "./requestObject";
 import type { StepId, StepStatus } from "../types";
 
 interface CascadeState {
@@ -29,7 +30,8 @@ export function computeStepStatuses(state: CascadeState): Record<StepId, StepSta
   const clientValid = validateClientConfig(state.client).ok;
   const authUrlBuilt =
     buildAuthorizeUrl(state.discoveryMetadata, state.client, state.authRequest).ok &&
-    state.authRequest.scopes.length > 0;
+    state.authRequest.scopes.length > 0 &&
+    jarReadiness(state.client, state.authRequest).ok;
   const parReady = state.par.enabled
     ? state.par.status === "success" && !!state.par.requestUri
     : true;

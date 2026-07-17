@@ -8,6 +8,8 @@ import {
   type ReactNode,
 } from "react";
 import { computeStepStatuses } from "../lib/stepCascade";
+import { buildAuthorizeParams } from "../lib/authorizeUrl";
+import { signRequestObject } from "../lib/requestObject";
 import { computeCodeChallenge, generateCodeVerifier } from "../lib/pkce";
 import { randomBase64Url } from "../lib/random";
 import {
@@ -141,6 +143,7 @@ interface PersistedAuthRequest {
   responseType: string;
   responseMode: AuthRequestState["responseMode"];
   pkceEnabled: boolean;
+  jarEnabled: boolean;
   prompt: string;
   loginHint: string;
   maxAge: string;
@@ -199,6 +202,7 @@ function persistAuthRequest(state: AuthRequestState) {
       responseType: state.responseType,
       responseMode: state.responseMode,
       pkceEnabled: state.pkceEnabled,
+      jarEnabled: state.jarEnabled,
       prompt: state.prompt,
       loginHint: state.loginHint,
       maxAge: state.maxAge,
@@ -264,6 +268,7 @@ function applyShareToAuthRequest(share: SharePayload | null) {
   if (share.responseType) out.responseType = share.responseType;
   if (share.responseMode) out.responseMode = share.responseMode;
   if (typeof share.pkce === "boolean") out.pkceEnabled = share.pkce;
+  if (typeof share.jar === "boolean") out.jarEnabled = share.jar;
   if (share.prompt !== undefined) out.prompt = share.prompt;
   if (share.loginHint !== undefined) out.loginHint = share.loginHint;
   if (share.maxAge !== undefined) out.maxAge = share.maxAge;
@@ -423,6 +428,7 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
               responseType: persistedAuthRequest.responseType,
               responseMode: persistedAuthRequest.responseMode,
               pkceEnabled: persistedAuthRequest.pkceEnabled,
+              jarEnabled: persistedAuthRequest.jarEnabled ?? false,
               prompt: persistedAuthRequest.prompt,
               loginHint: persistedAuthRequest.loginHint,
               maxAge: persistedAuthRequest.maxAge,
@@ -465,6 +471,7 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
     state.authRequest.responseType,
     state.authRequest.responseMode,
     state.authRequest.pkceEnabled,
+    state.authRequest.jarEnabled,
     state.authRequest.prompt,
     state.authRequest.loginHint,
     state.authRequest.maxAge,
@@ -521,6 +528,64 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
     state.authRequest.pkceEnabled,
     state.authRequest.codeVerifier,
     state.authRequest.codeChallenge,
+  ]);
+
+  // JAR (RFC 9101): keep a freshly-signed request object in state so step 3 can
+  // show the real decoded JWT the instant a valid key + params exist — no
+  // send-time placeholder. Mirrors the PKCE effect above (async crypto → state).
+  // Keyed on the wire params + signing key so it re-signs on any relevant edit;
+  // requestObjectJwt itself is NOT a dep, so writing it back can't loop.
+  const jarParamsKey =
+    state.authRequest.jarEnabled &&
+    state.client.privateKey.status === "valid" &&
+    state.discovery.metadata?.issuer
+      ? buildAuthorizeParams(state.client, state.authRequest).toString()
+      : "";
+  useEffect(() => {
+    const md = state.discovery.metadata;
+    const canSign =
+      state.authRequest.jarEnabled &&
+      state.client.privateKey.status === "valid" &&
+      !!md?.issuer;
+    if (!canSign) {
+      if (
+        state.authRequest.requestObjectJwt !== undefined ||
+        state.authRequest.requestObjectError !== undefined
+      ) {
+        dispatch({
+          type: "auth-request-update",
+          patch: {
+            requestObjectJwt: undefined,
+            requestObjectError: undefined,
+          },
+        });
+      }
+      return;
+    }
+    let cancelled = false;
+    signRequestObject({
+      metadata: md!,
+      client: state.client,
+      authRequest: state.authRequest,
+    }).then((res) => {
+      if (cancelled) return;
+      dispatch({
+        type: "auth-request-update",
+        patch: res.ok
+          ? { requestObjectJwt: res.jwt, requestObjectError: undefined }
+          : { requestObjectJwt: undefined, requestObjectError: res.message },
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    jarParamsKey,
+    state.authRequest.jarEnabled,
+    state.client.privateKey.jwkText,
+    state.client.privateKey.status,
+    state.discovery.metadata?.issuer,
   ]);
 
   // Derive step statuses from data and dispatch only when something changes.

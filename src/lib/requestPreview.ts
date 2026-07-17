@@ -4,8 +4,27 @@
 // with a fresh `jti` / `iat` / `exp` — and show a `<signed at send time>`
 // placeholder instead.
 
-import { buildAuthorizeParams } from "./authorizeUrl";
+import { buildAuthorizeParams, buildJarParams } from "./authorizeUrl";
 import type { AuthRequestState, ClientConfigState } from "../types";
+
+// Shown only before a valid signing key exists; normally the real signed JWT
+// (authRequest.requestObjectJwt) is in the URL/body and decoded via JwtPanel.
+const JAR_PENDING = "<awaiting a valid signing key in step 2>";
+
+function jarRequestValue(authRequest: AuthRequestState): string {
+  return authRequest.requestObjectJwt ?? JAR_PENDING;
+}
+
+function jarNote(client: ClientConfigState, signed: boolean): string {
+  if (!signed) {
+    return "request: signed once a valid private JWK is set in step 2 (JAR, RFC 9101).";
+  }
+  const { alg, kid } = client.privateKey;
+  return (
+    `request: signed request object (JAR, RFC 9101), ${alg ?? "?"}` +
+    `${kid ? ` · kid=${kid}` : ""} — decoded above; refreshed on each send.`
+  );
+}
 
 export interface PreviewBlock {
   method: "GET" | "POST";
@@ -21,12 +40,16 @@ export function previewPar(
   client: ClientConfigState,
   authRequest: AuthRequestState,
 ): PreviewBlock {
-  const body = buildAuthorizeParams(client, authRequest);
+  const body = authRequest.jarEnabled
+    ? buildJarParams(client, authRequest, jarRequestValue(authRequest))
+    : buildAuthorizeParams(client, authRequest);
   const headers: Array<[string, string]> = [
     ["Content-Type", "application/x-www-form-urlencoded"],
     ["Accept", "application/json"],
   ];
   const notes: string[] = [];
+  if (authRequest.jarEnabled)
+    notes.push(jarNote(client, !!authRequest.requestObjectJwt));
   applyClientAuthPreview(client, headers, body, notes);
   return {
     method: "POST",
@@ -44,9 +67,15 @@ export function previewAuthorize(
   parRequestUri?: string,
 ): PreviewBlock {
   const params = new URLSearchParams();
+  const notes: string[] = [];
   if (parRequestUri) {
     params.set("client_id", client.clientId);
     params.set("request_uri", parRequestUri);
+  } else if (authRequest.jarEnabled) {
+    for (const [k, v] of buildJarParams(client, authRequest, jarRequestValue(authRequest))) {
+      params.set(k, v);
+    }
+    notes.push(jarNote(client, !!authRequest.requestObjectJwt));
   } else {
     for (const [k, v] of buildAuthorizeParams(client, authRequest)) {
       params.set(k, v);
@@ -57,6 +86,7 @@ export function previewAuthorize(
     method: "GET",
     url: `${endpoint}${sep}${params.toString()}`,
     headers: [],
+    notes: notes.length ? notes : undefined,
   };
 }
 

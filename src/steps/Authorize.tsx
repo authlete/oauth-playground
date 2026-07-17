@@ -24,6 +24,7 @@ import {
 import { shorten } from "../lib/format";
 import { cn } from "../lib/cn";
 import { buildAuthorizeUrl } from "../lib/authorizeUrl";
+import { jarReadiness } from "../lib/requestObject";
 import { previewAuthorize } from "../lib/requestPreview";
 import { computeCodeChallenge, generateCodeVerifier } from "../lib/pkce";
 import { randomBase64Url } from "../lib/random";
@@ -49,6 +50,12 @@ export function AuthorizeStep() {
     state.authRequest,
     parRequestUri,
   );
+  const jarReady = jarReadiness(state.client, state.authRequest);
+  // When JAR is on, the signed object must be present (the store signs it);
+  // built.url only carries `request` once requestObjectJwt exists.
+  const jarPending =
+    state.authRequest.jarEnabled && !state.authRequest.requestObjectJwt;
+  const canAuthorize = built.ok && jarReady.ok && !jarPending;
 
   useEffect(() => {
     return () => {
@@ -58,16 +65,18 @@ export function AuthorizeStep() {
   }, []);
 
   const start = async () => {
-    if (!built.ok) return;
+    if (!canAuthorize) return;
     stopRef.current?.();
 
-    // On retry without PAR, regenerate state / nonce / code_verifier so the
-    // request isn't a replay of the previous (possibly already-consumed)
-    // attempt. With PAR, the AS has already bound the params to request_uri,
-    // so we must keep the existing values.
     let freshUrl = built.url;
     let freshState = state.authRequest.state;
-    if (!parRequestUri) {
+
+    // Plain request only: on (re)run, regenerate state / nonce / code_verifier
+    // so the request isn't a replay of a previous (possibly consumed) attempt.
+    // With PAR the AS already bound the params to request_uri; with JAR the
+    // params (incl. state/nonce) are bound inside the signed object built.url
+    // already carries, so both keep the existing values.
+    if (!parRequestUri && !state.authRequest.jarEnabled) {
       freshState = randomBase64Url(16);
       const freshNonce = randomBase64Url(16);
       const patch: Partial<typeof state.authRequest> = {
@@ -207,6 +216,20 @@ export function AuthorizeStep() {
         </Banner>
       )}
 
+      {built.ok && !jarReady.ok && (
+        <Banner tone="warn" className="mt-5">
+          {jarReady.message}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="ml-2 text-[var(--playground-accent)]"
+            onClick={() => setActiveStep("client")}
+          >
+            Fix it →
+          </Button>
+        </Banner>
+      )}
+
       {state.authRequest.state && (
         <InfoCard label="About to authorize" className="mt-5">
           <KVList className="mt-1">
@@ -256,12 +279,12 @@ export function AuthorizeStep() {
             </Button>
           </>
         ) : auth.status === "received" || auth.status === "error" ? (
-          <Button variant="secondary" onClick={start} disabled={!built.ok}>
+          <Button variant="secondary" onClick={start} disabled={!canAuthorize}>
             <RotateCw className="h-4 w-4" />
             Re-run
           </Button>
         ) : (
-          <Button onClick={start} disabled={!built.ok}>
+          <Button onClick={start} disabled={!canAuthorize}>
             <ExternalLink className="h-4 w-4" />
             Authorize ↗
           </Button>

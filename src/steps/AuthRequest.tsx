@@ -12,10 +12,12 @@ import { Input } from "../components/ui/Input";
 import { Checkbox } from "../components/ui/Checkbox";
 import { Select } from "../components/ui/Select";
 import { Textarea } from "../components/ui/Textarea";
-import { StatusPill, StepHeader } from "../components/step";
+import { JwtPanel, StatusPill, StepHeader } from "../components/step";
 import { computeCodeChallenge, generateCodeVerifier } from "../lib/pkce";
 import { randomBase64Url } from "../lib/random";
 import { buildAuthorizeUrl } from "../lib/authorizeUrl";
+import { jarReadiness } from "../lib/requestObject";
+import { parseJwt } from "../lib/jwt";
 import {
   COMMON_SCOPES,
   type AuthRequestState,
@@ -54,7 +56,8 @@ export function AuthRequestStep() {
     [metadata, client, req, parRequestUri],
   );
 
-  const isValid = builtUrl.ok && req.scopes.length > 0;
+  const jarReady = jarReadiness(client, req);
+  const isValid = builtUrl.ok && req.scopes.length > 0 && jarReady.ok;
 
 
   const regenState = () => authRequestUpdate({ state: randomBase64Url(16) });
@@ -206,7 +209,7 @@ export function AuthRequestStep() {
 
         <Field
           label="Extensions"
-          hint="PKCE is on by default for any v0.1 client. PAR / JAR / JARM ship in later build steps."
+          hint="PKCE is on by default for any v0.1 client. JARM ships in a later build step."
         >
           <div className="flex flex-wrap gap-x-6 gap-y-2">
             <Checkbox
@@ -224,9 +227,25 @@ export function AuthRequestStep() {
               disabled={!parSupported}
               onChange={(e) => parUpdate({ enabled: e.target.checked })}
             />
-            <Checkbox label="JAR (RFC 9101)" checked={false} disabled />
+            <Checkbox
+              label="JAR (RFC 9101 — signed request object)"
+              checked={req.jarEnabled}
+              onChange={(e) => authRequestUpdate({ jarEnabled: e.target.checked })}
+            />
             <Checkbox label="JARM (response_mode=jwt)" checked={false} disabled />
           </div>
+          {req.jarEnabled && !jarReady.ok && (
+            <p className="mt-2 text-[11.5px] text-[var(--status-warn)]">
+              {jarReady.message}{" "}
+              <button
+                type="button"
+                onClick={() => setActiveStep("client")}
+                className="underline hover:text-foreground"
+              >
+                Go to step 2 →
+              </button>
+            </p>
+          )}
         </Field>
 
         <ParamRow
@@ -274,6 +293,10 @@ export function AuthRequestStep() {
           onCopy={onCopy}
           onContinue={() => setActiveStep(parEnabled ? "par" : "authorize")}
         />
+
+        {req.jarEnabled && jarReady.ok && (
+          <RequestObjectPanel req={req} issuer={metadata?.issuer} />
+        )}
       </div>
     </div>
   );
@@ -422,6 +445,52 @@ function AdvancedExpander({
             </p>
           )}
         </Field>
+      </div>
+    </details>
+  );
+}
+
+// The live-signed JAR request object, decoded with the same viewer the Token
+// Inspector and Federation steps use. Signed by the store the instant a valid
+// key + params exist — this is the actual JWT the "Final Request" above sends.
+// Collapsed by default (like Advanced): a drill-down, not the main event.
+function RequestObjectPanel({
+  req,
+  issuer,
+}: {
+  req: AuthRequestState;
+  issuer?: string;
+}) {
+  const parsed = req.requestObjectJwt ? parseJwt(req.requestObjectJwt) : null;
+  const signed = parsed?.ok ? parsed.jwt : null;
+  const summary = req.requestObjectError
+    ? "signing error"
+    : signed
+      ? `${signed.header.alg ?? "?"}${
+          signed.header.kid ? ` · kid=${signed.header.kid}` : ""
+        }`
+      : "signing…";
+  return (
+    <details className="rounded-md border border-border bg-card/40 px-3 py-2 text-[13px]">
+      <summary className="flex cursor-pointer select-none items-baseline justify-between gap-3 text-muted-foreground hover:text-foreground">
+        <span>Decoded request object (JAR)</span>
+        <span className="font-mono text-[11px]">{summary}</span>
+      </summary>
+      <div className="mt-3">
+        {req.requestObjectError ? (
+          <div className="rounded-md border border-[var(--status-error)]/40 bg-[color-mix(in_oklch,var(--status-error)_8%,transparent)] p-3 text-[12.5px]">
+            {req.requestObjectError}
+          </div>
+        ) : signed ? (
+          <JwtPanel
+            jwt={signed}
+            payloadSubtitle={issuer ? `aud=${issuer}` : undefined}
+          />
+        ) : (
+          <div className="rounded-md border border-border bg-muted/40 p-3 text-[12.5px] text-muted-foreground">
+            Signing…
+          </div>
+        )}
       </div>
     </details>
   );

@@ -178,6 +178,14 @@ export interface AuthRequestState {
   nonce: string;
   codeVerifier: string;
   codeChallenge: string;
+  // JAR (RFC 9101): wrap the authorization request parameters in a signed JWT
+  // ("request object"), signed with the step-2 private JWK.
+  jarEnabled: boolean;
+  // Live-signed request object — derived (like codeChallenge), held in memory,
+  // never persisted. The store re-signs this whenever the params or key change;
+  // steps 3/4/5 all read this one value (single source of truth for JAR).
+  requestObjectJwt?: string;
+  requestObjectError?: string;
   prompt: string;
   loginHint: string;
   maxAge: string;
@@ -206,6 +214,7 @@ export const DEFAULT_AUTH_REQUEST: AuthRequestState = {
   nonce: "",
   codeVerifier: "",
   codeChallenge: "",
+  jarEnabled: false,
   prompt: "",
   loginHint: "",
   maxAge: "",

@@ -21,6 +21,7 @@ import {
 } from "../components/step";
 import { previewPar } from "../lib/requestPreview";
 import { pushPar } from "../lib/parClient";
+import { jarReadiness } from "../lib/requestObject";
 
 export function ParStep() {
   const {
@@ -50,14 +51,19 @@ export function ParStep() {
 
   const parEndpoint =
     state.discovery.metadata?.pushed_authorization_request_endpoint;
+  const jarReady = jarReadiness(state.client, state.authRequest);
   const canPush =
     par.enabled &&
     !!parEndpoint &&
     state.stepStatus.client === "done" &&
-    state.authRequest.scopes.length > 0;
+    state.authRequest.scopes.length > 0 &&
+    jarReady.ok &&
+    // JAR: the store signs the object; wait until it's present.
+    (!state.authRequest.jarEnabled || !!state.authRequest.requestObjectJwt);
 
   const onPush = async () => {
     if (!state.discovery.metadata || !canPush) return;
+
     parUpdate({
       status: "loading",
       requestUri: undefined,
@@ -71,6 +77,7 @@ export function ParStep() {
       metadata: state.discovery.metadata,
       client: state.client,
       authRequest: state.authRequest,
+      requestObjectJwt: state.authRequest.requestObjectJwt,
       onStart: networkAdd,
       onFinish: networkUpdate,
     });
@@ -121,6 +128,20 @@ export function ParStep() {
             <code className="font-mono">pushed_authorization_request_endpoint</code>.
             Toggle PAR off in step 3, or pick an AS that advertises one.
           </p>
+        </Banner>
+      )}
+
+      {par.enabled && parEndpoint && !jarReady.ok && (
+        <Banner tone="warn" className="mt-5">
+          <p>{jarReady.message}</p>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="mt-2 text-[var(--playground-accent)]"
+            onClick={() => setActiveStep("client")}
+          >
+            Go to step 2 →
+          </Button>
         </Banner>
       )}
 

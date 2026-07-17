@@ -38,10 +38,15 @@ export function ClientStep() {
   const cfg = state.client;
   const [jwkValidating, setJwkValidating] = useState(false);
 
+  // A signing key is needed for private_key_jwt client auth AND for JAR
+  // (RFC 9101) request objects — a public/PKCE client can enable JAR too.
+  const needsSigningKey =
+    cfg.authMethod === "private_key_jwt" || state.authRequest.jarEnabled;
+
   // Debounced JWK validation: any change to the pasted text triggers a fresh
   // Web Crypto import. We hold the CryptoKey in memory only (§8).
   useEffect(() => {
-    if (cfg.authMethod !== "private_key_jwt") return;
+    if (!needsSigningKey) return;
     const text = cfg.privateKey.jwkText;
     if (!text.trim()) {
       clientUpdate({ privateKey: { jwkText: text, status: "empty" } });
@@ -79,7 +84,7 @@ export function ClientStep() {
       cancelled = true;
       window.clearTimeout(handle);
     };
-  }, [cfg.authMethod, cfg.privateKey.jwkText, clientUpdate]);
+  }, [needsSigningKey, cfg.privateKey.jwkText, clientUpdate]);
 
   const validation = useMemo(() => validateClientConfig(cfg), [cfg]);
 
@@ -155,10 +160,14 @@ export function ClientStep() {
           </Field>
         )}
 
-        {cfg.authMethod === "private_key_jwt" && (
+        {needsSigningKey && (
           <Field
             label="Private key (JWK)"
-            hint="Paste a JWK with a private exponent (`d`). Validated on every keystroke; never persisted."
+            hint={
+              cfg.authMethod === "private_key_jwt"
+                ? "Signs the client_assertion (private_key_jwt) and, if JAR is on, the request object. Paste a JWK with a private exponent (`d`); never persisted."
+                : "Signs the JAR request object (RFC 9101). Paste a JWK with a private exponent (`d`); never persisted."
+            }
           >
             <Textarea
               mono

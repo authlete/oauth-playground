@@ -10,7 +10,8 @@
 // React state. SubtleCrypto import is fast (microseconds).
 
 import { validateAndImportJwk } from "./jwk";
-import { base64urlEncode, randomBase64Url } from "./random";
+import { signCompactJws } from "./jws";
+import { randomBase64Url } from "./random";
 import type { ClientConfigState } from "../types";
 
 export interface ApplyAuthOptions {
@@ -105,41 +106,10 @@ async function signClientAssertion(opts: SignAssertionOpts): Promise<string> {
     exp: now + 60,
     jti: randomBase64Url(16),
   };
-  const headerB64 = base64urlEncode(
-    new TextEncoder().encode(JSON.stringify(header)),
-  );
-  const payloadB64 = base64urlEncode(
-    new TextEncoder().encode(JSON.stringify(payload)),
-  );
-  const signingInput = `${headerB64}.${payloadB64}`;
-  const sigBytes = await crypto.subtle.sign(
-    signParams(opts.alg),
-    opts.cryptoKey,
-    new TextEncoder().encode(signingInput),
-  );
-  const sig = base64urlEncode(new Uint8Array(sigBytes));
-  return `${signingInput}.${sig}`;
-}
-
-function signParams(alg: string): AlgorithmIdentifier | EcdsaParams | RsaPssParams {
-  switch (alg) {
-    case "ES256":
-      return { name: "ECDSA", hash: "SHA-256" };
-    case "ES384":
-      return { name: "ECDSA", hash: "SHA-384" };
-    case "ES512":
-      return { name: "ECDSA", hash: "SHA-512" };
-    case "RS256":
-    case "RS384":
-    case "RS512":
-      return { name: "RSASSA-PKCS1-v1_5" };
-    case "PS256":
-      return { name: "RSA-PSS", saltLength: 32 };
-    case "PS384":
-      return { name: "RSA-PSS", saltLength: 48 };
-    case "PS512":
-      return { name: "RSA-PSS", saltLength: 64 };
-    default:
-      throw new Error(`Unsupported alg for signing: ${alg}`);
-  }
+  return signCompactJws({
+    header,
+    payload,
+    cryptoKey: opts.cryptoKey,
+    alg: opts.alg,
+  });
 }

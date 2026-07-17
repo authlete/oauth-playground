@@ -6,7 +6,7 @@
 // the full URL.
 
 import { applyClientAuth } from "./clientAuth";
-import { buildAuthorizeParams } from "./authorizeUrl";
+import { buildAuthorizeParams, buildJarParams } from "./authorizeUrl";
 import type {
   AuthRequestState,
   ClientConfigState,
@@ -27,6 +27,9 @@ export interface PushParInput {
   metadata: OidcMetadata;
   client: ClientConfigState;
   authRequest: AuthRequestState;
+  /** The signed request object, when JAR is enabled. Signed by the caller (the
+   *  store is the single signer) so the pushed object matches what step 3 shows. */
+  requestObjectJwt?: string;
   onStart: (entry: NetworkEntry) => void;
   onFinish: (id: string, patch: Partial<NetworkEntry>) => void;
 }
@@ -41,7 +44,16 @@ export async function pushPar(input: PushParInput): Promise<PushParResult> {
     };
   }
 
-  const body = buildAuthorizeParams(input.client, input.authRequest);
+  // JAR: push the params as a signed request object instead of individually.
+  let body: URLSearchParams;
+  if (input.authRequest.jarEnabled) {
+    if (!input.requestObjectJwt) {
+      return { ok: false, message: "No signed request object — set a valid JWK in step 2." };
+    }
+    body = buildJarParams(input.client, input.authRequest, input.requestObjectJwt);
+  } else {
+    body = buildAuthorizeParams(input.client, input.authRequest);
+  }
   const headers = new Headers({
     "Content-Type": "application/x-www-form-urlencoded",
     Accept: "application/json",

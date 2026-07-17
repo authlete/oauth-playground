@@ -1,7 +1,7 @@
 import { ArrowRight, Check, Copy, Info } from "lucide-react";
 import { Button } from "../../components/ui/Button";
 import { RequestPreview } from "../../components/step";
-import { previewPar, prettyUrl } from "../../lib/requestPreview";
+import { previewAuthorize, previewPar, prettyUrl } from "../../lib/requestPreview";
 import { cn } from "../../lib/cn";
 import type { AuthorizeUrlResult } from "../../lib/authorizeUrl";
 import type {
@@ -32,24 +32,31 @@ export function LivePreview(props: LivePreviewProps) {
   }
 
   const parEndpoint = props.metadata?.pushed_authorization_request_endpoint;
+  const authEndpoint = props.metadata?.authorization_endpoint;
   // When PAR is on and the AS advertises a /par endpoint, the NEXT request
   // is the POST to /par — not the /authorize navigation. Reflect that.
   const showPar = props.parEnabled && !!parEndpoint;
+  // JAR (no PAR): the /authorize URL carries a signed `request` object, so the
+  // plain-params block would misrepresent it — show the wire preview instead.
+  const showJar = !showPar && props.authRequest.jarEnabled && !!authEndpoint;
 
   return (
     <div>
       <PreviewHeader
-        title={showPar ? "PAR request" : "Authorize URL"}
+        title={showPar ? "PAR request" : showJar ? "Authorize URL (JAR)" : "Authorize URL"}
         subtitle={subtitleFor(showPar, props.parEnabled, props.parPushed)}
-        endpoint={
-          showPar ? parEndpoint : props.metadata?.authorization_endpoint
-        }
+        endpoint={showPar ? parEndpoint : authEndpoint}
       />
 
       {showPar && parEndpoint ? (
         <RequestPreview
           className="mt-1.5"
           block={previewPar(parEndpoint, props.client, props.authRequest)}
+        />
+      ) : showJar && authEndpoint ? (
+        <RequestPreview
+          className="mt-1.5"
+          block={previewAuthorize(authEndpoint, props.client, props.authRequest)}
         />
       ) : (
         <AuthorizeUrlBlock
