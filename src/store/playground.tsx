@@ -21,6 +21,7 @@ import {
   DEFAULT_AUTHORIZE,
   DEFAULT_AUTH_REQUEST,
   DEFAULT_CLIENT_CONFIG,
+  DEFAULT_DCR_REGISTER,
   DEFAULT_FEDERATION_REGISTER,
   DEFAULT_INSPECTOR,
   DEFAULT_INTROSPECT,
@@ -34,6 +35,7 @@ import {
   type AuthRequestState,
   type AuthorizeState,
   type ClientConfigState,
+  type DcrRegisterState,
   type DiscoveryState,
   type FederationRegisterState,
   type InspectorState,
@@ -57,6 +59,7 @@ interface State {
   network: NetworkEntry[];
   discovery: DiscoveryState;
   client: ClientConfigState;
+  dcrRegister: DcrRegisterState;
   federationRegister: FederationRegisterState;
   authRequest: AuthRequestState;
   par: ParState;
@@ -80,6 +83,7 @@ type Action =
   | { type: "discovery-update"; patch: Partial<DiscoveryState> }
   | { type: "discovery-reset" }
   | { type: "client-update"; patch: Partial<ClientConfigState> }
+  | { type: "dcr-register-update"; patch: Partial<DcrRegisterState> }
   | { type: "federation-register-update"; patch: Partial<FederationRegisterState> }
   | { type: "auth-request-update"; patch: Partial<AuthRequestState> }
   | { type: "par-update"; patch: Partial<ParState> }
@@ -222,6 +226,7 @@ const initialState: State = {
   stepStatus: {
     discovery: "active",
     client: "locked",
+    "dcr-register": "hidden",
     "federation-register": "hidden",
     "auth-request": "locked",
     par: "locked",
@@ -242,6 +247,7 @@ const initialState: State = {
     manual: { ...EMPTY_MANUAL_ENDPOINTS },
   },
   client: DEFAULT_CLIENT_CONFIG,
+  dcrRegister: DEFAULT_DCR_REGISTER,
   federationRegister: DEFAULT_FEDERATION_REGISTER,
   authRequest: DEFAULT_AUTH_REQUEST,
   par: DEFAULT_PAR,
@@ -311,6 +317,11 @@ function reducer(state: State, action: Action): State {
       };
     case "client-update":
       return { ...state, client: { ...state.client, ...action.patch } };
+    case "dcr-register-update":
+      return {
+        ...state,
+        dcrRegister: { ...state.dcrRegister, ...action.patch },
+      };
     case "federation-register-update":
       return {
         ...state,
@@ -357,6 +368,7 @@ interface PlaygroundContextValue {
   discoveryUpdate: (patch: Partial<DiscoveryState>) => void;
   discoveryReset: () => void;
   clientUpdate: (patch: Partial<ClientConfigState>) => void;
+  dcrRegisterUpdate: (patch: Partial<DcrRegisterState>) => void;
   federationRegisterUpdate: (patch: Partial<FederationRegisterState>) => void;
   authRequestUpdate: (patch: Partial<AuthRequestState>) => void;
   parUpdate: (patch: Partial<ParState>) => void;
@@ -419,6 +431,7 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
         authMethod,
         redirectUri,
       },
+      dcrRegister: { ...s.dcrRegister, redirectUris: redirectUri },
       authRequest: {
         ...s.authRequest,
         ...(persistedAuthRequest
@@ -597,6 +610,7 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
       discovery: state.discovery,
       discoveryMetadata: state.discovery.metadata,
       client: state.client,
+      dcrRegister: state.dcrRegister,
       federationRegister: state.federationRegister,
       authRequest: state.authRequest,
       par: state.par,
@@ -616,6 +630,7 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
   }, [
     state.discovery,
     state.client,
+    state.dcrRegister,
     state.federationRegister,
     state.authRequest,
     state.par,
@@ -681,6 +696,11 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
   const clientUpdate = useCallback(
     (patch: Partial<ClientConfigState>) =>
       dispatch({ type: "client-update", patch }),
+    [],
+  );
+  const dcrRegisterUpdate = useCallback(
+    (patch: Partial<DcrRegisterState>) =>
+      dispatch({ type: "dcr-register-update", patch }),
     [],
   );
   const federationRegisterUpdate = useCallback(
@@ -749,6 +769,7 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
       discoveryUpdate,
       discoveryReset,
       clientUpdate,
+      dcrRegisterUpdate,
       federationRegisterUpdate,
       authRequestUpdate,
       parUpdate,
@@ -773,6 +794,7 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
       discoveryUpdate,
       discoveryReset,
       clientUpdate,
+      dcrRegisterUpdate,
       federationRegisterUpdate,
       authRequestUpdate,
       parUpdate,

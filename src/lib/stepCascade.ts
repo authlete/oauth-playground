@@ -11,6 +11,7 @@ import type { StepId, StepStatus } from "../types";
 interface CascadeState {
   discovery: { status: string };
   client: Parameters<typeof validateClientConfig>[0];
+  dcrRegister: { status: string };
   federationRegister: { status: string };
   authRequest: Parameters<typeof buildAuthorizeUrl>[2];
   par: { enabled: boolean; status: string; requestUri?: string };
@@ -40,15 +41,22 @@ export function computeStepStatuses(state: CascadeState): Record<StepId, StepSta
   const tokenSucceeded =
     state.token.status === "success" && !!state.token.accessToken;
 
-  // Federation registration appears only when the AS advertises an endpoint.
-  // It's an enhancement to step 2's output (it produces a client_id), never a
-  // gate on later steps — hence no other step depends on it.
+  // DCR and Federation registration each appear only when the AS advertises the
+  // matching endpoint. Both are enhancements to step 2's output (they produce a
+  // client_id), never gates on later steps — no other step depends on them.
+  const dcrEndpoint =
+    typeof state.discoveryMetadata?.registration_endpoint === "string";
   const federationEndpoint =
     typeof state.discoveryMetadata?.federation_registration_endpoint === "string";
 
   const status: Record<StepId, StepStatus> = {
     discovery: discoveryDone ? "done" : "active",
     client: !discoveryDone ? "locked" : clientValid ? "done" : "ready",
+    "dcr-register": !dcrEndpoint
+      ? "hidden"
+      : state.dcrRegister.status === "success"
+        ? "done"
+        : "ready",
     "federation-register": !federationEndpoint
       ? "hidden"
       : state.federationRegister.status === "success"

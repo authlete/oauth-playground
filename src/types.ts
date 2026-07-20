@@ -1,6 +1,7 @@
 export type StepId =
   | "discovery"
   | "client"
+  | "dcr-register"
   | "federation-register"
   | "auth-request"
   | "par"
@@ -37,9 +38,10 @@ export interface StepDef {
 export const STEPS: StepDef[] = [
   { id: "discovery", number: 1, name: "Discovery" },
   { id: "client", number: 2, name: "Client config" },
-  // Auxiliary path under Client: visible only when the AS advertises a
-  // federation_registration_endpoint. Nested + numberless so it reads as an
-  // optional branch off step 2 rather than an inline step.
+  // Auxiliary paths under Client, each visible only when the AS advertises the
+  // matching endpoint. Nested + numberless so they read as optional branches
+  // off step 2 rather than inline steps. Both produce a client_id for step 2.
+  { id: "dcr-register", name: "Register client (DCR)", nested: true },
   { id: "federation-register", name: "Federation register", nested: true },
   { id: "auth-request", number: 3, name: "Auth request" },
   { id: "par", number: 4, name: "PAR" },
@@ -376,6 +378,50 @@ export const DEFAULT_REVOKE: RevokeState = {
   status: "idle",
   tokenSource: "access",
 };
+
+// Dynamic Client Registration (RFC 7591). Shown when discovery advertises a
+// `registration_endpoint`. The form is a subset of client metadata; the AS
+// echoes it back plus the issued credentials and RFC 7592 management fields.
+export type DcrRegisterStatus = "idle" | "loading" | "success" | "error";
+
+export interface DcrRegisteredClient {
+  clientId: string;
+  clientSecret?: string;
+  clientSecretExpiresAt?: number; // 0 = never expires
+  clientIdIssuedAt?: number;
+  registrationAccessToken?: string;
+  registrationClientUri?: string;
+  raw: Record<string, unknown>;
+}
+
+export interface DcrRegisterState {
+  status: DcrRegisterStatus;
+  clientName: string;
+  redirectUris: string; // one URI per line
+  tokenEndpointAuthMethod: ClientAuthMethod;
+  grantTypes: string[];
+  scope: string;
+  result?: DcrRegisteredClient;
+  registeredAt?: number;
+  errorMessage?: string;
+  errorStatus?: number;
+  errorBody?: string;
+}
+
+export const DEFAULT_DCR_REGISTER: DcrRegisterState = {
+  status: "idle",
+  clientName: "OAuth Playground",
+  redirectUris: "",
+  tokenEndpointAuthMethod: "none",
+  grantTypes: ["authorization_code", "refresh_token"],
+  scope: "openid profile email",
+};
+
+export const DCR_GRANT_TYPES = [
+  "authorization_code",
+  "refresh_token",
+  "client_credentials",
+] as const;
 
 export type FederationRegisterMode = "entity-config" | "trust-chain";
 

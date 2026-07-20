@@ -39,6 +39,7 @@ export function LeftRail() {
   const summaries: Partial<Record<StepId, string>> = {
     discovery: discoverySummary(state),
     client: clientSummary(state),
+    "dcr-register": dcrRegisterSummary(state),
     "federation-register": federationRegisterSummary(state),
     "auth-request": authRequestSummary(state),
     par: parSummary(state),
@@ -238,6 +239,14 @@ function federationRegisterSummary(
 ): string | undefined {
   if (state.stepStatus["federation-register"] !== "done") return undefined;
   const id = state.federationRegister.issuedClientId;
+  return id ? `client_id: ${shortStr(id, 12)}` : "registered";
+}
+
+function dcrRegisterSummary(
+  state: ReturnType<typeof usePlayground>["state"],
+): string | undefined {
+  if (state.stepStatus["dcr-register"] !== "done") return undefined;
+  const id = state.dcrRegister.result?.clientId;
   return id ? `client_id: ${shortStr(id, 12)}` : "registered";
 }
 
