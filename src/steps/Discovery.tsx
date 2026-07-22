@@ -3,17 +3,22 @@ import { Loader2, RotateCw, Send } from "lucide-react";
 import { usePlayground } from "../store/playground";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
+import { Select } from "../components/ui/Select";
 import {
   Banner,
   StatusPill,
   StepHeader as SharedStepHeader,
 } from "../components/step";
 import { cn } from "../lib/cn";
+import { AUTH_SERVERS } from "../lib/authServers";
 import { fetchDiscovery, type DiscoveryError } from "../lib/discovery";
 import { applyManual } from "../lib/manualDiscovery";
 import type { ManualEndpoints, OidcMetadata } from "../types";
 
 type Tab = "endpoints" | "jwks" | "raw";
+
+// Sentinel <option> value for "not one of the presets — type your own".
+const CUSTOM_SERVER = "__custom__";
 
 export function DiscoveryStep() {
   const { state, discoveryUpdate, networkAdd, networkUpdate } = usePlayground();
@@ -107,15 +112,45 @@ export function DiscoveryStep() {
       {discovery.mode === "wellknown" ? (
         <>
           <form onSubmit={onSubmit} className="mt-4 flex items-center gap-2">
+            <label className="sr-only" htmlFor="server-select">
+              Authorization server
+            </label>
+            <div className="w-52 shrink-0">
+              <Select
+                id="server-select"
+                value={AUTH_SERVERS.includes(issuerInput) ? issuerInput : CUSTOM_SERVER}
+                disabled={isLoading}
+                onChange={(e) => {
+                  if (e.target.value === CUSTOM_SERVER) {
+                    // Switching to Custom from a preset: clear so the derived
+                    // value stays on "Custom…", then focus the box to type.
+                    if (AUTH_SERVERS.includes(issuerInput)) setIssuerInput("");
+                    window.requestAnimationFrame(() =>
+                      document.getElementById("issuer-input")?.focus(),
+                    );
+                  } else {
+                    setIssuerInput(e.target.value);
+                  }
+                }}
+              >
+                {AUTH_SERVERS.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+                <option value={CUSTOM_SERVER}>Custom…</option>
+              </Select>
+            </div>
             <label className="sr-only" htmlFor="issuer-input">
               Issuer URL
             </label>
             <Input
               id="issuer-input"
               mono
+              className="flex-1"
               value={issuerInput}
               onChange={(e) => setIssuerInput(e.target.value)}
-              placeholder="https://issuer.example/"
+              placeholder="https://your-as.example.com"
               disabled={isLoading}
               autoComplete="off"
               spellCheck={false}
@@ -140,7 +175,7 @@ export function DiscoveryStep() {
 
           {discovery.status === "idle" && (
             <p className="mt-2 text-[12.5px] text-muted-foreground">
-              Press Run, or paste a different issuer URL.
+              Pick an authorization server, or type any issuer URL, then Run.
             </p>
           )}
         </>

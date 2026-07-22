@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { computeStepStatuses } from "../lib/stepCascade";
+import { DEFAULT_AUTH_SERVER } from "../lib/authServers";
 import { buildAuthorizeParams } from "../lib/authorizeUrl";
 import { signRequestObject } from "../lib/requestObject";
 import { computeCodeChallenge, generateCodeVerifier } from "../lib/pkce";
@@ -96,7 +97,6 @@ type Action =
   | { type: "refresh-update"; patch: Partial<RefreshState> }
   | { type: "revoke-update"; patch: Partial<RevokeState> };
 
-const DEFAULT_ISSUER = "http://localhost:3000";
 const CLIENT_PERSIST_KEY = "playground.client";
 const AUTH_REQUEST_PERSIST_KEY = "playground.authRequest";
 const DISCOVERY_MODE_PERSIST_KEY = "playground.discoveryMode";
@@ -242,7 +242,7 @@ const initialState: State = {
   network: [],
   discovery: {
     status: "idle",
-    issuer: DEFAULT_ISSUER,
+    issuer: DEFAULT_AUTH_SERVER,
     mode: "wellknown",
     manual: { ...EMPTY_MANUAL_ENDPOINTS },
   },
