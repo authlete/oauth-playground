@@ -1,5 +1,11 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { Check, CircleAlert, KeyRound, Loader2 } from "lucide-react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
+import { Check, CircleAlert, Eye, EyeOff, KeyRound, Loader2 } from "lucide-react";
 import { usePlayground } from "../store/playground";
 import { Input } from "../components/ui/Input";
 import { Select } from "../components/ui/Select";
@@ -9,6 +15,9 @@ import { cn } from "../lib/cn";
 import { validateClientConfig } from "../lib/clientConfig";
 import { validateAndImportJwk } from "../lib/jwk";
 import type { ClientAuthMethod } from "../types";
+
+// Mask the sensitive JWK text when hidden (Chromium/WebKit -webkit-text-security).
+const MASK_STYLE = { WebkitTextSecurity: "disc" } as CSSProperties;
 
 const AUTH_METHODS: Array<{ value: ClientAuthMethod; label: string; hint: string }> = [
   {
@@ -37,6 +46,7 @@ export function ClientStep() {
   const { state, clientUpdate } = usePlayground();
   const cfg = state.client;
   const [jwkValidating, setJwkValidating] = useState(false);
+  const [showKey, setShowKey] = useState(false);
 
   // A signing key is needed for private_key_jwt client auth AND for JAR
   // (RFC 9101) request objects — a public/PKCE client can enable JAR too.
@@ -168,6 +178,25 @@ export function ClientStep() {
                 ? "Signs the client_assertion (private_key_jwt) and, if JAR is on, the request object. Paste a JWK with a private exponent (`d`); never persisted."
                 : "Signs the JAR request object (RFC 9101). Paste a JWK with a private exponent (`d`); never persisted."
             }
+            action={
+              cfg.privateKey.jwkText.trim() ? (
+                <button
+                  type="button"
+                  onClick={() => setShowKey((v) => !v)}
+                  className="inline-flex items-center gap-1 text-[11.5px] text-muted-foreground hover:text-foreground"
+                >
+                  {showKey ? (
+                    <>
+                      <EyeOff className="h-3.5 w-3.5" /> Hide
+                    </>
+                  ) : (
+                    <>
+                      <Eye className="h-3.5 w-3.5" /> Show
+                    </>
+                  )}
+                </button>
+              ) : undefined
+            }
           >
             <Textarea
               mono
@@ -180,6 +209,7 @@ export function ClientStep() {
               }
               placeholder={'{\n  "kty": "EC",\n  "crv": "P-256",\n  "kid": "...",\n  "x": "...",\n  "y": "...",\n  "d": "..."\n}'}
               className="min-h-[200px] resize-y"
+              style={showKey ? undefined : MASK_STYLE}
             />
             <JwkStatusLine
               validating={jwkValidating}
@@ -220,15 +250,20 @@ export function ClientStep() {
 function Field({
   label,
   hint,
+  action,
   children,
 }: {
   label: string;
   hint?: string;
+  action?: ReactNode;
   children: ReactNode;
 }) {
   return (
     <div>
-      <label className="mb-1.5 block text-[12.5px] font-medium">{label}</label>
+      <div className="mb-1.5 flex items-center justify-between gap-2">
+        <label className="block text-[12.5px] font-medium">{label}</label>
+        {action}
+      </div>
       {children}
       {hint && (
         <p className="mt-1.5 text-[12px] text-muted-foreground">{hint}</p>
