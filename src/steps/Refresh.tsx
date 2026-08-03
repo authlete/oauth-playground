@@ -120,7 +120,7 @@ export function RefreshStep() {
         <>
           <InfoCard
             label="Request"
-            description="grant_type=refresh_token — rotates the tokens held by Token exchange."
+            description="Trades the refresh token for a fresh set — Token exchange holds the result."
             method="POST"
             url={endpoint}
             className="mt-5"

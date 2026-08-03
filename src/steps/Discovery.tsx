@@ -12,36 +12,95 @@ import {
 } from "../components/step";
 import { cn } from "../lib/cn";
 import { AUTH_SERVERS } from "../lib/authServers";
+import {
+  RESOURCE_SERVERS,
+  DEFAULT_RESOURCE_SERVER,
+} from "../lib/resourceServers";
 import { fetchDiscovery, type DiscoveryError } from "../lib/discovery";
+import { fetchOpenApiOperations } from "../lib/openapi";
+import { fetchPrm } from "../lib/prm";
 import { applyManual } from "../lib/manualDiscovery";
-import type { ManualEndpoints, OidcMetadata } from "../types";
+import type { ManualEndpoints, OidcMetadata, PrmDocument } from "../types";
 
-type Tab = "endpoints" | "jwks" | "raw";
+type Tab = "endpoints" | "jwks";
 
 // Sentinel <option> for "not one of the configured servers — type your own".
 const CUSTOM_SERVER = "__custom__";
 // The picker only exists when a deployment configures servers (VITE_AUTH_SERVERS);
 // with just the local-dev fallback a lone free-text input is enough.
 const HAS_PRESETS = AUTH_SERVERS.length > 1;
+const HAS_RESOURCE_PRESETS = RESOURCE_SERVERS.length > 1;
 
 export function DiscoveryStep() {
-  const { state, discoveryUpdate, networkAdd, networkUpdate } = usePlayground();
+  const { state, discoveryUpdate, resourceUpdate, networkAdd, networkUpdate } =
+    usePlayground();
   const discovery = state.discovery;
+  const resource = state.resource;
   const isLoading = discovery.status === "loading";
 
   const [tab, setTab] = useState<Tab>("endpoints");
   const [issuerInput, setIssuerInput] = useState(discovery.issuer);
-  // Anything not in the configured list is a custom issuer — the picker shows
-  // "Custom…" and the free-text input takes over.
-  const isCustom = !AUTH_SERVERS.includes(issuerInput);
+  const [resourceInput, setResourceInput] = useState(
+    resource.url || DEFAULT_RESOURCE_SERVER,
+  );
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (isLoading) return;
+    await runDiscovery(issuerInput);
+  };
 
+  // RFC 9728: fetch the resource's PRM; with exactly one advertised AS, chain
+  // straight into issuer discovery so one click completes the whole hop.
+  const onFetchPrm = async (e: FormEvent) => {
+    e.preventDefault();
+    if (resource.status === "loading" || isLoading) return;
+    resourceUpdate({
+      status: "loading",
+      url: resourceInput,
+      prm: undefined,
+      metadataUrl: undefined,
+      operations: undefined,
+      errorMessage: undefined,
+      errorStatus: undefined,
+      errorBody: undefined,
+    });
+    const result = await fetchPrm(resourceInput, {
+      onStart: networkAdd,
+      onFinish: networkUpdate,
+    });
+    if (!result.ok) {
+      resourceUpdate({
+        status: "error",
+        errorMessage: errorMessage(result.error),
+        errorStatus: "status" in result.error ? result.error.status : undefined,
+        errorBody: "body" in result.error ? result.error.body : undefined,
+      });
+      return;
+    }
+    resourceUpdate({
+      status: "success",
+      prm: result.prm,
+      metadataUrl: result.metadataUrl,
+    });
+    // Opportunistic: if the resource also publishes an OpenAPI document, the
+    // Resource call step can offer its operations. A 404 here is fine.
+    const operations = await fetchOpenApiOperations(resourceInput, {
+      onStart: networkAdd,
+      onFinish: networkUpdate,
+    });
+    if (operations) resourceUpdate({ operations });
+    const servers = result.prm.authorization_servers ?? [];
+    if (servers.length === 1) {
+      setIssuerInput(servers[0]);
+      await runDiscovery(servers[0]);
+    }
+  };
+
+  async function runDiscovery(issuer: string) {
     discoveryUpdate({
       status: "loading",
-      issuer: issuerInput,
+      issuer,
       errorMessage: undefined,
       errorBody: undefined,
       errorStatus: undefined,
@@ -50,7 +109,7 @@ export function DiscoveryStep() {
       durationMs: undefined,
     });
 
-    const result = await fetchDiscovery(issuerInput, {
+    const result = await fetchDiscovery(issuer, {
       onStart: (entry) => networkAdd(entry),
       onFinish: (id, patch) => networkUpdate(id, patch),
     });
@@ -104,7 +163,7 @@ export function DiscoveryStep() {
           discovery.manual.federation_registration_endpoint,
       },
     });
-  };
+  }
 
   return (
     <div className="mx-auto max-w-3xl @4xl:max-w-5xl">
@@ -115,74 +174,21 @@ export function DiscoveryStep() {
         onChange={(mode) => discoveryUpdate({ mode })}
       />
 
-      {discovery.mode === "wellknown" ? (
+      {discovery.mode === "wellknown" && (
         <>
-          <form onSubmit={onSubmit} className="mt-4 flex items-center gap-2">
-            {HAS_PRESETS && (
-              <>
-                <label className="sr-only" htmlFor="server-select">
-                  Authorization server
-                </label>
-                <Select
-                  id="server-select"
-                  className={isCustom ? "w-36 shrink-0" : "flex-1"}
-                  value={isCustom ? CUSTOM_SERVER : issuerInput}
-                  disabled={isLoading}
-                  onChange={(e) => {
-                    if (e.target.value === CUSTOM_SERVER) {
-                      setIssuerInput("");
-                      window.requestAnimationFrame(() =>
-                        document.getElementById("issuer-input")?.focus(),
-                      );
-                    } else {
-                      setIssuerInput(e.target.value);
-                    }
-                  }}
-                >
-                  {AUTH_SERVERS.map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  ))}
-                  <option value={CUSTOM_SERVER}>Custom…</option>
-                </Select>
-              </>
-            )}
-            {(!HAS_PRESETS || isCustom) && (
-              <>
-                <label className="sr-only" htmlFor="issuer-input">
-                  Issuer URL
-                </label>
-                <Input
-                  id="issuer-input"
-                  mono
-                  className="flex-1"
-                  value={issuerInput}
-                  onChange={(e) => setIssuerInput(e.target.value)}
-                  placeholder="https://your-as.example.com"
-                  disabled={isLoading}
-                  autoComplete="off"
-                  spellCheck={false}
-                />
-              </>
-            )}
-            <Button type="submit" disabled={isLoading} className="shrink-0">
-              {isLoading ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Fetching…
-                </>
-              ) : discovery.status === "success" ||
-                discovery.status === "partial" ? (
-                <>
-                  <RotateCw className="h-4 w-4" />
-                  Re-run
-                </>
-              ) : (
-                "Run discovery"
-              )}
-            </Button>
-          </form>
+          <ServerForm
+            idPrefix="issuer"
+            ariaLabel="Authorization server"
+            presets={AUTH_SERVERS}
+            value={issuerInput}
+            onChange={setIssuerInput}
+            placeholder="https://your-as.example.com"
+            loading={isLoading}
+            succeeded={
+              discovery.status === "success" || discovery.status === "partial"
+            }
+            onSubmit={onSubmit}
+          />
 
           {discovery.status === "idle" && (
             <p className="mt-2 text-[12.5px] text-muted-foreground">
@@ -197,7 +203,74 @@ export function DiscoveryStep() {
             </p>
           )}
         </>
-      ) : (
+      )}
+
+      {discovery.mode === "resource" && (
+        <>
+          <ServerForm
+            idPrefix="resource"
+            ariaLabel="Protected resource"
+            presets={RESOURCE_SERVERS}
+            value={resourceInput}
+            onChange={setResourceInput}
+            placeholder="https://api.example.com"
+            loading={resource.status === "loading" || isLoading}
+            succeeded={resource.status === "success"}
+            onSubmit={onFetchPrm}
+          />
+
+          {resource.status === "idle" && (
+            <p className="mt-2 text-[12.5px] text-muted-foreground">
+              {HAS_RESOURCE_PRESETS
+                ? "Pick a configured resource (or Custom… for any URL), then Run — "
+                : "Type a protected resource URL, then Run — "}
+              the playground fetches{" "}
+              <code className="font-mono">
+                /.well-known/oauth-protected-resource
+              </code>{" "}
+              (RFC 9728) and discovers the AS it names.
+            </p>
+          )}
+
+          {resource.status === "error" && (
+            <Banner tone="error" className="mt-4 p-4">
+              <p className="font-medium">
+                Couldn't fetch protected resource metadata
+                {resource.errorStatus ? ` (${resource.errorStatus})` : ""}.
+              </p>
+              {resource.errorMessage && (
+                <p className="mt-1 text-[12.5px] text-muted-foreground">
+                  {resource.errorMessage}
+                </p>
+              )}
+              {resource.errorBody && (
+                <pre className="mt-2 max-h-[160px] overflow-auto rounded-sm bg-background/60 p-2 font-mono text-[11.5px] leading-relaxed">
+                  {resource.errorBody}
+                </pre>
+              )}
+            </Banner>
+          )}
+
+          {resource.status === "success" && resource.prm && (
+            <PrmPanel
+              prm={resource.prm}
+              metadataUrl={resource.metadataUrl}
+              discoveredIssuer={
+                discovery.status === "success" || discovery.status === "partial"
+                  ? discovery.issuer
+                  : undefined
+              }
+              discovering={isLoading}
+              onDiscover={(as) => {
+                setIssuerInput(as);
+                void runDiscovery(as);
+              }}
+            />
+          )}
+        </>
+      )}
+
+      {discovery.mode === "manual" && (
         <ManualForm
           endpoints={discovery.manual}
           prefilled={!!discovery.metadata}
@@ -274,18 +347,29 @@ export function DiscoveryStep() {
         );
       case "partial":
       case "success":
+        // Same section grammar as the PRM card above it; in resource mode the
+        // description carries the attribution for the auto-chained second hop.
         return (
-          <SuccessPanel
-            metadata={discovery.metadata!}
-            jwks={discovery.jwks}
-            jwksError={
-              discovery.status === "partial"
-                ? discovery.errorMessage
-                : undefined
+          <Section
+            title="Authorization server metadata"
+            description={
+              discovery.mode === "resource" && resource.status === "success"
+                ? "↳ discovered from the resource metadata above"
+                : "OpenID Connect Discovery / RFC 8414"
             }
-            tab={tab}
-            setTab={setTab}
-          />
+          >
+            <SuccessPanel
+              metadata={discovery.metadata!}
+              jwks={discovery.jwks}
+              jwksError={
+                discovery.status === "partial"
+                  ? discovery.errorMessage
+                  : undefined
+              }
+              tab={tab}
+              setTab={setTab}
+            />
+          </Section>
         );
     }
   }
@@ -303,12 +387,14 @@ function StepHeader({
   );
 }
 
+type DiscoveryMode = "wellknown" | "resource" | "manual";
+
 function ModeTabs({
   mode,
   onChange,
 }: {
-  mode: "wellknown" | "manual";
-  onChange: (mode: "wellknown" | "manual") => void;
+  mode: DiscoveryMode;
+  onChange: (mode: DiscoveryMode) => void;
 }) {
   return (
     <div className="mt-4 inline-flex rounded-md border border-border bg-card p-0.5 text-[12.5px]">
@@ -316,12 +402,201 @@ function ModeTabs({
         active={mode === "wellknown"}
         onClick={() => onChange("wellknown")}
       >
-        Discovery
+        From issuer
+      </ModeTab>
+      <ModeTab
+        active={mode === "resource"}
+        onClick={() => onChange("resource")}
+      >
+        From resource
       </ModeTab>
       <ModeTab active={mode === "manual"} onClick={() => onChange("manual")}>
         Manual endpoints
       </ModeTab>
     </div>
+  );
+}
+
+// One-row well-known form shared by the issuer and resource modes: preset
+// picker + free-text input for Custom… + run button. With a single preset
+// the picker collapses to just the input. Anything not in the preset list
+// counts as custom.
+function ServerForm({
+  idPrefix,
+  ariaLabel,
+  presets,
+  value,
+  onChange,
+  placeholder,
+  loading,
+  succeeded,
+  onSubmit,
+}: {
+  idPrefix: string;
+  ariaLabel: string;
+  presets: string[];
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+  loading: boolean;
+  succeeded: boolean;
+  onSubmit: (e: FormEvent) => void;
+}) {
+  const hasPresets = presets.length > 1;
+  const isCustom = !presets.includes(value);
+  return (
+    <form onSubmit={onSubmit} className="mt-4 flex items-center gap-2">
+      {hasPresets && (
+        <>
+          <label className="sr-only" htmlFor={`${idPrefix}-select`}>
+            {ariaLabel}
+          </label>
+          <Select
+            id={`${idPrefix}-select`}
+            className={isCustom ? "w-36 shrink-0" : "flex-1"}
+            value={isCustom ? CUSTOM_SERVER : value}
+            disabled={loading}
+            onChange={(e) => {
+              if (e.target.value === CUSTOM_SERVER) {
+                onChange("");
+                window.requestAnimationFrame(() =>
+                  document.getElementById(`${idPrefix}-input`)?.focus(),
+                );
+              } else {
+                onChange(e.target.value);
+              }
+            }}
+          >
+            {presets.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+            <option value={CUSTOM_SERVER}>Custom…</option>
+          </Select>
+        </>
+      )}
+      {(!hasPresets || isCustom) && (
+        <>
+          <label className="sr-only" htmlFor={`${idPrefix}-input`}>
+            {ariaLabel} URL
+          </label>
+          <Input
+            id={`${idPrefix}-input`}
+            mono
+            className="flex-1"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={placeholder}
+            disabled={loading}
+            autoComplete="off"
+            spellCheck={false}
+          />
+        </>
+      )}
+      <Button type="submit" disabled={loading} className="shrink-0">
+        {loading ? (
+          <>
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Fetching…
+          </>
+        ) : succeeded ? (
+          <>
+            <RotateCw className="h-4 w-4" />
+            Re-run
+          </>
+        ) : (
+          "Run discovery"
+        )}
+      </Button>
+    </form>
+  );
+}
+
+// RFC 9728 Protected Resource Metadata, rendered after a successful fetch.
+// Each advertised AS gets a Discover button; with a single AS the discovery
+// already ran automatically and the button shows its result state.
+function PrmPanel({
+  prm,
+  metadataUrl,
+  discoveredIssuer,
+  discovering,
+  onDiscover,
+}: {
+  prm: PrmDocument;
+  metadataUrl?: string;
+  discoveredIssuer?: string;
+  discovering: boolean;
+  onDiscover: (issuer: string) => void;
+}) {
+  const servers = prm.authorization_servers ?? [];
+  return (
+    <Section
+      title="Protected resource metadata"
+      // Just the citation — the exact GET (full metadata URL, headers) lives
+      // in the network log, not in prose.
+      description={<span title={metadataUrl}>RFC 9728</span>}
+      className="mt-4"
+    >
+      <div className="space-y-3 text-[12.5px]">
+        <div>
+          <span className="text-muted-foreground">resource:</span>{" "}
+          <span className="font-mono">{prm.resource}</span>
+        </div>
+
+        {typeof prm.resource_name === "string" && (
+          <div>
+            <span className="text-muted-foreground">resource_name:</span>{" "}
+            {prm.resource_name}
+          </div>
+        )}
+
+        {Array.isArray(prm.scopes_supported) &&
+          prm.scopes_supported.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-muted-foreground">scopes_supported:</span>
+              {prm.scopes_supported.map((s) => (
+                <span
+                  key={s}
+                  className="rounded-full border border-border bg-muted/50 px-2 py-0.5 font-mono text-[11px]"
+                >
+                  {s}
+                </span>
+              ))}
+            </div>
+          )}
+
+        <div className="space-y-1.5">
+          <span className="text-muted-foreground">authorization_servers:</span>
+          {servers.map((as) => {
+            const discovered = discoveredIssuer === as;
+            return (
+              <div key={as} className="flex items-center gap-2">
+                <span className="min-w-0 flex-1 break-all font-mono">{as}</span>
+                <Button
+                  size="sm"
+                  variant={discovered ? "secondary" : "primary"}
+                  disabled={discovering || discovered}
+                  onClick={() => onDiscover(as)}
+                  className="shrink-0"
+                >
+                  {discovered ? "Discovered ✓" : "Discover →"}
+                </Button>
+              </div>
+            );
+          })}
+        </div>
+
+        <details className="text-[12px]">
+          <summary className="cursor-pointer select-none text-muted-foreground hover:text-foreground">
+            Raw metadata
+          </summary>
+          <pre className="mt-2 max-h-[240px] overflow-auto rounded-md border border-border bg-background/60 p-3 font-mono text-[11.5px] leading-relaxed">
+            {JSON.stringify(prm, null, 2)}
+          </pre>
+        </details>
+      </div>
+    </Section>
   );
 }
 
@@ -687,9 +962,6 @@ function SuccessPanel({
         <TabButton active={tab === "jwks"} onClick={() => setTab("jwks")}>
           JWKS ({jwks?.keys?.length ?? 0} keys)
         </TabButton>
-        <TabButton active={tab === "raw"} onClick={() => setTab("raw")}>
-          Raw metadata
-        </TabButton>
       </div>
 
       <div className="mt-4">
@@ -697,12 +969,18 @@ function SuccessPanel({
         {tab === "jwks" && (
           <JwksList keys={jwks?.keys ?? []} hasError={!!jwksError} />
         )}
-        {tab === "raw" && (
-          <pre className="max-h-[480px] overflow-auto rounded-md border border-border bg-background/60 p-3 font-mono text-[12px] leading-relaxed">
-            {JSON.stringify(metadata, null, 2)}
-          </pre>
-        )}
       </div>
+
+      {/* Raw document is a drill-down, not a coequal view — same affordance
+          as the PRM card's raw expander (and DCR's full response). */}
+      <details className="mt-4 text-[12px]">
+        <summary className="cursor-pointer select-none text-muted-foreground hover:text-foreground">
+          Raw metadata
+        </summary>
+        <pre className="mt-2 max-h-[480px] overflow-auto rounded-md border border-border bg-background/60 p-3 font-mono text-[12px] leading-relaxed">
+          {JSON.stringify(metadata, null, 2)}
+        </pre>
+      </details>
     </div>
   );
 }

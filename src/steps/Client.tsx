@@ -169,7 +169,7 @@ export function ClientStep() {
 
         <Section
           title="Authentication"
-          description="How the client proves itself at /token (and /introspect, /revoke)."
+          description="How the client proves itself to the authorization server."
         >
           <div className="space-y-5">
             <Field

@@ -28,7 +28,7 @@ const RESPONSE_MODES: Array<{ value: ResponseMode; label: string }> = [
 ];
 
 export function AuthRequestStep() {
-  const { state, authRequestUpdate, parUpdate, setActiveStep } =
+  const { state, authRequestUpdate, parUpdate, resourceUpdate, setActiveStep } =
     usePlayground();
   const req = state.authRequest;
   const metadata = state.discovery.metadata;
@@ -49,6 +49,19 @@ export function AuthRequestStep() {
 
   const jarReady = jarReadiness(client, req);
   const isValid = builtUrl.ok && req.scopes.length > 0 && jarReady.ok;
+
+  // When the flow started at a protected resource, offer its advertised
+  // scopes (RFC 9728 scopes_supported) alongside the OIDC standard set.
+  const prmScopes =
+    state.resource.status === "success"
+      ? (state.resource.prm?.scopes_supported ?? [])
+      : [];
+  const availableScopes = [
+    ...COMMON_SCOPES,
+    ...prmScopes.filter(
+      (s) => !(COMMON_SCOPES as readonly string[]).includes(s),
+    ),
+  ];
 
   const regenState = () => authRequestUpdate({ state: randomBase64Url(16) });
   const regenNonce = () => authRequestUpdate({ nonce: randomBase64Url(16) });
@@ -129,7 +142,7 @@ export function AuthRequestStep() {
           <div className="space-y-5">
             <Field label="Scopes">
               <div className="flex flex-wrap gap-x-4 gap-y-2">
-                {COMMON_SCOPES.map((s) => (
+                {availableScopes.map((s) => (
                   <Checkbox
                     key={s}
                     label={s}
@@ -138,14 +151,10 @@ export function AuthRequestStep() {
                   />
                 ))}
               </div>
-              {req.scopes.some(
-                (s) => !(COMMON_SCOPES as readonly string[]).includes(s),
-              ) && (
+              {req.scopes.some((s) => !availableScopes.includes(s)) && (
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {req.scopes
-                    .filter(
-                      (s) => !(COMMON_SCOPES as readonly string[]).includes(s),
-                    )
+                    .filter((s) => !availableScopes.includes(s))
                     .map((s) => (
                       <button
                         type="button"
@@ -226,6 +235,26 @@ export function AuthRequestStep() {
                 </Select>
               </Field>
             </div>
+
+            {state.resource.status === "success" && state.resource.prm && (
+              <div>
+                <Checkbox
+                  label="resource indicator (RFC 8707)"
+                  checked={state.resource.indicatorEnabled}
+                  onChange={(e) =>
+                    resourceUpdate({ indicatorEnabled: e.target.checked })
+                  }
+                />
+                <p className="mt-1 pl-6 font-mono text-[11.5px] text-muted-foreground">
+                  resource={state.resource.prm.resource}
+                </p>
+                <p className="mt-1 pl-6 text-[12px] text-muted-foreground">
+                  Audience-restricts the token to the protected resource
+                  discovered in step 1; sent on the authorize and token
+                  requests.
+                </p>
+              </div>
+            )}
           </div>
         </Section>
 
@@ -234,7 +263,7 @@ export function AuthRequestStep() {
           description={
             parSupported
               ? "PKCE is on by default — leave it on unless the AS can't handle it. PAR adds a step that pushes the request to the AS first."
-              : "PKCE is on by default — leave it on unless the AS can't handle it. PAR is unavailable: this AS doesn't advertise a /par endpoint."
+              : "PKCE is on by default — leave it on unless the AS can't handle it. PAR is unavailable: this AS doesn't advertise a PAR endpoint."
           }
         >
           <div className="flex flex-wrap gap-x-6 gap-y-2">

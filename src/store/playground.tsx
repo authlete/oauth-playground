@@ -29,6 +29,7 @@ import {
   DEFAULT_PAR,
   DEFAULT_REFRESH,
   DEFAULT_RESOURCE_CALL,
+  DEFAULT_RESOURCE_CONTEXT,
   DEFAULT_REVOKE,
   DEFAULT_TOKEN,
   DEFAULT_USERINFO,
@@ -46,6 +47,7 @@ import {
   type ParState,
   type RefreshState,
   type ResourceCallState,
+  type ResourceContextState,
   type RevokeState,
   type StepId,
   type StepStatus,
@@ -61,6 +63,8 @@ interface State {
   /** Right-pane visibility. Starts collapsed; auto-expands on first request. */
   networkCollapsed: boolean;
   discovery: DiscoveryState;
+  /** RFC 9728 context when the flow started at a protected resource. */
+  resource: ResourceContextState;
   client: ClientConfigState;
   dcrRegister: DcrRegisterState;
   federationRegister: FederationRegisterState;
@@ -86,6 +90,7 @@ type Action =
   | { type: "network-set-collapsed"; collapsed: boolean }
   | { type: "discovery-update"; patch: Partial<DiscoveryState> }
   | { type: "discovery-reset" }
+  | { type: "resource-update"; patch: Partial<ResourceContextState> }
   | { type: "client-update"; patch: Partial<ClientConfigState> }
   | { type: "dcr-register-update"; patch: Partial<DcrRegisterState> }
   | {
@@ -172,10 +177,13 @@ function loadPersistedAuthRequest(): PersistedAuthRequest | null {
   return null;
 }
 
-function loadPersistedDiscoveryMode(): "wellknown" | "manual" | null {
+function loadPersistedDiscoveryMode():
+  "wellknown" | "manual" | "resource" | null {
   if (typeof window === "undefined") return null;
   const raw = window.localStorage.getItem(DISCOVERY_MODE_PERSIST_KEY);
-  return raw === "manual" || raw === "wellknown" ? raw : null;
+  return raw === "manual" || raw === "wellknown" || raw === "resource"
+    ? raw
+    : null;
 }
 
 function loadPersistedManualEndpoints(): ManualEndpoints | null {
@@ -191,7 +199,7 @@ function loadPersistedManualEndpoints(): ManualEndpoints | null {
 }
 
 function persistDiscovery(
-  mode: "wellknown" | "manual",
+  mode: DiscoveryState["mode"],
   manual: ManualEndpoints,
 ) {
   if (typeof window === "undefined") return;
@@ -256,6 +264,7 @@ const initialState: State = {
     mode: "wellknown",
     manual: { ...EMPTY_MANUAL_ENDPOINTS },
   },
+  resource: DEFAULT_RESOURCE_CONTEXT,
   client: DEFAULT_CLIENT_CONFIG,
   dcrRegister: DEFAULT_DCR_REGISTER,
   federationRegister: DEFAULT_FEDERATION_REGISTER,
@@ -323,6 +332,8 @@ function reducer(state: State, action: Action): State {
       return { ...state, networkCollapsed: action.collapsed };
     case "discovery-update":
       return { ...state, discovery: { ...state.discovery, ...action.patch } };
+    case "resource-update":
+      return { ...state, resource: { ...state.resource, ...action.patch } };
     case "discovery-reset":
       return {
         ...state,
@@ -386,6 +397,7 @@ interface PlaygroundContextValue {
   networkSetCollapsed: (collapsed: boolean) => void;
   discoveryUpdate: (patch: Partial<DiscoveryState>) => void;
   discoveryReset: () => void;
+  resourceUpdate: (patch: Partial<ResourceContextState>) => void;
   clientUpdate: (patch: Partial<ClientConfigState>) => void;
   dcrRegisterUpdate: (patch: Partial<DcrRegisterState>) => void;
   federationRegisterUpdate: (patch: Partial<FederationRegisterState>) => void;
@@ -507,6 +519,26 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
     state.authRequest.prompt,
     state.authRequest.loginHint,
     state.authRequest.maxAge,
+  ]);
+
+  // Derive the RFC 8707 resource indicator from the resource context: set
+  // when a PRM was loaded and the toggle is on, cleared otherwise. Downstream
+  // (authorize URL, PAR, JAR, token exchange) all read authRequest.resource.
+  useEffect(() => {
+    const next =
+      state.resource.status === "success" &&
+      state.resource.indicatorEnabled &&
+      state.resource.prm
+        ? state.resource.prm.resource
+        : "";
+    if (state.authRequest.resource !== next) {
+      dispatch({ type: "auth-request-update", patch: { resource: next } });
+    }
+  }, [
+    state.resource.status,
+    state.resource.indicatorEnabled,
+    state.resource.prm,
+    state.authRequest.resource,
   ]);
 
   // Seed state, nonce, and PKCE globally so the Authorize URL is complete
@@ -723,6 +755,11 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
     () => dispatch({ type: "discovery-reset" }),
     [],
   );
+  const resourceUpdate = useCallback(
+    (patch: Partial<ResourceContextState>) =>
+      dispatch({ type: "resource-update", patch }),
+    [],
+  );
   const clientUpdate = useCallback(
     (patch: Partial<ClientConfigState>) =>
       dispatch({ type: "client-update", patch }),
@@ -799,6 +836,7 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
       networkSetCollapsed,
       discoveryUpdate,
       discoveryReset,
+      resourceUpdate,
       clientUpdate,
       dcrRegisterUpdate,
       federationRegisterUpdate,
@@ -825,6 +863,7 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
       networkSetCollapsed,
       discoveryUpdate,
       discoveryReset,
+      resourceUpdate,
       clientUpdate,
       dcrRegisterUpdate,
       federationRegisterUpdate,

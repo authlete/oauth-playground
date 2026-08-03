@@ -6,13 +6,15 @@ type SelectProps = SelectHTMLAttributes<HTMLSelectElement>;
 
 export const Select = forwardRef<HTMLSelectElement, SelectProps>(
   ({ className, children, ...rest }, ref) => (
-    <div className="relative">
+    // className goes on the wrapper — it's the element that participates in
+    // the parent's layout (flex-1/w-* from callers must land here, not on
+    // the inner <select>, which always fills the wrapper).
+    <div className={cn("relative", className)}>
       <select
         ref={ref}
         className={cn(
           "h-9 w-full appearance-none rounded-md border border-border bg-background px-3 pr-8 text-sm",
           "disabled:cursor-not-allowed disabled:opacity-60",
-          className,
         )}
         {...rest}
       >

@@ -48,9 +48,12 @@ export const STEPS: StepDef[] = [
   { id: "token", number: 5, name: "Token exchange" },
   // Passive JWT viewer hanging off Token exchange; usable with any pasted JWT.
   { id: "inspect", name: "Token inspector", nested: true },
-  { id: "userinfo", number: 6, name: "UserInfo" },
-  { id: "introspect", number: 7, name: "Introspection" },
-  { id: "resource", number: 8, name: "Resource call" },
+  // The payoff comes right after the mint: the token was issued to call the
+  // resource. UserInfo is the OIDC-flavored resource; Introspection follows
+  // as "what the RS saw when it validated your token".
+  { id: "resource", number: 6, name: "Resource call" },
+  { id: "userinfo", number: 7, name: "UserInfo" },
+  { id: "introspect", number: 8, name: "Introspection" },
   { id: "refresh", number: 9, name: "Refresh" },
   { id: "revoke", number: 10, name: "Revoke" },
 ];
@@ -122,9 +125,63 @@ export interface DiscoveryState {
   errorBody?: string;
   errorStatus?: number;
   durationMs?: number;
-  mode: "wellknown" | "manual";
+  mode: "wellknown" | "manual" | "resource";
   manual: ManualEndpoints;
 }
+
+// RFC 9728 OAuth 2.0 Protected Resource Metadata.
+export interface PrmDocument {
+  resource: string;
+  authorization_servers?: string[];
+  scopes_supported?: string[];
+  bearer_methods_supported?: string[];
+  resource_name?: string;
+  resource_documentation?: string;
+  [key: string]: unknown;
+}
+
+export type ResourceContextStatus = "idle" | "loading" | "success" | "error";
+
+// One operation from the resource's OpenAPI document — enough to fill the
+// Resource call request builder and tell the scope story per operation.
+export interface ResourceOperation {
+  method: HttpMethod;
+  /** Templated path as documented, e.g. /api/accounts/{id}/balance. */
+  path: string;
+  /** Path with parameter examples substituted (falls back to the template
+   * when the document has none) — what the Use button actually fills. */
+  filledPath: string;
+  summary?: string;
+  scopes: string[];
+  /** Pretty-printed JSON example for the request body, when the document
+   * provides one. */
+  requestBodyExample?: string;
+}
+
+// Set when the flow starts at a protected resource ("From resource" mode in
+// Discovery). Downstream: Auth request derives the RFC 8707 resource param
+// from it, and Resource call prefills its target.
+export interface ResourceContextState {
+  status: ResourceContextStatus;
+  /** Resource URL as typed by the user. */
+  url: string;
+  metadataUrl?: string;
+  prm?: PrmDocument;
+  /** Send the RFC 8707 resource parameter in authorize/PAR/token requests. */
+  indicatorEnabled: boolean;
+  /** Operations advertised by the resource's OpenAPI document (probed at
+   * {resource}/openapi.json after a PRM fetch; absent when it has none). */
+  operations?: ResourceOperation[];
+  errorMessage?: string;
+  errorStatus?: number;
+  errorBody?: string;
+}
+
+export const DEFAULT_RESOURCE_CONTEXT: ResourceContextState = {
+  status: "idle",
+  url: "",
+  indicatorEnabled: true,
+};
 
 export interface ManualEndpoints {
   issuer: string;
@@ -204,6 +261,10 @@ export interface AuthRequestState {
   // intermediates, Trust Anchor entity configuration). Sent verbatim as the
   // value of the `trust_chain` request parameter.
   trustChain: string;
+  // RFC 8707 resource indicator. Derived by the store from the resource
+  // context (never persisted, never edited directly) — empty means "don't
+  // send the parameter".
+  resource: string;
 }
 
 export const COMMON_SCOPES = [
@@ -230,6 +291,7 @@ export const DEFAULT_AUTH_REQUEST: AuthRequestState = {
   loginHint: "",
   maxAge: "",
   trustChain: "",
+  resource: "",
 };
 
 export type AuthorizeStatus = "idle" | "waiting" | "received" | "error";

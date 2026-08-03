@@ -60,14 +60,15 @@ function classifyFetchError(err: unknown): DiscoveryError {
   };
 }
 
-interface RunFetchOptions {
+export interface RunFetchOptions {
   method: "GET";
   url: string;
   onStart: (entry: NetworkEntry) => void;
   onFinish: (id: string, patch: Partial<NetworkEntry>) => void;
 }
 
-async function runFetch(
+// Shared by prm.ts (RFC 9728) — same logging, same CORS-vs-network heuristics.
+export async function runFetch(
   opts: RunFetchOptions,
 ): Promise<
   | { ok: true; status: number; body: string; headers: Record<string, string> }

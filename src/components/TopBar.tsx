@@ -49,6 +49,14 @@ export function TopBar() {
 
       {discoveredAt && (
         <div className="ml-6 flex min-w-0 items-center gap-2">
+          {state.resource.status === "success" && state.resource.prm && (
+            <ContextPill
+              label="RS"
+              value={stripScheme(state.resource.prm.resource)}
+              title={state.resource.prm.resource}
+              onClick={() => setActiveStep("discovery")}
+            />
+          )}
           <ContextPill
             label="AS"
             value={stripScheme(discoveredAt)}

@@ -271,7 +271,7 @@ export function DcrRegisterStep() {
 
             <Section
               title="Request body"
-              description="POSTed as JSON to the registration endpoint."
+              description="Sent as JSON to the registration endpoint."
             >
               <pre className="max-h-[220px] overflow-auto rounded-md border border-border bg-background/60 p-3 font-mono text-[11.5px] leading-relaxed">
                 {JSON.stringify(request, null, 2)}

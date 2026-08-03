@@ -60,6 +60,11 @@ export async function exchangeCode(
   if (input.authRequest.pkceEnabled && input.authRequest.codeVerifier) {
     body.set("code_verifier", input.authRequest.codeVerifier);
   }
+  // RFC 8707: repeat the resource indicator at the token endpoint so the
+  // issued access token is audience-restricted to it.
+  if (input.authRequest.resource.trim()) {
+    body.set("resource", input.authRequest.resource.trim());
+  }
 
   const headers = new Headers({
     "Content-Type": "application/x-www-form-urlencoded",

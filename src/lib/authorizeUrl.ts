@@ -35,6 +35,9 @@ export function buildAuthorizeParams(
     params.set("code_challenge", req.codeChallenge);
     params.set("code_challenge_method", "S256");
   }
+  // RFC 8707 resource indicator — set from Protected Resource Metadata when
+  // the flow started at a resource (RFC 9728); audience-restricts the token.
+  if (req.resource.trim()) params.set("resource", req.resource.trim());
   if (req.prompt.trim()) params.set("prompt", req.prompt.trim());
   if (req.maxAge.trim()) params.set("max_age", req.maxAge.trim());
   if (req.loginHint.trim()) params.set("login_hint", req.loginHint.trim());
