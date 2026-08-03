@@ -28,7 +28,7 @@ const AUTH_METHODS: Array<{ value: ClientAuthMethod; label: string; hint: string
   {
     value: "client_secret_basic",
     label: "client_secret_basic",
-    hint: "Sends client_id:client_secret as HTTP Basic on /token. RFC 6749 §2.3.1.",
+    hint: "Sends client_id:client_secret as HTTP Basic on /token. RFC 6749, Section 2.3.1.",
   },
   {
     value: "client_secret_post",
@@ -99,7 +99,7 @@ export function ClientStep() {
   const validation = useMemo(() => validateClientConfig(cfg), [cfg]);
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="mx-auto max-w-3xl @4xl:max-w-5xl">
       <StepHeader
         step="client"
         right={

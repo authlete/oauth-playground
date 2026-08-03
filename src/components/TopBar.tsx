@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Moon, Sun, HelpCircle, X } from "lucide-react";
+import { AlertTriangle, Moon, Sun, HelpCircle, X } from "lucide-react";
 import { usePlayground } from "../store/playground";
 import { Button } from "./ui/Button";
 import { cn } from "../lib/cn";
@@ -7,6 +7,17 @@ import { cn } from "../lib/cn";
 export function TopBar() {
   const { state, toggleTheme, setActiveStep } = usePlayground();
   const [helpOpen, setHelpOpen] = useState(false);
+
+  // The AS pill shows where discovery actually ran (the operator's reality),
+  // not the issuer the metadata declares — those can differ (e.g. an AS
+  // deployed on one host declaring an authlete.com issuer), and when they do
+  // the mismatch is surfaced because it predicts iss-check behavior later.
+  const discoveredAt = state.discovery.metadata ? state.discovery.issuer : null;
+  const declaredIssuer = state.discovery.metadata?.issuer ?? null;
+  const issuerMismatch =
+    !!discoveredAt &&
+    !!declaredIssuer &&
+    normalizeIssuer(discoveredAt) !== normalizeIssuer(declaredIssuer);
 
   // "?" toggles help (documented in the popover itself). Ignored while typing.
   useEffect(() => {
@@ -27,16 +38,6 @@ export function TopBar() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
-  const issuerHost = (() => {
-    try {
-      return state.discovery.metadata
-        ? new URL(state.discovery.metadata.issuer).host
-        : null;
-    } catch {
-      return null;
-    }
-  })();
-
   return (
     <header className="flex h-12 shrink-0 items-center border-b border-border bg-card px-3">
       <div className="flex items-center gap-2.5">
@@ -46,17 +47,24 @@ export function TopBar() {
         </span>
       </div>
 
-      {issuerHost && (
-        <div className="ml-6 flex items-center gap-2">
+      {discoveredAt && (
+        <div className="ml-6 flex min-w-0 items-center gap-2">
           <ContextPill
             label="AS"
-            value={issuerHost}
+            value={stripScheme(discoveredAt)}
+            warn={issuerMismatch}
+            title={
+              issuerMismatch
+                ? `Discovered at ${discoveredAt} — but the metadata declares issuer ${declaredIssuer}. iss checks (RFC 9207, ID token) will use the declared value.`
+                : discoveredAt
+            }
             onClick={() => setActiveStep("discovery")}
           />
           {state.stepStatus.client === "valid" && state.client.clientId && (
             <ContextPill
               label="Client"
               value={state.client.clientId}
+              title={state.client.clientId}
               onClick={() => setActiveStep("client")}
             />
           )}
@@ -174,23 +182,45 @@ function BrandSquare() {
 function ContextPill({
   label,
   value,
+  title,
+  warn,
   onClick,
 }: {
   label: string;
   value: string;
+  title?: string;
+  warn?: boolean;
   onClick?: () => void;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
+      title={title}
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-2 py-1",
+        "inline-flex min-w-0 items-center gap-1.5 rounded-md border bg-background px-2 py-1",
         "text-[12px] hover:bg-accent transition-colors",
+        warn ? "border-[var(--status-warn)]/50" : "border-border",
       )}
     >
-      <span className="text-muted-foreground">{label}:</span>
-      <span className="font-mono">{value}</span>
+      <span className="shrink-0 text-muted-foreground">{label}:</span>
+      <span className="max-w-[340px] truncate font-mono">{value}</span>
+      {warn && (
+        <AlertTriangle
+          className="h-3 w-3 shrink-0 text-[var(--status-warn)]"
+          aria-label="Declared issuer differs from the discovery URL"
+        />
+      )}
     </button>
   );
+}
+
+// Issuer comparison ignores the two differences that never matter: scheme
+// casing and a trailing slash.
+function normalizeIssuer(url: string): string {
+  return url.trim().toLowerCase().replace(/\/+$/, "");
+}
+
+function stripScheme(url: string): string {
+  return url.trim().replace(/^https?:\/\//i, "").replace(/\/+$/, "");
 }

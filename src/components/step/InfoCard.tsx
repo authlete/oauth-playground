@@ -1,30 +1,40 @@
 import { type ReactNode } from "react";
-import { cn } from "../../lib/cn";
+import { Section } from "./Section";
 
 export interface InfoCardProps {
-  /** Small uppercase label shown at the top. */
-  label?: string;
-  /** Optional monospace URL shown below the label. */
+  /** Section-style title (e.g. "Request", "About to authorize"). */
+  label: string;
+  /** One-line explanation, rendered in the Section's description slot. */
+  description?: ReactNode;
+  /** HTTP method rendered before the URL (muted). */
+  method?: string;
+  /** Endpoint URL shown as the first content line, full-width and breakable. */
   url?: string;
   children?: ReactNode;
   className?: string;
 }
 
-export function InfoCard({ label, url, children, className }: InfoCardProps) {
+/** Context card for "here's what this step is about to do" — a Section under
+ * the hood, so it follows the same two-level layout as the form sections. */
+export function InfoCard({
+  label,
+  description,
+  method,
+  url,
+  children,
+  className,
+}: InfoCardProps) {
   return (
-    <div
-      className={cn(
-        "rounded-md border border-border bg-card/40 p-3 text-[12px]",
-        className,
-      )}
-    >
-      {label && (
-        <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-          {label}
-        </div>
-      )}
-      {url && <p className="mt-1 break-all font-mono">{url}</p>}
-      {children && <div className={cn(label || url ? "mt-2" : "")}>{children}</div>}
-    </div>
+    <Section title={label} description={description} className={className}>
+      <div className="space-y-3 text-[12.5px]">
+        {url && (
+          <p className="break-all font-mono text-[12px]">
+            {method && <span className="text-muted-foreground">{method} </span>}
+            {url}
+          </p>
+        )}
+        {children}
+      </div>
+    </Section>
   );
 }

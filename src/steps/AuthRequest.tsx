@@ -102,7 +102,7 @@ export function AuthRequestStep() {
   };
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="mx-auto max-w-3xl @4xl:max-w-5xl">
       <Header valid={isValid} />
 
       {!metadata && (
@@ -123,7 +123,10 @@ export function AuthRequestStep() {
       )}
 
       <div className="mt-6 space-y-4">
-        <Section title="Request parameters">
+        <Section
+          title="Request parameters"
+          description="What to ask the AS for, and how it should return the response."
+        >
           <div className="space-y-5">
             <Field label="Scopes">
               <div className="flex flex-wrap gap-x-4 gap-y-2">
@@ -400,60 +403,71 @@ function AdvancedExpander({
     () => validateTrustChain(req.trustChain),
     [req.trustChain],
   );
+  // A disclosure, not a Section — optional params shouldn't carry permanent
+  // visual weight. Once open, though, the body follows the same two-level
+  // grammar as the Sections around it (description left, controls right).
   return (
-    <details className="rounded-md border border-border bg-card/40 px-3 py-2 text-[13px]">
-      <summary className="cursor-pointer select-none text-muted-foreground hover:text-foreground">
-        Advanced (prompt, max_age, login_hint, trust_chain)
+    <details className="rounded-lg border border-border bg-muted/20 p-4 text-[13px] @4xl:px-5">
+      <summary className="cursor-pointer select-none text-[13px] font-semibold leading-5">
+        Advanced{" "}
+        <span className="font-normal text-muted-foreground">
+          (prompt, max_age, login_hint, trust_chain)
+        </span>
       </summary>
-      <div className="mt-3 grid grid-cols-3 gap-3">
-        <Field label="prompt" hint="none, login, consent, select_account">
-          <Input
-            mono
-            value={req.prompt}
-            onChange={(e) => update({ prompt: e.target.value })}
-            placeholder=""
-            className="h-8"
-          />
-        </Field>
-        <Field label="max_age" hint="Seconds since user authentication.">
-          <Input
-            mono
-            inputMode="numeric"
-            value={req.maxAge}
-            onChange={(e) => update({ maxAge: e.target.value })}
-            placeholder=""
-            className="h-8"
-          />
-        </Field>
-        <Field label="login_hint" hint="Hint about the user account.">
-          <Input
-            mono
-            value={req.loginHint}
-            onChange={(e) => update({ loginHint: e.target.value })}
-            placeholder=""
-            className="h-8"
-          />
-        </Field>
-      </div>
-      <div className="mt-3">
-        <Field
-          label="trust_chain"
-          hint="OpenID Federation: JSON array of entity statement JWTs — [RP, intermediates…, Trust Anchor]."
-        >
-          <Textarea
-            rows={4}
-            spellCheck={false}
-            className="font-mono text-[11.5px]"
-            value={req.trustChain}
-            onChange={(e) => update({ trustChain: e.target.value })}
-            placeholder='[ "eyJhbGciOi...", "eyJhbGciOi..." ]'
-          />
-          {trustChainWarning && (
-            <p className="mt-1 text-[11.5px] text-[var(--status-warn)]">
-              {trustChainWarning}
-            </p>
-          )}
-        </Field>
+      <div className="mt-4 @4xl:grid @4xl:grid-cols-[220px_1fr] @4xl:gap-8">
+        <p className="mb-4 text-[12px] leading-relaxed text-muted-foreground @4xl:mb-0">
+          Rarely-needed request parameters — sent only when non-empty.
+        </p>
+        <div className="min-w-0 space-y-4">
+          <div className="grid grid-cols-3 gap-3">
+            <Field label="prompt" hint="none, login, consent, select_account">
+              <Input
+                mono
+                value={req.prompt}
+                onChange={(e) => update({ prompt: e.target.value })}
+                placeholder=""
+                className="h-8"
+              />
+            </Field>
+            <Field label="max_age" hint="Seconds since user authentication.">
+              <Input
+                mono
+                inputMode="numeric"
+                value={req.maxAge}
+                onChange={(e) => update({ maxAge: e.target.value })}
+                placeholder=""
+                className="h-8"
+              />
+            </Field>
+            <Field label="login_hint" hint="Hint about the user account.">
+              <Input
+                mono
+                value={req.loginHint}
+                onChange={(e) => update({ loginHint: e.target.value })}
+                placeholder=""
+                className="h-8"
+              />
+            </Field>
+          </div>
+          <Field
+            label="trust_chain"
+            hint="OpenID Federation: JSON array of entity statement JWTs — [RP, intermediates…, Trust Anchor]."
+          >
+            <Textarea
+              rows={4}
+              spellCheck={false}
+              className="font-mono text-[11.5px]"
+              value={req.trustChain}
+              onChange={(e) => update({ trustChain: e.target.value })}
+              placeholder='[ "eyJhbGciOi...", "eyJhbGciOi..." ]'
+            />
+            {trustChainWarning && (
+              <p className="mt-1 text-[11.5px] text-[var(--status-warn)]">
+                {trustChainWarning}
+              </p>
+            )}
+          </Field>
+        </div>
       </div>
     </details>
   );
@@ -480,26 +494,34 @@ function RequestObjectPanel({
         }`
       : "signing…";
   return (
-    <details className="rounded-md border border-border bg-card/40 px-3 py-2 text-[13px]">
-      <summary className="flex cursor-pointer select-none items-baseline justify-between gap-3 text-muted-foreground hover:text-foreground">
-        <span>Decoded request object (JAR)</span>
-        <span className="font-mono text-[11px]">{summary}</span>
+    <details className="rounded-lg border border-border bg-muted/20 p-4 text-[13px] @4xl:px-5">
+      <summary className="flex cursor-pointer select-none items-baseline justify-between gap-3">
+        <span className="text-[13px] font-semibold leading-5">
+          Decoded request object{" "}
+          <span className="font-normal text-muted-foreground">(JAR)</span>
+        </span>
+        <span className="font-mono text-[11px] text-muted-foreground">{summary}</span>
       </summary>
-      <div className="mt-3">
-        {req.requestObjectError ? (
-          <div className="rounded-md border border-[var(--status-error)]/40 bg-[color-mix(in_oklch,var(--status-error)_8%,transparent)] p-3 text-[12.5px]">
-            {req.requestObjectError}
-          </div>
-        ) : signed ? (
-          <JwtPanel
-            jwt={signed}
-            payloadSubtitle={issuer ? `aud=${issuer}` : undefined}
-          />
-        ) : (
-          <div className="rounded-md border border-border bg-muted/40 p-3 text-[12.5px] text-muted-foreground">
-            Signing…
-          </div>
-        )}
+      <div className="mt-4 @4xl:grid @4xl:grid-cols-[220px_1fr] @4xl:gap-8">
+        <p className="mb-4 text-[12px] leading-relaxed text-muted-foreground @4xl:mb-0">
+          The signed JWT the request carries — re-signed on every relevant edit.
+        </p>
+        <div className="min-w-0">
+          {req.requestObjectError ? (
+            <div className="rounded-md border border-[var(--status-error)]/40 bg-[color-mix(in_oklch,var(--status-error)_8%,transparent)] p-3 text-[12.5px]">
+              {req.requestObjectError}
+            </div>
+          ) : signed ? (
+            <JwtPanel
+              jwt={signed}
+              payloadSubtitle={issuer ? `aud=${issuer}` : undefined}
+            />
+          ) : (
+            <div className="rounded-md border border-border bg-muted/40 p-3 text-[12.5px] text-muted-foreground">
+              Signing…
+            </div>
+          )}
+        </div>
       </div>
     </details>
   );

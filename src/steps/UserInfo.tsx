@@ -72,7 +72,7 @@ export function UserInfoStep() {
   };
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="mx-auto max-w-3xl @4xl:max-w-5xl">
       <StepHeader step="userinfo" right={renderPill(info.status)} />
 
       {!accessToken && (
@@ -99,7 +99,13 @@ export function UserInfoStep() {
       )}
 
       {endpoint && (
-        <InfoCard label="Will GET" url={endpoint} className="mt-5">
+        <InfoCard
+          label="Request"
+          description="Fetches the user's claims with the access token."
+          method="GET"
+          url={endpoint}
+          className="mt-5"
+        >
           <p className="text-muted-foreground">
             With <code className="font-mono">Authorization: Bearer ...</code>
           </p>

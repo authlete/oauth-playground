@@ -15,6 +15,7 @@ import {
   ErrorPanel,
   InfoCard,
   JwtPanel,
+  Section,
   StatusPill,
   StepHeader,
   type StatusTone,
@@ -96,12 +97,8 @@ export function FederationRegisterStep() {
   }, [reg.status, reg.responseJwt]);
 
   return (
-    <div className="mx-auto max-w-3xl">
-      <StepHeader
-        step="federation-register"
-        titleSuffix="branches off Client config"
-        right={renderPill(reg.status)}
-      />
+    <div className="mx-auto max-w-3xl @4xl:max-w-5xl">
+      <StepHeader step="federation-register" right={renderPill(reg.status)} />
 
       {!endpoint && (
         <Banner tone="warn" className="mt-5">
@@ -110,40 +107,43 @@ export function FederationRegisterStep() {
       )}
 
       {endpoint && (
-        <InfoCard label="Will POST" url={endpoint} className="mt-5">
-          <p className="text-muted-foreground">
-            OpenID Federation 1.0 Explicit Client Registration.
-          </p>
-        </InfoCard>
+        <InfoCard
+          label="Request"
+          description="OpenID Federation 1.0 Explicit Client Registration."
+          method="POST"
+          url={endpoint}
+          className="mt-5"
+        />
       )}
 
-      <div className="mt-5 flex gap-2">
-        {MODES.map((m) => (
-          <ModeTab
-            key={m.id}
-            active={reg.mode === m.id}
-            label={m.label}
-            onClick={() => federationRegisterUpdate({ mode: m.id })}
-          />
-        ))}
-      </div>
-
-      <p className="mt-2 text-[12.5px] text-muted-foreground">
-        {MODES.find((m) => m.id === reg.mode)?.hint}
-      </p>
-
-      <Textarea
-        className="mt-2 font-mono text-[12px]"
-        rows={8}
-        spellCheck={false}
-        placeholder={
-          reg.mode === "entity-config"
-            ? "eyJhbGciOiJSUzI1NiIsImtpZCI6Ii4uLiJ9..."
-            : '[ "eyJhbGciOi...", "eyJhbGciOi...", "eyJhbGciOi..." ]'
-        }
-        value={reg.payload}
-        onChange={(e) => federationRegisterUpdate({ payload: e.target.value })}
-      />
+      <Section
+        title="Payload"
+        description={MODES.find((m) => m.id === reg.mode)?.hint}
+        className="mt-4"
+      >
+        <div className="flex gap-2">
+          {MODES.map((m) => (
+            <ModeTab
+              key={m.id}
+              active={reg.mode === m.id}
+              label={m.label}
+              onClick={() => federationRegisterUpdate({ mode: m.id })}
+            />
+          ))}
+        </div>
+        <Textarea
+          className="mt-3 font-mono text-[12px]"
+          rows={8}
+          spellCheck={false}
+          placeholder={
+            reg.mode === "entity-config"
+              ? "eyJhbGciOiJSUzI1NiIsImtpZCI6Ii4uLiJ9..."
+              : '[ "eyJhbGciOi...", "eyJhbGciOi...", "eyJhbGciOi..." ]'
+          }
+          value={reg.payload}
+          onChange={(e) => federationRegisterUpdate({ payload: e.target.value })}
+        />
+      </Section>
 
       <div className="mt-4 flex flex-wrap gap-2">
         {reg.status === "loading" ? (

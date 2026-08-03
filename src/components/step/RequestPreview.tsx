@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { Check, Copy } from "lucide-react";
 import { Button } from "../ui/Button";
+import { Section } from "./Section";
 import { formatFormBody, prettyUrl, type PreviewBlock } from "../../lib/requestPreview";
-import { cn } from "../../lib/cn";
 
+/** Wire-level request preview — a Section under the hood so it matches the
+ * form sections around it; the copy button rides in the header/action slot. */
 export function RequestPreview({
   block,
   className,
@@ -25,16 +27,11 @@ export function RequestPreview({
   };
 
   return (
-    <div
-      className={cn(
-        "rounded-md border border-border bg-card/40 text-[12px]",
-        className,
-      )}
-    >
-      <div className="flex items-center justify-between border-b border-border/60 px-3 py-2">
-        <span className="text-[11px] uppercase tracking-wide text-muted-foreground">
-          Final request
-        </span>
+    <Section
+      title="Final request"
+      description="The exact request on the wire — method, headers, body."
+      className={className}
+      action={
         <Button variant="ghost" size="sm" onClick={onCopy}>
           {copied ? (
             <>
@@ -46,18 +43,19 @@ export function RequestPreview({
             </>
           )}
         </Button>
-      </div>
-      <pre className="overflow-auto px-3 py-2.5 font-mono text-[11.5px] leading-relaxed">
+      }
+    >
+      <pre className="overflow-auto rounded-md border border-border bg-background/60 px-3 py-2.5 font-mono text-[11.5px] leading-relaxed">
         {text}
       </pre>
       {block.notes && block.notes.length > 0 && (
-        <div className="border-t border-border/60 px-3 py-2 text-[11.5px] text-muted-foreground">
+        <div className="mt-2 text-[11.5px] text-muted-foreground">
           {block.notes.map((n, i) => (
             <p key={i}>{n}</p>
           ))}
         </div>
       )}
-    </div>
+    </Section>
   );
 }
 

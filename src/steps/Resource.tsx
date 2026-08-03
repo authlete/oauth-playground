@@ -82,7 +82,7 @@ export function ResourceStep() {
   const hasBearer = rc.attachBearer && !!state.token.accessToken;
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="mx-auto max-w-3xl @4xl:max-w-5xl">
       <StepHeader step="resource" right={renderPill(rc.status)} />
 
       <div className="mt-5">

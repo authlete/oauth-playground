@@ -91,7 +91,7 @@ export function RefreshStep() {
   };
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="mx-auto max-w-3xl @4xl:max-w-5xl">
       <StepHeader step="refresh" right={renderPill(ref.status)} />
 
       {!refreshToken && (
@@ -114,29 +114,34 @@ export function RefreshStep() {
 
       {refreshToken && endpoint && (
         <>
-          <InfoCard label="Will POST to" url={endpoint} className="mt-5">
-            <KVGrid className="mt-2">
+          <InfoCard
+            label="Request"
+            description="grant_type=refresh_token — rotates the tokens held by Token exchange."
+            method="POST"
+            url={endpoint}
+            className="mt-5"
+          >
+            <KVGrid>
               <KVRow label="grant_type">refresh_token</KVRow>
               <KVRow label="refresh_token">{shorten(refreshToken, 10, 6)}</KVRow>
               <KVRow label="client auth">{state.client.authMethod}</KVRow>
             </KVGrid>
+            <div>
+              <label className="mb-1.5 block text-[12.5px] font-medium">
+                Downscope (optional)
+              </label>
+              <Input
+                mono
+                value={ref.downscope}
+                onChange={(e) => refreshUpdate({ downscope: e.target.value })}
+                placeholder="e.g. openid (subset of original)"
+              />
+              <p className="mt-1 text-[12px] text-muted-foreground">
+                The AS may issue a narrower access token. Leave blank to keep the
+                original scopes.
+              </p>
+            </div>
           </InfoCard>
-
-          <div className="mt-4">
-            <label className="mb-1.5 block text-[12.5px] font-medium">
-              Downscope (optional)
-            </label>
-            <Input
-              mono
-              value={ref.downscope}
-              onChange={(e) => refreshUpdate({ downscope: e.target.value })}
-              placeholder="e.g. openid (subset of original)"
-            />
-            <p className="mt-1 text-[12px] text-muted-foreground">
-              The AS may issue a narrower access token. Leave blank to keep the
-              original scopes.
-            </p>
-          </div>
 
           <div className="mt-5 flex flex-wrap gap-2">
             {ref.status === "loading" ? (

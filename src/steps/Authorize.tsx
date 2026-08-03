@@ -193,7 +193,7 @@ export function AuthorizeStep() {
   };
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="mx-auto max-w-3xl @4xl:max-w-5xl">
       <StepHeader
         step="authorize"
         titleSuffix="opens the AS, catches the callback"
@@ -231,12 +231,28 @@ export function AuthorizeStep() {
       )}
 
       {state.authRequest.state && (
-        <InfoCard label="About to authorize" className="mt-5">
+        <InfoCard
+          label="About to authorize"
+          description="Parameters bound at Auth request; the browser opens the AS next."
+          className="mt-5"
+        >
           <KVList className="mt-1">
-            <KV label="mode">
-              {parRequestUri
-                ? `PAR (request_uri: ${shorten(parRequestUri, 18, 10)})`
-                : "direct (no PAR)"}
+            {/* How the authorization request parameters reach the AS — only
+                spec terms: query params (RFC 6749, Section 4.1.1), request object by
+                value (JAR, RFC 9101), or by reference (PAR, RFC 9126). */}
+            <KV label="parameters">
+              {parRequestUri ? (
+                <>
+                  by reference — request_uri (PAR, RFC 9126){" "}
+                  <span className="font-mono">
+                    {shorten(parRequestUri, 18, 10)}
+                  </span>
+                </>
+              ) : state.authRequest.jarEnabled ? (
+                "by value — signed request object (JAR, RFC 9101)"
+              ) : (
+                "query parameters (RFC 6749, Section 4.1.1)"
+              )}
             </KV>
             <KV label="state">
               <span className="font-mono">

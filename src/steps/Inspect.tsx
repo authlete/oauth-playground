@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import { usePlayground } from "../store/playground";
 import { Textarea } from "../components/ui/Textarea";
-import { Banner, JwtPanel, StepHeader } from "../components/step";
+import { Banner, JwtPanel, Section, StepHeader } from "../components/step";
 import { cn } from "../lib/cn";
 import { formatDuration, formatLocalTime, shorten } from "../lib/format";
 import {
@@ -107,10 +107,14 @@ export function InspectStep() {
   const timings = parsed.ok ? computeJwtTimings(parsed.jwt.payload, nowMs) : null;
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="mx-auto max-w-3xl @4xl:max-w-5xl">
       <Header />
 
-      <div className="mt-5">
+      <Section
+        title="Source"
+        description="Pick a token from Token exchange, or paste any JWT."
+        className="mt-5"
+      >
         <div className="flex flex-wrap gap-1">
           {sources.map((s) => (
             <SourceTab
@@ -134,7 +138,7 @@ export function InspectStep() {
             className="mt-3 min-h-[120px] resize-y"
           />
         )}
-      </div>
+      </Section>
 
       {!raw.trim() ? (
         <EmptyState />

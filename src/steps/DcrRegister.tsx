@@ -138,12 +138,8 @@ export function DcrRegisterStep() {
   };
 
   return (
-    <div className="mx-auto max-w-3xl">
-      <StepHeader
-        step="dcr-register"
-        titleSuffix="branches off Client config"
-        right={renderPill(reg.status)}
-      />
+    <div className="mx-auto max-w-3xl @4xl:max-w-5xl">
+      <StepHeader step="dcr-register" right={renderPill(reg.status)} />
 
       {!endpoint && (
         <Banner tone="warn" className="mt-5">
@@ -153,14 +149,19 @@ export function DcrRegisterStep() {
 
       {endpoint && (
         <>
-          <InfoCard label="Will POST" url={endpoint} className="mt-5">
-            <p className="text-muted-foreground">
-              RFC 7591 Dynamic Client Registration — open registration, no client auth.
-            </p>
-          </InfoCard>
+          <InfoCard
+            label="Request"
+            description="RFC 7591 Dynamic Client Registration — open registration, no client auth."
+            method="POST"
+            url={endpoint}
+            className="mt-5"
+          />
 
           <div className="mt-6 space-y-4">
-            <Section title="Client metadata">
+            <Section
+              title="Client metadata"
+              description="What the AS registers for this client (RFC 7591)."
+            >
               <div className="space-y-5">
                 <Field label="client_name" hint="Human-readable name shown on the consent screen.">
                   <Input
@@ -364,11 +365,11 @@ function SuccessPanel({
         </div>
       </Banner>
 
-      <details className="rounded-md border border-border bg-card/40 px-3 py-2 text-[13px]">
-        <summary className="cursor-pointer select-none text-muted-foreground hover:text-foreground">
+      <details className="rounded-lg border border-border bg-muted/20 p-4 text-[13px]">
+        <summary className="cursor-pointer select-none text-[13px] font-semibold leading-5">
           Full registration response
         </summary>
-        <pre className="mt-3 max-h-[320px] overflow-auto rounded-sm bg-background/60 p-3 font-mono text-[11.5px] leading-relaxed">
+        <pre className="mt-3 max-h-[320px] overflow-auto rounded-md border border-border bg-background/60 p-3 font-mono text-[11.5px] leading-relaxed">
           {JSON.stringify(client.raw, null, 2)}
         </pre>
       </details>

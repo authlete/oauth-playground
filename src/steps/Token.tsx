@@ -116,7 +116,7 @@ export function TokenStep() {
   };
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="mx-auto max-w-3xl @4xl:max-w-5xl">
       <StepHeader step="token" right={renderPill(tok.status, secondsLeft)} />
 
       {!code && (
@@ -134,7 +134,13 @@ export function TokenStep() {
       )}
 
       {code && (
-        <InfoCard label="Will POST to" url={tokenEndpoint ?? "—"} className="mt-5">
+        <InfoCard
+          label="Request"
+          description="Exchanges the authorization code for tokens."
+          method="POST"
+          url={tokenEndpoint ?? "—"}
+          className="mt-5"
+        >
           <KVGrid className="mt-2">
             <KVRow label="grant_type">authorization_code</KVRow>
             <KVRow label="code">{shorten(code, 12, 8)}</KVRow>

@@ -37,8 +37,11 @@ export function CenterPane() {
   const { state } = usePlayground();
   const ActiveStep = STEP_COMPONENTS[state.activeStep];
 
+  // @container: step pages adapt to the PANE's width, not the viewport's —
+  // sections go two-column at @4xl (896px) only when this pane actually has
+  // the room (e.g. network log collapsed, wide monitor).
   return (
-    <main className="flex-1 overflow-y-auto bg-background">
+    <main className="@container flex-1 overflow-y-auto bg-background">
       <div className="px-8 py-6">
         <ActiveStep />
       </div>

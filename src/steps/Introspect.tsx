@@ -73,7 +73,7 @@ export function IntrospectStep() {
   };
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="mx-auto max-w-3xl @4xl:max-w-5xl">
       <StepHeader step="introspect" right={renderPill(intro.status)} />
 
       {!tokens.access && !tokens.refresh && (
@@ -98,28 +98,33 @@ export function IntrospectStep() {
 
       {endpoint && (
         <>
-          <div className="mt-5">
-            <label className="mb-1.5 block text-[12.5px] font-medium">
-              Which token to introspect
-            </label>
-            <Select
-              value={intro.tokenSource}
-              onChange={(e) =>
-                introspectUpdate({
-                  tokenSource: e.target.value as IntrospectState["tokenSource"],
-                })
-              }
-            >
-              <option value="access" disabled={!tokens.access}>
-                access_token {tokens.access ? "" : "(none)"}
-              </option>
-              <option value="refresh" disabled={!tokens.refresh}>
-                refresh_token {tokens.refresh ? "" : "(none)"}
-              </option>
-            </Select>
-          </div>
-
-          <InfoCard label="Will POST to" url={endpoint} className="mt-4">
+          <InfoCard
+            label="Request"
+            description="Asks the AS whether the token is still active (RFC 7662)."
+            method="POST"
+            url={endpoint}
+            className="mt-5"
+          >
+            <div>
+              <label className="mb-1.5 block text-[12.5px] font-medium">
+                Token to introspect
+              </label>
+              <Select
+                value={intro.tokenSource}
+                onChange={(e) =>
+                  introspectUpdate({
+                    tokenSource: e.target.value as IntrospectState["tokenSource"],
+                  })
+                }
+              >
+                <option value="access" disabled={!tokens.access}>
+                  access_token {tokens.access ? "" : "(none)"}
+                </option>
+                <option value="refresh" disabled={!tokens.refresh}>
+                  refresh_token {tokens.refresh ? "" : "(none)"}
+                </option>
+              </Select>
+            </div>
             <p className="text-muted-foreground">
               Authenticating with{" "}
               <span className="font-mono text-foreground">{state.client.authMethod}</span>.

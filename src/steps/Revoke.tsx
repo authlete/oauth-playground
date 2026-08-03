@@ -77,7 +77,7 @@ export function RevokeStep() {
   };
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="mx-auto max-w-3xl @4xl:max-w-5xl">
       <StepHeader step="revoke" right={renderPill(rev.status)} />
 
       {!tokens.access && !tokens.refresh && (
@@ -102,28 +102,33 @@ export function RevokeStep() {
 
       {endpoint && (
         <>
-          <div className="mt-5">
-            <label className="mb-1.5 block text-[12.5px] font-medium">
-              Which token to revoke
-            </label>
-            <Select
-              value={rev.tokenSource}
-              onChange={(e) =>
-                revokeUpdate({
-                  tokenSource: e.target.value as RevokeState["tokenSource"],
-                })
-              }
-            >
-              <option value="access" disabled={!tokens.access}>
-                access_token {tokens.access ? "" : "(none)"}
-              </option>
-              <option value="refresh" disabled={!tokens.refresh}>
-                refresh_token {tokens.refresh ? "" : "(none)"}
-              </option>
-            </Select>
-          </div>
-
-          <InfoCard label="Will POST to" url={endpoint} className="mt-4">
+          <InfoCard
+            label="Request"
+            description="Tells the AS to invalidate the token (RFC 7009)."
+            method="POST"
+            url={endpoint}
+            className="mt-5"
+          >
+            <div>
+              <label className="mb-1.5 block text-[12.5px] font-medium">
+                Token to revoke
+              </label>
+              <Select
+                value={rev.tokenSource}
+                onChange={(e) =>
+                  revokeUpdate({
+                    tokenSource: e.target.value as RevokeState["tokenSource"],
+                  })
+                }
+              >
+                <option value="access" disabled={!tokens.access}>
+                  access_token {tokens.access ? "" : "(none)"}
+                </option>
+                <option value="refresh" disabled={!tokens.refresh}>
+                  refresh_token {tokens.refresh ? "" : "(none)"}
+                </option>
+              </Select>
+            </div>
             <p className="text-muted-foreground">
               Authenticating with{" "}
               <span className="font-mono text-foreground">{state.client.authMethod}</span>.
@@ -185,7 +190,7 @@ function SuccessPanel({
       </p>
       <p className="mt-1 text-[13px] text-muted-foreground">
         The AS responds 200 regardless of whether the token was actually
-        recognized — see RFC 7009 §2.2 (clients can't probe for valid tokens).
+        recognized — see RFC 7009, Section 2.2 (clients can't probe for valid tokens).
       </p>
       {revokedKind === "access" && (
         <Button

@@ -108,7 +108,7 @@ export function DiscoveryStep() {
   };
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="mx-auto max-w-3xl @4xl:max-w-5xl">
       <StepHeader status={discovery.status} durationMs={discovery.durationMs} />
 
       <ModeTabs
@@ -369,7 +369,10 @@ function ManualForm({
           : "Use when the AS has no .well-known endpoint or you're targeting a stub/test server."}
       </p>
 
-      <Section title="Required endpoints">
+      <Section
+        title="Required endpoints"
+        description="The minimum the playground needs to run an authorization flow."
+      >
         <div className="space-y-3">
           <ManualField
             label="issuer"

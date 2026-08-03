@@ -99,7 +99,7 @@ export function ParStep() {
   };
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="mx-auto max-w-3xl @4xl:max-w-5xl">
       <Header status={par.status} enabled={par.enabled} remaining={remaining} />
 
       {!par.enabled && (
