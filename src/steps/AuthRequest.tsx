@@ -29,7 +29,7 @@ const RESPONSE_TYPES = ["code", "id_token", "code id_token", "token"];
 const RESPONSE_MODES: Array<{ value: ResponseMode; label: string }> = [
   { value: "query", label: "query (default for code)" },
   { value: "fragment", label: "fragment" },
-  { value: "form_post", label: "form_post (OAuth 2.0 FOSS)" },
+  { value: "form_post", label: "form_post" },
 ];
 
 export function AuthRequestStep() {
@@ -123,7 +123,7 @@ export function AuthRequestStep() {
       )}
 
       <div className="mt-6 space-y-5">
-        <Field label="Scopes" hint="Space-separated values sent in the `scope` query param.">
+        <Field label="Scopes">
           <div className="flex flex-wrap gap-x-4 gap-y-2">
             {COMMON_SCOPES.map((s) => (
               <Checkbox
@@ -178,7 +178,7 @@ export function AuthRequestStep() {
         </Field>
 
         <div className="grid grid-cols-2 gap-4">
-          <Field label="response_type" hint="OAuth 2.0 §3.1.1 — what the AS returns at the callback.">
+          <Field label="response_type" hint="What the AS returns at the callback.">
             <Select
               value={req.responseType}
               onChange={(e) => authRequestUpdate({ responseType: e.target.value })}
@@ -209,7 +209,11 @@ export function AuthRequestStep() {
 
         <Field
           label="Extensions"
-          hint="PKCE is on by default for any v0.1 client. JARM ships in a later build step."
+          hint={
+            parSupported
+              ? "PKCE is on by default — leave it on unless the AS can't handle it. PAR adds a step that pushes the request to the AS first."
+              : "PKCE is on by default — leave it on unless the AS can't handle it. PAR is unavailable: this AS doesn't advertise a /par endpoint."
+          }
         >
           <div className="flex flex-wrap gap-x-6 gap-y-2">
             <Checkbox
@@ -218,11 +222,7 @@ export function AuthRequestStep() {
               onChange={(e) => authRequestUpdate({ pkceEnabled: e.target.checked })}
             />
             <Checkbox
-              label={
-                parSupported
-                  ? "PAR (RFC 9126)"
-                  : "PAR (RFC 9126) — AS does not advertise an endpoint"
-              }
+              label="PAR (RFC 9126)"
               checked={parEnabled}
               disabled={!parSupported}
               onChange={(e) => parUpdate({ enabled: e.target.checked })}
@@ -232,7 +232,6 @@ export function AuthRequestStep() {
               checked={req.jarEnabled}
               onChange={(e) => authRequestUpdate({ jarEnabled: e.target.checked })}
             />
-            <Checkbox label="JARM (response_mode=jwt)" checked={false} disabled />
           </div>
           {req.jarEnabled && !jarReady.ok && (
             <p className="mt-2 text-[11.5px] text-[var(--status-warn)]">
@@ -242,7 +241,7 @@ export function AuthRequestStep() {
                 onClick={() => setActiveStep("client")}
                 className="underline hover:text-foreground"
               >
-                Go to step 2 →
+                Go to Client config →
               </button>
             </p>
           )}
@@ -258,7 +257,7 @@ export function AuthRequestStep() {
           label="nonce"
           value={req.nonce}
           onRegen={regenNonce}
-          hint="Bound into the ID token; mitigates replay (OIDC Core §3.1.2.1)."
+          hint="Bound into the ID token; mitigates replay."
         />
         {req.pkceEnabled && (
           <ParamRow
@@ -266,7 +265,7 @@ export function AuthRequestStep() {
             value={req.codeVerifier}
             onRegen={regenPkce}
             regenerating={pkceRegenerating}
-            hint="Held in memory; sent to /token at step 6. Challenge = SHA-256(verifier)."
+            hint="Held in memory; sent to /token at Token exchange. Challenge = SHA-256(verifier)."
             secondary={
               req.codeChallenge ? (
                 <span className="font-mono text-[11.5px] text-muted-foreground">
@@ -305,8 +304,7 @@ export function AuthRequestStep() {
 function Header({ valid }: { valid: boolean }) {
   return (
     <StepHeader
-      stepNumber={3}
-      title="Authorization request"
+      step="auth-request"
       right={
         valid ? (
           <StatusPill tone="success">URL built</StatusPill>

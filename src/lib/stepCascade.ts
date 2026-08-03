@@ -42,16 +42,20 @@ export function computeStepStatuses(state: CascadeState): Record<StepId, StepSta
     state.token.status === "success" && !!state.token.accessToken;
 
   // DCR and Federation registration each appear only when the AS advertises the
-  // matching endpoint. Both are enhancements to step 2's output (they produce a
-  // client_id), never gates on later steps — no other step depends on them.
+  // matching endpoint. Both are enhancements to Client config's output (they
+  // produce a client_id), never gates on later steps — nothing depends on them.
   const dcrEndpoint =
     typeof state.discoveryMetadata?.registration_endpoint === "string";
   const federationEndpoint =
     typeof state.discoveryMetadata?.federation_registration_endpoint === "string";
 
+  // Steps unlock strictly in order — each gate includes every earlier gate, so
+  // a later step is never open while an earlier one is locked. Config steps
+  // (client, auth-request) top out at "valid" ("inputs check out", quiet dot);
+  // "done" (checkmark) is reserved for steps where something actually executed.
   const status: Record<StepId, StepStatus> = {
     discovery: discoveryDone ? "done" : "active",
-    client: !discoveryDone ? "locked" : clientValid ? "done" : "ready",
+    client: !discoveryDone ? "locked" : clientValid ? "valid" : "ready",
     "dcr-register": !dcrEndpoint
       ? "hidden"
       : state.dcrRegister.status === "success"
@@ -62,15 +66,16 @@ export function computeStepStatuses(state: CascadeState): Record<StepId, StepSta
       : state.federationRegister.status === "success"
         ? "done"
         : "ready",
-    "auth-request": !clientValid
+    "auth-request": !(discoveryDone && clientValid)
       ? "locked"
       : authUrlBuilt
-        ? "done"
+        ? "valid"
         : "ready",
-    par: !authUrlBuilt
-      ? "locked"
-      : !state.par.enabled
-        ? "ready"
+    // On the rail only while the user has the extension enabled in Auth request.
+    par: !state.par.enabled
+      ? "hidden"
+      : !authUrlBuilt
+        ? "locked"
         : state.par.status === "success"
           ? "done"
           : "ready",

@@ -1,4 +1,4 @@
-// Step 11: refresh-token grant (RFC 6749 §6). Same /token endpoint as step 6,
+// Refresh-token grant (RFC 6749 §6). Same /token endpoint as Token exchange,
 // with grant_type=refresh_token. The AS may return a rotated refresh_token
 // (one-time-use refresh tokens are common in FAPI / OAuth 2.1).
 

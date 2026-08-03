@@ -1,7 +1,7 @@
 // JWK validation + import for client_assertion (private_key_jwt) signing.
 //
 // We only need PRIVATE keys here (the client's signing key). Supported algs
-// for v0.1 cover the common AS deployments: ES256/384/512, RS256/384/512,
+// cover the common AS deployments: ES256/384/512, RS256/384/512,
 // PS256/384/512. The CryptoKey lives in memory only (§8 — never persisted).
 
 interface JwkLike {

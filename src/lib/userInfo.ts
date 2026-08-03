@@ -1,4 +1,4 @@
-// Step 8: GET userinfo_endpoint with Bearer access_token (OIDC Core §5.3).
+// GET userinfo_endpoint with Bearer access_token (OIDC Core §5.3).
 // JSON response is a flat object of claims about the end-user.
 
 import type { NetworkEntry, OidcMetadata } from "../types";
@@ -93,7 +93,7 @@ export async function fetchUserInfo(
   }
   // userinfo response may be JSON (default) or signed JWT (per OIDC Core §5.3.2)
   // depending on `userinfo_signed_response_alg` in client registration. We
-  // surface JWT-shaped responses as a single "_jwt" claim so step 7 can
+  // surface JWT-shaped responses as a single "_jwt" claim so the Token inspector can
   // inspect them.
   const contentType = response.headers.get("content-type") ?? "";
   if (contentType.includes("application/jwt") || isJwtShape(body)) {

@@ -23,7 +23,7 @@ const AUTH_METHODS: Array<{ value: ClientAuthMethod; label: string; hint: string
   {
     value: "none",
     label: "none (public — PKCE only)",
-    hint: "No client credential at /token. PKCE is required and is configured in step 3.",
+    hint: "No client credential at /token. PKCE is required and is configured in Auth request.",
   },
   {
     value: "client_secret_basic",
@@ -101,8 +101,7 @@ export function ClientStep() {
   return (
     <div className="mx-auto max-w-3xl">
       <StepHeader
-        stepNumber={2}
-        title="Client config"
+        step="client"
         right={
           validation.ok ? (
             <StatusPill tone="success">ready</StatusPill>
@@ -224,7 +223,7 @@ export function ClientStep() {
         <Field
           label="Redirect URI"
           hint={
-            "Used by step 5 callback handling. Pre-filled to this playground's origin; override only if your AS expects a different one."
+            "Where the AS sends the authorization response. Pre-filled to this playground's /callback; override only if your AS expects a different one."
           }
         >
           <Input

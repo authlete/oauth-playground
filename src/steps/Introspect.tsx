@@ -74,11 +74,11 @@ export function IntrospectStep() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <StepHeader stepNumber={9} title="Introspection" right={renderPill(intro.status)} />
+      <StepHeader step="introspect" right={renderPill(intro.status)} />
 
       {!tokens.access && !tokens.refresh && (
         <Banner tone="warn" className="mt-5">
-          <p>No tokens to introspect — run step 6 first.</p>
+          <p>No tokens to introspect — run Token exchange first.</p>
           <Button
             variant="ghost"
             size="sm"

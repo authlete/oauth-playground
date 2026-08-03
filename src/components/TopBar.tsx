@@ -7,6 +7,26 @@ import { cn } from "../lib/cn";
 export function TopBar() {
   const { state, toggleTheme, setActiveStep } = usePlayground();
   const [helpOpen, setHelpOpen] = useState(false);
+
+  // "?" toggles help (documented in the popover itself). Ignored while typing.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "?" || e.metaKey || e.ctrlKey || e.altKey) return;
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+      e.preventDefault();
+      setHelpOpen((o) => !o);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
   const issuerHost = (() => {
     try {
       return state.discovery.metadata
@@ -33,7 +53,7 @@ export function TopBar() {
             value={issuerHost}
             onClick={() => setActiveStep("discovery")}
           />
-          {state.stepStatus.client === "done" && state.client.clientId && (
+          {state.stepStatus.client === "valid" && state.client.clientId && (
             <ContextPill
               label="Client"
               value={state.client.clientId}
@@ -111,6 +131,7 @@ function HelpPopover({ onClose }: { onClose: () => void }) {
       </div>
       <dl className="space-y-1.5 text-[12px]">
         <Shortcut keys="⌘D" desc="Toggle dark / light theme" />
+        <Shortcut keys="⌘J" desc="Show / hide network log" />
         <Shortcut keys="⌘L" desc="Clear network log" />
         <Shortcut keys="?" desc="Open / close this help" />
       </dl>

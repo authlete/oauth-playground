@@ -1,7 +1,7 @@
 // Single source of truth for the /authorize URL. Used by:
-//  - step 3 (URL preview),
-//  - step 4 (the body it POSTs to /par),
-//  - step 5 (the URL it navigates to, optionally with request_uri from step 4).
+//  - Auth request (URL preview),
+//  - PAR (the body it POSTs to /par),
+//  - Authorize (the URL it navigates to, optionally with request_uri from PAR).
 
 import type {
   AuthRequestState,
@@ -53,10 +53,10 @@ export function buildAuthorizeUrl(
     return { ok: false, message: "Authorization endpoint not loaded — run Discovery first." };
   }
   if (!client.clientId.trim()) {
-    return { ok: false, message: "Client ID is empty — set it in step 2." };
+    return { ok: false, message: "Client ID is empty — set it in Client config." };
   }
   if (!client.redirectUri.trim()) {
-    return { ok: false, message: "Redirect URI is empty — set it in step 2." };
+    return { ok: false, message: "Redirect URI is empty — set it in Client config." };
   }
   if (req.scopes.length === 0) {
     return { ok: false, message: "Pick at least one scope." };

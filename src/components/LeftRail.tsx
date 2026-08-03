@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Check, Copy, Link2, Lock, RotateCw } from "lucide-react";
 import { usePlayground } from "../store/playground";
 import { STEPS, type StepDef, type StepId, type StepStatus } from "../types";
@@ -8,12 +8,9 @@ import { buildPayloadFromState, buildShareUrl } from "../lib/shareConfig";
 export function LeftRail() {
   const { state, setActiveStep } = usePlayground();
   const [shared, setShared] = useState(false);
+  const [confirmingReset, setConfirmingReset] = useState(false);
 
   const onResetAll = () => {
-    const confirmed = window.confirm(
-      "Reset all? This clears every step's state and your saved client config. Theme is kept.",
-    );
-    if (!confirmed) return;
     try {
       localStorage.removeItem("playground.client");
       localStorage.removeItem("playground.authRequest");
@@ -78,7 +75,18 @@ export function LeftRail() {
         ))}
       </ul>
       <div className="flex flex-col gap-px border-t border-border p-2">
-        <RailButton label="Reset all" icon={<RotateCw className="h-3.5 w-3.5" />} onClick={onResetAll} />
+        {confirmingReset ? (
+          <ResetConfirmRow
+            onConfirm={onResetAll}
+            onCancel={() => setConfirmingReset(false)}
+          />
+        ) : (
+          <RailButton
+            label="Reset all"
+            icon={<RotateCw className="h-3.5 w-3.5" />}
+            onClick={() => setConfirmingReset(true)}
+          />
+        )}
         <RailButton
           label={shared ? "Copied!" : "Share"}
           icon={shared ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
@@ -86,6 +94,40 @@ export function LeftRail() {
         />
       </div>
     </nav>
+  );
+}
+
+// Two-stage confirm, in place of a native window.confirm — keeps destructive
+// intent one deliberate extra click away without leaving the app's idiom.
+function ResetConfirmRow({
+  onConfirm,
+  onCancel,
+}: {
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  useEffect(() => {
+    const t = window.setTimeout(onCancel, 6000);
+    return () => window.clearTimeout(t);
+  }, [onCancel]);
+  return (
+    <div className="flex h-9 items-center gap-2 rounded-md px-3 text-[12.5px]">
+      <span className="flex-1 text-muted-foreground">Clear every step?</span>
+      <button
+        type="button"
+        onClick={onConfirm}
+        className="rounded-sm px-1.5 py-0.5 font-medium text-[var(--status-error)] hover:bg-accent"
+      >
+        Reset
+      </button>
+      <button
+        type="button"
+        onClick={onCancel}
+        className="rounded-sm px-1.5 py-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+      >
+        Cancel
+      </button>
+    </div>
   );
 }
 
@@ -112,6 +154,7 @@ function StepRow({
         disabled={locked}
         aria-current={active ? "step" : undefined}
         aria-disabled={locked || undefined}
+        title={summary ? `${step.name} · ${summary}` : undefined}
         className={cn(
           "relative flex w-full items-start gap-2 px-3 py-2 text-left transition-colors",
           nested ? "h-10 pl-10" : "h-14",
@@ -177,6 +220,15 @@ function StepRow({
 function StatusIcon({ status }: { status: StepStatus }) {
   if (status === "done")
     return <Check className="h-4 w-4 text-[var(--status-success)]" aria-label="done" />;
+  // Config is valid but nothing was executed — a quiet dot, not a checkmark.
+  if (status === "valid")
+    return (
+      <span
+        className="mt-1.5 inline-block h-1.5 w-1.5 rounded-full bg-[var(--status-success)]/70"
+        role="img"
+        aria-label="configured"
+      />
+    );
   if (status === "stale")
     return <RotateCw className="h-4 w-4 text-[var(--status-warn)]" aria-label="stale" />;
   if (status === "locked")
@@ -224,7 +276,7 @@ function discoverySummary(state: ReturnType<typeof usePlayground>["state"]): str
 }
 
 function clientSummary(state: ReturnType<typeof usePlayground>["state"]): string | undefined {
-  if (state.stepStatus.client !== "done") return undefined;
+  if (state.stepStatus.client !== "valid") return undefined;
   const c = state.client;
   const method = c.authMethod === "none" ? "PKCE only" : c.authMethod;
   const alg =
@@ -251,7 +303,7 @@ function dcrRegisterSummary(
 }
 
 function authRequestSummary(state: ReturnType<typeof usePlayground>["state"]): string | undefined {
-  if (state.stepStatus["auth-request"] !== "done") return undefined;
+  if (state.stepStatus["auth-request"] !== "valid") return undefined;
   const r = state.authRequest;
   const scopes = r.scopes.join(" ") || "no scopes";
   const pkce = r.pkceEnabled ? " · PKCE" : "";
@@ -260,7 +312,6 @@ function authRequestSummary(state: ReturnType<typeof usePlayground>["state"]): s
 }
 
 function parSummary(state: ReturnType<typeof usePlayground>["state"]): string | undefined {
-  if (!state.par.enabled) return "off";
   if (state.par.status !== "success" || !state.par.requestUri) return undefined;
   const uri = state.par.requestUri;
   const tail = uri.length > 12 ? `…${uri.slice(-8)}` : uri;

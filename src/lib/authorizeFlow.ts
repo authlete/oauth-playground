@@ -1,4 +1,4 @@
-// Step 5 popup orchestration: open the AS in a new tab, listen for the
+// Authorize popup orchestration: open the AS in a new tab, listen for the
 // CallbackPage to post the result back. The popup loses opener access if the
 // AS sends a COOP header, so we listen on TWO channels and use whichever
 // fires first: postMessage (best case) or localStorage events (fallback).

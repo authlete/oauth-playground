@@ -1,6 +1,6 @@
-// Step 10: a tiny generic HTTP client for hitting a user-owned resource server.
+// A tiny generic HTTP client for hitting a user-owned resource server.
 // Out of scope: any AS interaction. The only OAuth-y bit is the optional
-// "Attach Bearer" toggle that adds the access_token from step 6.
+// "Attach Bearer" toggle that adds the access_token from Token exchange.
 
 import type { HttpMethod, NetworkEntry } from "../types";
 

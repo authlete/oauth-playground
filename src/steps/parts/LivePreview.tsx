@@ -68,7 +68,7 @@ export function LivePreview(props: LivePreviewProps) {
 
       {showPar && props.parPushed && (
         <p className="mt-3 text-[11.5px] text-muted-foreground">
-          After PAR, step 5 will navigate to{" "}
+          After PAR, Authorize will navigate to{" "}
           <code className="font-mono break-all">{props.built.url}</code>
         </p>
       )}
@@ -90,12 +90,12 @@ function subtitleFor(
   if (showPar) {
     return parPushed
       ? "live preview · POST to /par (already pushed — request_uri ready)"
-      : "live preview · POST to /par — step 4 sends this";
+      : "live preview · POST to /par — the PAR step sends this";
   }
   if (parEnabled) {
     return "live preview · /authorize URL — PAR is on but the AS has no /par endpoint";
   }
-  return "live preview · /authorize URL — step 5 navigates here";
+  return "live preview · /authorize URL — Authorize navigates here";
 }
 
 function PreviewHeader({
@@ -195,8 +195,8 @@ function ContinueFooter({
           <span className="font-medium">This step builds the request.</span>
           <span className="ml-1 text-muted-foreground">
             {showPar
-              ? "Step 4 will POST it; step 5 then navigates with the returned request_uri."
-              : "Step 5 will navigate to this URL when you Authorize."}
+              ? "PAR will POST it; Authorize then navigates with the returned request_uri."
+              : "Authorize will navigate to this URL."}
           </span>
         </span>
       </p>

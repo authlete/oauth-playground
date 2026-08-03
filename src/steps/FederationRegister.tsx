@@ -1,4 +1,4 @@
-// Step 2.5: OpenID Federation Explicit Client Registration.
+// OpenID Federation Explicit Client Registration.
 //
 // Visible only when discovery surfaces a `federation_registration_endpoint`.
 // User pastes either their RP entity configuration (signed JWT) or a
@@ -98,9 +98,8 @@ export function FederationRegisterStep() {
   return (
     <div className="mx-auto max-w-3xl">
       <StepHeader
-        stepLabel="Optional"
-        title="Federation registration"
-        titleSuffix="branches off step 2"
+        step="federation-register"
+        titleSuffix="branches off Client config"
         right={renderPill(reg.status)}
       />
 

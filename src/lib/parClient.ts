@@ -1,8 +1,8 @@
-// Step 4: Pushed Authorization Request (RFC 9126).
+// Pushed Authorization Request (RFC 9126).
 //
 // The client POSTs the full /authorize params to /par with client
 // authentication, gets back a `request_uri` (short-lived URN) + expires_in.
-// Step 5 then navigates to /authorize?client_id=X&request_uri=Y instead of
+// Authorize then navigates to /authorize?client_id=X&request_uri=Y instead of
 // the full URL.
 
 import { applyClientAuth } from "./clientAuth";
@@ -28,7 +28,7 @@ export interface PushParInput {
   client: ClientConfigState;
   authRequest: AuthRequestState;
   /** The signed request object, when JAR is enabled. Signed by the caller (the
-   *  store is the single signer) so the pushed object matches what step 3 shows. */
+   *  store is the single signer) so the pushed object matches what Auth request shows. */
   requestObjectJwt?: string;
   onStart: (entry: NetworkEntry) => void;
   onFinish: (id: string, patch: Partial<NetworkEntry>) => void;
@@ -48,7 +48,7 @@ export async function pushPar(input: PushParInput): Promise<PushParResult> {
   let body: URLSearchParams;
   if (input.authRequest.jarEnabled) {
     if (!input.requestObjectJwt) {
-      return { ok: false, message: "No signed request object — set a valid JWK in step 2." };
+      return { ok: false, message: "No signed request object — set a valid JWK in Client config." };
     }
     body = buildJarParams(input.client, input.authRequest, input.requestObjectJwt);
   } else {
@@ -93,7 +93,7 @@ export async function pushPar(input: PushParInput): Promise<PushParResult> {
     const finishedAt = performance.now();
     const message =
       err instanceof TypeError
-        ? "CORS / network error reaching /par. Enable CORS on the AS or wait for the v0.2 relay."
+        ? "CORS / network error reaching /par. Enable CORS on the AS for this origin."
         : err instanceof Error
           ? err.message
           : String(err);

@@ -14,12 +14,16 @@ export type StepId =
   | "refresh"
   | "revoke";
 
-// "hidden" steps are filtered from the rail entirely — used for federation
-// registration when the AS doesn't advertise the endpoint.
+// "hidden" steps are filtered from the rail entirely — used for the optional
+// registration paths and PAR when the AS / user hasn't enabled them.
+// "valid" is for config steps only: the inputs check out, but nothing was
+// executed — rendered as a quiet dot, never a checkmark. "done" is reserved
+// for steps where something actually happened (a request ran, a code arrived).
 export type StepStatus =
   | "locked"
   | "ready"
   | "active"
+  | "valid"
   | "done"
   | "stale"
   | "hidden";
@@ -27,7 +31,7 @@ export type StepStatus =
 export interface StepDef {
   id: StepId;
   /** Sequential number. Omitted for auxiliary / nested steps that aren't on
-   * the main 1→12 path. */
+   * the main 1→10 path. */
   number?: number;
   name: string;
   /** Nested under the previous step in the rail (renders indented, no
@@ -40,20 +44,28 @@ export const STEPS: StepDef[] = [
   { id: "client", number: 2, name: "Client config" },
   // Auxiliary paths under Client, each visible only when the AS advertises the
   // matching endpoint. Nested + numberless so they read as optional branches
-  // off step 2 rather than inline steps. Both produce a client_id for step 2.
+  // off Client config rather than inline steps. Both produce a client_id.
   { id: "dcr-register", name: "Register client (DCR)", nested: true },
   { id: "federation-register", name: "Federation register", nested: true },
   { id: "auth-request", number: 3, name: "Auth request" },
-  { id: "par", number: 4, name: "PAR" },
-  { id: "authorize", number: 5, name: "Authorize" },
-  { id: "token", number: 6, name: "Token exchange" },
-  { id: "inspect", number: 7, name: "Token inspector" },
-  { id: "userinfo", number: 8, name: "UserInfo" },
-  { id: "introspect", number: 9, name: "Introspection" },
-  { id: "resource", number: 10, name: "Resource call" },
-  { id: "refresh", number: 11, name: "Refresh" },
-  { id: "revoke", number: 12, name: "Revoke" },
+  // PAR only appears when the user enables it in Auth request's Extensions.
+  { id: "par", name: "PAR push", nested: true },
+  { id: "authorize", number: 4, name: "Authorize" },
+  { id: "token", number: 5, name: "Token exchange" },
+  // Passive JWT viewer hanging off Token exchange; usable with any pasted JWT.
+  { id: "inspect", name: "Token inspector", nested: true },
+  { id: "userinfo", number: 6, name: "UserInfo" },
+  { id: "introspect", number: 7, name: "Introspection" },
+  { id: "resource", number: 8, name: "Resource call" },
+  { id: "refresh", number: 9, name: "Refresh" },
+  { id: "revoke", number: 10, name: "Revoke" },
 ];
+
+const STEP_BY_ID = new Map(STEPS.map((s) => [s.id, s]));
+
+export function getStep(id: StepId): StepDef {
+  return STEP_BY_ID.get(id)!;
+}
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "DELETE" | "PATCH" | "HEAD";
 

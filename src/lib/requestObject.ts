@@ -1,8 +1,8 @@
 // JAR (RFC 9101): sign the authorization request parameters into a JWT — the
 // "request object". Signed in the browser with the client's private JWK (the
-// same key step 2 uses for private_key_jwt). The store is the single signer:
+// same key Client config uses for private_key_jwt). The store is the single signer:
 // it re-signs into state.authRequest.requestObjectJwt on every param/key edit,
-// and step 3 / step 4 / step 5 all read that one value.
+// and Auth request / PAR / Authorize all read that one value.
 
 import { buildAuthorizeParams } from "./authorizeUrl";
 import { validateAndImportJwk } from "./jwk";
@@ -90,6 +90,6 @@ export function jarReadiness(
   return {
     ok: false,
     message:
-      "JAR is on — paste a valid private JWK in step 2 to sign the request object.",
+      "JAR is on — paste a valid private JWK in Client config to sign the request object.",
   };
 }

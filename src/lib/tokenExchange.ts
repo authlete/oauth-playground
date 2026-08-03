@@ -1,6 +1,6 @@
-// Step 6: exchange the authorization code at the AS /token endpoint
-// (RFC 6749 §4.1.3). Client auth comes from step 2 (lib/clientAuth.ts).
-// PKCE verifier (RFC 7636 §4.5) is included when step 3 used PKCE.
+// Exchange the authorization code at the AS /token endpoint
+// (RFC 6749 §4.1.3). Client auth comes from Client config (lib/clientAuth.ts).
+// PKCE verifier (RFC 7636 §4.5) is included when the auth request used PKCE.
 
 import { applyClientAuth } from "./clientAuth";
 import type {
@@ -98,7 +98,7 @@ export async function exchangeCode(
     const finishedAt = performance.now();
     const message =
       err instanceof TypeError
-        ? "CORS / network error reaching /token. Enable CORS on the AS or wait for the v0.2 relay."
+        ? "CORS / network error reaching /token. Enable CORS on the AS for this origin."
         : err instanceof Error
           ? err.message
           : String(err);

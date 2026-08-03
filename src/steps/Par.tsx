@@ -55,7 +55,7 @@ export function ParStep() {
   const canPush =
     par.enabled &&
     !!parEndpoint &&
-    state.stepStatus.client === "done" &&
+    state.stepStatus.client === "valid" &&
     state.authRequest.scopes.length > 0 &&
     jarReady.ok &&
     // JAR: the store signs the object; wait until it's present.
@@ -106,9 +106,9 @@ export function ParStep() {
         <Banner tone="info" className="mt-5 text-[12.5px] text-muted-foreground">
           <p>
             PAR is off — toggle <span className="font-medium text-foreground">PAR (RFC 9126)</span>{" "}
-            in step 3's Extensions row to enable it.
+            in Auth request's Extensions to enable it.
           </p>
-          <p className="mt-1">Step 5 will use the full URL from step 3.</p>
+          <p className="mt-1">Authorize will use the full URL built in Auth request.</p>
           <Button
             variant="ghost"
             size="sm"
@@ -126,7 +126,7 @@ export function ParStep() {
           <p className="mt-1 text-muted-foreground">
             Discovery metadata has no{" "}
             <code className="font-mono">pushed_authorization_request_endpoint</code>.
-            Toggle PAR off in step 3, or pick an AS that advertises one.
+            Toggle PAR off in Auth request, or pick an AS that advertises one.
           </p>
         </Banner>
       )}
@@ -140,7 +140,7 @@ export function ParStep() {
             className="mt-2 text-[var(--playground-accent)]"
             onClick={() => setActiveStep("client")}
           >
-            Go to step 2 →
+            Go to Client config →
           </Button>
         </Banner>
       )}
@@ -214,9 +214,8 @@ function Header({
 }) {
   return (
     <StepHeader
-      stepNumber={4}
-      title="PAR push"
-      titleSuffix={!enabled ? "(off — enable in step 3)" : undefined}
+      step="par"
+      titleSuffix={!enabled ? "(off — enable in Auth request)" : undefined}
       right={renderPill(status, remaining)}
     />
   );
@@ -268,7 +267,7 @@ function SuccessPanel({
           <Check className="h-4 w-4 text-[var(--status-success)]" />
         )}
         {expired
-          ? "request_uri has expired — push again before step 5."
+          ? "request_uri has expired — push again before you authorize."
           : "request_uri received."}
       </p>
       <KVList className="mt-3">

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Trash2 } from "lucide-react";
+import { Activity, PanelRightClose, Trash2 } from "lucide-react";
 import { usePlayground } from "../store/playground";
 import { Button } from "./ui/Button";
 import { cn } from "../lib/cn";
@@ -15,8 +15,32 @@ const METHOD_COLOR: Record<HttpMethod, string> = {
 };
 
 export function NetworkLog() {
-  const { state, networkClear } = usePlayground();
+  const { state, networkClear, networkSetCollapsed } = usePlayground();
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  // Collapsed state lives in the store: it starts collapsed, the reducer
+  // opens it on the first request, and ⌘J toggles it from anywhere.
+
+  if (state.networkCollapsed) {
+    return (
+      <aside
+        aria-label="Network log (collapsed)"
+        className="flex h-full w-11 shrink-0 flex-col items-center border-l border-border bg-card py-2"
+      >
+        <button
+          type="button"
+          onClick={() => networkSetCollapsed(false)}
+          aria-label="Expand network log"
+          title={`Network · ${state.network.length} ${state.network.length === 1 ? "call" : "calls"} (⌘J)`}
+          className="flex flex-col items-center gap-1 rounded-md p-2 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+        >
+          <Activity className="h-4 w-4" />
+          {state.network.length > 0 && (
+            <span className="font-mono text-[10.5px]">{state.network.length}</span>
+          )}
+        </button>
+      </aside>
+    );
+  }
 
   return (
     <aside
@@ -30,17 +54,28 @@ export function NetworkLog() {
             · {state.network.length} {state.network.length === 1 ? "call" : "calls"}
           </span>
         </h2>
-        {state.network.length > 0 && (
+        <div className="flex items-center gap-0.5">
+          {state.network.length > 0 && (
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Clear network log"
+              title="Clear (⌘L)"
+              onClick={networkClear}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="icon"
-            aria-label="Clear network log"
-            title="Clear (⌘L)"
-            onClick={networkClear}
+            aria-label="Collapse network log"
+            title="Collapse (⌘J)"
+            onClick={() => networkSetCollapsed(true)}
           >
-            <Trash2 className="h-3.5 w-3.5" />
+            <PanelRightClose className="h-3.5 w-3.5" />
           </Button>
-        )}
+        </div>
       </div>
 
       {state.network.length === 0 ? (

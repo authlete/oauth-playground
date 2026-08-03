@@ -1,9 +1,9 @@
-// Step 2.x: Dynamic Client Registration (RFC 7591).
+// Dynamic Client Registration (RFC 7591).
 //
 // Visible only when discovery surfaces a `registration_endpoint`. The user
 // fills a subset of client metadata; the AS returns the issued client_id (and
 // optional client_secret + RFC 7592 management fields). "Use this client"
-// feeds the credentials into step 2 so the OAuth flows run with it.
+// feeds the credentials into Client config so the OAuth flows run with it.
 
 import { useMemo, useState, type ReactNode } from "react";
 import { ArrowRight, Check, Copy, Eye, EyeOff, Loader2, RotateCw } from "lucide-react";
@@ -121,7 +121,7 @@ export function DcrRegisterStep() {
       typeof echoedAuth === "string" && SUPPORTED_AUTH_METHODS.includes(echoedAuth)
         ? (echoedAuth as ClientAuthMethod)
         : reg.tokenEndpointAuthMethod;
-    // Prefer the AS-echoed redirect, then the form's first, then step 2's.
+    // Prefer the AS-echoed redirect, then the form's first, then Client config's.
     const echoedRedirects = Array.isArray(c.raw.redirect_uris) ? c.raw.redirect_uris : [];
     const redirectUri =
       (typeof echoedRedirects[0] === "string" && echoedRedirects[0]) ||
@@ -139,9 +139,8 @@ export function DcrRegisterStep() {
   return (
     <div className="mx-auto max-w-3xl">
       <StepHeader
-        stepLabel="Optional"
-        title="Dynamic client registration"
-        titleSuffix="branches off step 2"
+        step="dcr-register"
+        titleSuffix="branches off Client config"
         right={renderPill(reg.status)}
       />
 
@@ -353,7 +352,7 @@ function SuccessPanel({
         </KVList>
         <div className="mt-3">
           <Button onClick={onUse} disabled={applied} size="sm">
-            {applied ? "Applied to step 2" : "Use this client →"}
+            {applied ? "Applied to Client config" : "Use this client →"}
           </Button>
         </div>
       </Banner>

@@ -1,4 +1,4 @@
-// Step 1 "manual" mode: synthesize an OIDC metadata object from a hand-
+// Discovery "manual" mode: synthesize an OIDC metadata object from a hand-
 // typed form, optionally fetch the JWKS, and feed `state.discovery.metadata`
 // — so every downstream step works unchanged.
 

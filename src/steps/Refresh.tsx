@@ -92,14 +92,14 @@ export function RefreshStep() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <StepHeader stepNumber={11} title="Refresh" right={renderPill(ref.status)} />
+      <StepHeader step="refresh" right={renderPill(ref.status)} />
 
       {!refreshToken && (
         <Banner tone="warn" className="mt-5">
-          <p>No refresh token — step 6 either didn't return one or hasn't run.</p>
+          <p>No refresh token — Token exchange either didn't return one or hasn't run.</p>
           <p className="mt-1 text-muted-foreground">
-            Add <code className="font-mono">offline_access</code> to scopes in step 3
-            and re-run the flow.
+            Add <code className="font-mono">offline_access</code> to scopes in Auth
+            request and re-run the flow.
           </p>
           <Button
             variant="ghost"
@@ -187,7 +187,7 @@ function SuccessPanel({ diff }: { diff: TokenDiff }) {
     <Banner tone="success" className="mt-4 p-4">
       <p className="flex items-center gap-1.5 text-[13.5px] font-medium">
         <Check className="h-4 w-4 text-[var(--status-success)]" />
-        New tokens received — step 6's slice has been updated.
+        New tokens received — Token exchange now holds them.
       </p>
       <KVList className="mt-3">
         {diff.accessToken && (

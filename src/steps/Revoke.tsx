@@ -78,11 +78,11 @@ export function RevokeStep() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <StepHeader stepNumber={12} title="Revoke" right={renderPill(rev.status)} />
+      <StepHeader step="revoke" right={renderPill(rev.status)} />
 
       {!tokens.access && !tokens.refresh && (
         <Banner tone="warn" className="mt-5">
-          <p>No tokens to revoke. Step 6 hasn't run, or both were already cleared.</p>
+          <p>No tokens to revoke. Token exchange hasn't run, or both were already cleared.</p>
           <Button
             variant="ghost"
             size="sm"

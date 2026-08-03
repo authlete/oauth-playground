@@ -46,7 +46,7 @@ function normalizeIssuer(input: string): string | null {
 function classifyFetchError(err: unknown): DiscoveryError {
   // The browser collapses CORS and network errors into the same opaque
   // TypeError. Best-effort: if we're online and got a TypeError, the most
-  // likely cause is CORS (the v0.1 #1 footgun per design B.9).
+  // likely cause is CORS.
   if (err instanceof TypeError) {
     const message = err.message || "Failed to fetch";
     if (typeof navigator !== "undefined" && navigator.onLine === false) {

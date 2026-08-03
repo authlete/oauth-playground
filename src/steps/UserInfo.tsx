@@ -73,11 +73,11 @@ export function UserInfoStep() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <StepHeader stepNumber={8} title="UserInfo" right={renderPill(info.status)} />
+      <StepHeader step="userinfo" right={renderPill(info.status)} />
 
       {!accessToken && (
         <Banner tone="warn" className="mt-5">
-          <p>No access token yet — run step 6 first.</p>
+          <p>No access token yet — run Token exchange first.</p>
           <Button
             variant="ghost"
             size="sm"

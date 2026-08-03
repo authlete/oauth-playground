@@ -1,5 +1,5 @@
 // Build a wire-level HTTP-message preview for the request a step is about
-// to send. Used by step 4 (PAR) and step 5 (Authorize). For private_key_jwt
+// to send. Used by the PAR and Authorize steps. For private_key_jwt
 // we elide the actual signed assertion — it's regenerated at send time
 // with a fresh `jti` / `iat` / `exp` — and show a `<signed at send time>`
 // placeholder instead.
@@ -9,7 +9,7 @@ import type { AuthRequestState, ClientConfigState } from "../types";
 
 // Shown only before a valid signing key exists; normally the real signed JWT
 // (authRequest.requestObjectJwt) is in the URL/body and decoded via JwtPanel.
-const JAR_PENDING = "<awaiting a valid signing key in step 2>";
+const JAR_PENDING = "<awaiting a valid signing key in Client config>";
 
 function jarRequestValue(authRequest: AuthRequestState): string {
   return authRequest.requestObjectJwt ?? JAR_PENDING;
@@ -17,7 +17,7 @@ function jarRequestValue(authRequest: AuthRequestState): string {
 
 function jarNote(client: ClientConfigState, signed: boolean): string {
   if (!signed) {
-    return "request: signed once a valid private JWK is set in step 2 (JAR, RFC 9101).";
+    return "request: signed once a valid private JWK is set in Client config (JAR, RFC 9101).";
   }
   const { alg, kid } = client.privateKey;
   return (
@@ -108,7 +108,7 @@ function applyClientAuthPreview(
     case "client_secret_post":
       body.set("client_id", client.clientId);
       body.set("client_secret", "<client_secret>");
-      notes.push("client_secret is read from step 2 at send time.");
+      notes.push("client_secret is read from Client config at send time.");
       return;
     case "private_key_jwt":
       body.set("client_id", client.clientId);

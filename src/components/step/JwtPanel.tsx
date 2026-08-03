@@ -1,6 +1,6 @@
 // Side-by-side header + payload display for a decoded JWT, plus a raw row
-// with a copy button. Reused by Token Inspector (step 7) and Federation
-// Register (step 2.5) — both need to show a decoded signed payload, but each
+// with a copy button. Reused by the Token inspector and Federation
+// register steps — both need to show a decoded signed payload, but each
 // surrounds it with different metadata (verification banner / claims row vs.
 // "apply as client_id" CTA), so this stays focused on the decode itself.
 

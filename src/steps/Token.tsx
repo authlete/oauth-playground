@@ -117,15 +117,11 @@ export function TokenStep() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <StepHeader
-        stepNumber={6}
-        title="Token exchange"
-        right={renderPill(tok.status, secondsLeft)}
-      />
+      <StepHeader step="token" right={renderPill(tok.status, secondsLeft)} />
 
       {!code && (
         <Banner tone="warn" className="mt-5">
-          <p>No authorization code yet — complete step 5 first.</p>
+          <p>No authorization code yet — complete Authorize first.</p>
           <Button
             variant="ghost"
             size="sm"
@@ -145,7 +141,7 @@ export function TokenStep() {
             {state.authRequest.pkceEnabled && state.authRequest.codeVerifier && (
               <KVRow label="code_verifier">
                 {shorten(state.authRequest.codeVerifier, 12, 8)}{" "}
-                <span className="text-muted-foreground">(PKCE, RFC 7636 §4.5)</span>
+                <span className="text-muted-foreground">(PKCE)</span>
               </KVRow>
             )}
             <KVRow label="redirect_uri">{state.client.redirectUri}</KVRow>

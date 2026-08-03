@@ -1,6 +1,6 @@
 // JWT parse + verify (RFC 7519, signatures per RFC 7515).
 //
-// Verification uses Web Crypto against the JWKS loaded by step 1. Symmetric
+// Verification uses Web Crypto against the JWKS loaded by Discovery. Symmetric
 // algs (HS256/384/512) are intentionally excluded — they need a shared secret
 // the client shouldn't have for OIDC at-rest tokens.
 

@@ -17,8 +17,11 @@ import type { ManualEndpoints, OidcMetadata } from "../types";
 
 type Tab = "endpoints" | "jwks" | "raw";
 
-// Sentinel <option> value for "not one of the presets — type your own".
+// Sentinel <option> for "not one of the configured servers — type your own".
 const CUSTOM_SERVER = "__custom__";
+// The picker only exists when a deployment configures servers (VITE_AUTH_SERVERS);
+// with just the local-dev fallback a lone free-text input is enough.
+const HAS_PRESETS = AUTH_SERVERS.length > 1;
 
 export function DiscoveryStep() {
   const { state, discoveryUpdate, networkAdd, networkUpdate } = usePlayground();
@@ -27,6 +30,9 @@ export function DiscoveryStep() {
 
   const [tab, setTab] = useState<Tab>("endpoints");
   const [issuerInput, setIssuerInput] = useState(discovery.issuer);
+  // Anything not in the configured list is a custom issuer — the picker shows
+  // "Custom…" and the free-text input takes over.
+  const isCustom = !AUTH_SERVERS.includes(issuerInput);
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -112,49 +118,54 @@ export function DiscoveryStep() {
       {discovery.mode === "wellknown" ? (
         <>
           <form onSubmit={onSubmit} className="mt-4 flex items-center gap-2">
-            <label className="sr-only" htmlFor="server-select">
-              Authorization server
-            </label>
-            <div className="w-52 shrink-0">
-              <Select
-                id="server-select"
-                value={AUTH_SERVERS.includes(issuerInput) ? issuerInput : CUSTOM_SERVER}
-                disabled={isLoading}
-                onChange={(e) => {
-                  if (e.target.value === CUSTOM_SERVER) {
-                    // Switching to Custom from a preset: clear so the derived
-                    // value stays on "Custom…", then focus the box to type.
-                    if (AUTH_SERVERS.includes(issuerInput)) setIssuerInput("");
-                    window.requestAnimationFrame(() =>
-                      document.getElementById("issuer-input")?.focus(),
-                    );
-                  } else {
-                    setIssuerInput(e.target.value);
-                  }
-                }}
-              >
-                {AUTH_SERVERS.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-                <option value={CUSTOM_SERVER}>Custom…</option>
-              </Select>
-            </div>
-            <label className="sr-only" htmlFor="issuer-input">
-              Issuer URL
-            </label>
-            <Input
-              id="issuer-input"
-              mono
-              className="flex-1"
-              value={issuerInput}
-              onChange={(e) => setIssuerInput(e.target.value)}
-              placeholder="https://your-as.example.com"
-              disabled={isLoading}
-              autoComplete="off"
-              spellCheck={false}
-            />
+            {HAS_PRESETS && (
+              <>
+                <label className="sr-only" htmlFor="server-select">
+                  Authorization server
+                </label>
+                <Select
+                  id="server-select"
+                  className={isCustom ? "w-36 shrink-0" : "flex-1"}
+                  value={isCustom ? CUSTOM_SERVER : issuerInput}
+                  disabled={isLoading}
+                  onChange={(e) => {
+                    if (e.target.value === CUSTOM_SERVER) {
+                      setIssuerInput("");
+                      window.requestAnimationFrame(() =>
+                        document.getElementById("issuer-input")?.focus(),
+                      );
+                    } else {
+                      setIssuerInput(e.target.value);
+                    }
+                  }}
+                >
+                  {AUTH_SERVERS.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                  <option value={CUSTOM_SERVER}>Custom…</option>
+                </Select>
+              </>
+            )}
+            {(!HAS_PRESETS || isCustom) && (
+              <>
+                <label className="sr-only" htmlFor="issuer-input">
+                  Issuer URL
+                </label>
+                <Input
+                  id="issuer-input"
+                  mono
+                  className="flex-1"
+                  value={issuerInput}
+                  onChange={(e) => setIssuerInput(e.target.value)}
+                  placeholder="https://your-as.example.com"
+                  disabled={isLoading}
+                  autoComplete="off"
+                  spellCheck={false}
+                />
+              </>
+            )}
             <Button type="submit" disabled={isLoading} className="shrink-0">
               {isLoading ? (
                 <>
@@ -175,7 +186,11 @@ export function DiscoveryStep() {
 
           {discovery.status === "idle" && (
             <p className="mt-2 text-[12.5px] text-muted-foreground">
-              Pick an authorization server, or type any issuer URL, then Run.
+              {HAS_PRESETS
+                ? "Pick a configured server (or Custom… for any issuer URL), then Run — "
+                : "Type any issuer URL, then Run — "}
+              the playground fetches{" "}
+              <code className="font-mono">/.well-known/openid-configuration</code>.
             </p>
           )}
         </>
@@ -277,11 +292,7 @@ function StepHeader({
   durationMs?: number;
 }) {
   return (
-    <SharedStepHeader
-      stepNumber={1}
-      title="AS Discovery"
-      right={renderPill(status, durationMs)}
-    />
+    <SharedStepHeader step="discovery" right={renderPill(status, durationMs)} />
   );
 }
 
@@ -359,7 +370,7 @@ function ManualForm({
       </p>
       <ManualField
         label="issuer *"
-        hint="Echoed at step 5 (RFC 9207); validated against the iss param."
+        hint="Compared against the iss param the AS echoes at the callback (RFC 9207)."
       >
         <Input
           mono
@@ -386,7 +397,7 @@ function ManualForm({
       </ManualField>
       <ManualField
         label="jwks_uri"
-        hint="Optional. Fetched on Apply for step 7 signature verification."
+        hint="Optional. Fetched on Apply; the Token inspector uses it to verify signatures."
       >
         <Input
           mono
@@ -531,9 +542,10 @@ function CorsErrorPanel({ message: _message }: { message: string }) {
         </summary>
         <div className="mt-2 space-y-2 pl-4 text-muted-foreground">
           <p>
-            The browser made the request but the AS didn't send back the{" "}
+            The playground runs entirely in your browser, so every request is
+            subject to CORS. The AS answered without an{" "}
             <code className="font-mono">Access-Control-Allow-Origin</code>{" "}
-            header. v0.2 of the playground will ship a relay; for now:
+            header, so the browser withheld the response. To fix it:
           </p>
           <ul className="ml-5 list-disc space-y-1">
             <li>
@@ -547,9 +559,6 @@ function CorsErrorPanel({ message: _message }: { message: string }) {
           </ul>
         </div>
       </details>
-      <p className="mt-3 text-[11.5px] text-muted-foreground">
-        Why CORS? — design doc §9.
-      </p>
     </ErrorBanner>
   );
 }

@@ -195,8 +195,8 @@ export function AuthorizeStep() {
   return (
     <div className="mx-auto max-w-3xl">
       <StepHeader
-        stepNumber={5}
-        title="Authorize → Callback"
+        step="authorize"
+        titleSuffix="opens the AS, catches the callback"
         right={renderPill(auth.status)}
       />
 
@@ -388,7 +388,7 @@ function ResultPanel({
         )}
       </KVList>
       <p className="mt-3 text-[12px] text-muted-foreground">
-        Next: step 6 exchanges this code for tokens at{" "}
+        Next: Token exchange trades this code for tokens at{" "}
         <code className="font-mono">/token</code>.
       </p>
     </Banner>

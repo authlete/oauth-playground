@@ -1,5 +1,5 @@
 // Client authentication for confidential calls (PAR, /token, /introspect,
-// /revoke). Picks the right machinery based on step 2's authMethod:
+// /revoke). Picks the right machinery based on Client config's authMethod:
 //
 //   none                 → no auth (PKCE-only public client)
 //   client_secret_basic  → Authorization: Basic base64(client_id:secret)
@@ -44,7 +44,7 @@ export async function applyClientAuth(
 
     case "client_secret_basic": {
       if (!client.clientSecret) {
-        return { ok: false, message: "client_secret is empty (step 2)." };
+        return { ok: false, message: "client_secret is empty — set it in Client config." };
       }
       const encoded = btoa(`${client.clientId}:${client.clientSecret}`);
       opts.headers.set("Authorization", `Basic ${encoded}`);
@@ -53,7 +53,7 @@ export async function applyClientAuth(
 
     case "client_secret_post": {
       if (!client.clientSecret) {
-        return { ok: false, message: "client_secret is empty (step 2)." };
+        return { ok: false, message: "client_secret is empty — set it in Client config." };
       }
       opts.body.set("client_id", client.clientId);
       opts.body.set("client_secret", client.clientSecret);

@@ -82,7 +82,7 @@ export function ResourceStep() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <StepHeader stepNumber={10} title="Resource call" right={renderPill(rc.status)} />
+      <StepHeader step="resource" right={renderPill(rc.status)} />
 
       <div className="mt-5 space-y-4">
         <div className="flex gap-2">

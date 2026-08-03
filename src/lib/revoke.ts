@@ -1,4 +1,4 @@
-// Step 12: revoke a token (RFC 7009). The AS responds 200 OK on success
+// Revoke a token (RFC 7009). The AS responds 200 OK on success
 // (regardless of whether the token was valid — the spec says clients
 // shouldn't be able to probe for valid tokens).
 

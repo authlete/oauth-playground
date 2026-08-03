@@ -1,4 +1,4 @@
-// PKCE (RFC 7636) — only S256 in v0.1; plain is allowed by spec but actively
+// PKCE (RFC 7636) — only S256; plain is allowed by spec but actively
 // discouraged. The verifier is high-entropy random base64url; the challenge
 // is base64url(SHA-256(verifier)).
 

@@ -158,8 +158,8 @@ export function InspectStep() {
 function Header() {
   return (
     <StepHeader
-      stepNumber={7}
-      title="Token inspector"
+      step="inspect"
+      stepLabel="Utility"
       right={
         <span className="text-[11.5px] text-muted-foreground">passive</span>
       }
@@ -199,7 +199,7 @@ function SourceTab({
 function EmptyState() {
   return (
     <Banner tone="info" className="mt-6 p-4 text-[13px] text-muted-foreground">
-      Run step 6 first, or pick the Paste tab and drop in any JWT.
+      Run Token exchange first, or pick the Paste tab and drop in any JWT.
     </Banner>
   );
 }

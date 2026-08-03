@@ -42,7 +42,7 @@ function Shell() {
 }
 
 function useKeyboardShortcuts() {
-  const { toggleTheme, networkClear } = usePlayground();
+  const { state, toggleTheme, networkClear, networkSetCollapsed } = usePlayground();
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       // Ignore shortcuts while typing into inputs / textareas.
@@ -62,9 +62,12 @@ function useKeyboardShortcuts() {
       } else if (mod && e.key.toLowerCase() === "l") {
         e.preventDefault();
         networkClear();
+      } else if (mod && e.key.toLowerCase() === "j") {
+        e.preventDefault();
+        networkSetCollapsed(!state.networkCollapsed);
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [toggleTheme, networkClear]);
+  }, [toggleTheme, networkClear, networkSetCollapsed, state.networkCollapsed]);
 }

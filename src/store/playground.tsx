@@ -58,6 +58,8 @@ interface State {
   activeStep: StepId;
   stepStatus: Record<StepId, StepStatus>;
   network: NetworkEntry[];
+  /** Right-pane visibility. Starts collapsed; auto-expands on first request. */
+  networkCollapsed: boolean;
   discovery: DiscoveryState;
   client: ClientConfigState;
   dcrRegister: DcrRegisterState;
@@ -81,6 +83,7 @@ type Action =
   | { type: "network-add"; entry: NetworkEntry }
   | { type: "network-update"; id: string; patch: Partial<NetworkEntry> }
   | { type: "network-clear" }
+  | { type: "network-set-collapsed"; collapsed: boolean }
   | { type: "discovery-update"; patch: Partial<DiscoveryState> }
   | { type: "discovery-reset" }
   | { type: "client-update"; patch: Partial<ClientConfigState> }
@@ -229,7 +232,7 @@ const initialState: State = {
     "dcr-register": "hidden",
     "federation-register": "hidden",
     "auth-request": "locked",
-    par: "locked",
+    par: "hidden",
     authorize: "locked",
     token: "locked",
     inspect: "locked",
@@ -240,6 +243,7 @@ const initialState: State = {
     revoke: "locked",
   },
   network: [],
+  networkCollapsed: true,
   discovery: {
     status: "idle",
     issuer: DEFAULT_AUTH_SERVER,
@@ -293,7 +297,12 @@ function reducer(state: State, action: Action): State {
         stepStatus: { ...state.stepStatus, [action.step]: action.status },
       };
     case "network-add":
-      return { ...state, network: [...state.network, action.entry] };
+      // First traffic opens the pane — after that the user's choice wins.
+      return {
+        ...state,
+        network: [...state.network, action.entry],
+        networkCollapsed: state.network.length === 0 ? false : state.networkCollapsed,
+      };
     case "network-update":
       return {
         ...state,
@@ -303,6 +312,8 @@ function reducer(state: State, action: Action): State {
       };
     case "network-clear":
       return { ...state, network: [] };
+    case "network-set-collapsed":
+      return { ...state, networkCollapsed: action.collapsed };
     case "discovery-update":
       return { ...state, discovery: { ...state.discovery, ...action.patch } };
     case "discovery-reset":
@@ -365,6 +376,7 @@ interface PlaygroundContextValue {
   networkAdd: (entry: NetworkEntry) => void;
   networkUpdate: (id: string, patch: Partial<NetworkEntry>) => void;
   networkClear: () => void;
+  networkSetCollapsed: (collapsed: boolean) => void;
   discoveryUpdate: (patch: Partial<DiscoveryState>) => void;
   discoveryReset: () => void;
   clientUpdate: (patch: Partial<ClientConfigState>) => void;
@@ -491,7 +503,7 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
   ]);
 
   // Seed state, nonce, and PKCE globally so the Authorize URL is complete
-  // even when the user jumps straight from Discovery to step 5.
+  // even when the user jumps straight from Discovery to Authorize.
   useEffect(() => {
     const patch: Partial<AuthRequestState> = {};
     if (!state.authRequest.state) patch.state = randomBase64Url(16);
@@ -543,7 +555,7 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
     state.authRequest.codeChallenge,
   ]);
 
-  // JAR (RFC 9101): keep a freshly-signed request object in state so step 3 can
+  // JAR (RFC 9101): keep a freshly-signed request object in state so Auth request can
   // show the real decoded JWT the instant a valid key + params exist — no
   // send-time placeholder. Mirrors the PKCE effect above (async crypto → state).
   // Keyed on the wire params + signing key so it re-signs on any relevant edit;
@@ -687,6 +699,11 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
     [],
   );
   const networkClear = useCallback(() => dispatch({ type: "network-clear" }), []);
+  const networkSetCollapsed = useCallback(
+    (collapsed: boolean) =>
+      dispatch({ type: "network-set-collapsed", collapsed }),
+    [],
+  );
   const discoveryUpdate = useCallback(
     (patch: Partial<DiscoveryState>) =>
       dispatch({ type: "discovery-update", patch }),
@@ -766,6 +783,7 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
       networkAdd,
       networkUpdate,
       networkClear,
+      networkSetCollapsed,
       discoveryUpdate,
       discoveryReset,
       clientUpdate,
@@ -791,6 +809,7 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
       networkAdd,
       networkUpdate,
       networkClear,
+      networkSetCollapsed,
       discoveryUpdate,
       discoveryReset,
       clientUpdate,

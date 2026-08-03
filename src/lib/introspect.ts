@@ -1,4 +1,4 @@
-// Step 9: POST introspection_endpoint (RFC 7662). Client auth is required;
+// POST introspection_endpoint (RFC 7662). Client auth is required;
 // the AS uses it to decide whether the caller is allowed to introspect.
 
 import { applyClientAuth } from "./clientAuth";
