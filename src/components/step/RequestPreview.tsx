@@ -8,14 +8,21 @@ import {
   type PreviewBlock,
 } from "../../lib/requestPreview";
 
-/** Wire-level request preview — a Section under the hood so it matches the
- * form sections around it; the copy button rides in the header/action slot. */
+/** Wire-level request preview.
+ *
+ * "section" (default): a full Section titled "Final request" — for standalone
+ * use on the Authorize / PAR pages.
+ * "plain": just the pre block, copy button, and notes — for embedding inside
+ * a card that already provides section chrome (the Auth request live
+ * preview), so sections never nest. */
 export function RequestPreview({
   block,
   className,
+  variant = "section",
 }: {
   block: PreviewBlock;
   className?: string;
+  variant?: "section" | "plain";
 }) {
   const [copied, setCopied] = useState(false);
   const text = renderPreview(block);
@@ -30,25 +37,22 @@ export function RequestPreview({
     }
   };
 
-  return (
-    <Section
-      title="Final request"
-      description="The exact request on the wire — method, headers, body."
-      className={className}
-      action={
-        <Button variant="ghost" size="sm" onClick={onCopy}>
-          {copied ? (
-            <>
-              <Check className="h-3.5 w-3.5" /> Copied
-            </>
-          ) : (
-            <>
-              <Copy className="h-3.5 w-3.5" /> Copy
-            </>
-          )}
-        </Button>
-      }
-    >
+  const copyButton = (
+    <Button variant="ghost" size="sm" onClick={onCopy}>
+      {copied ? (
+        <>
+          <Check className="h-3.5 w-3.5" /> Copied
+        </>
+      ) : (
+        <>
+          <Copy className="h-3.5 w-3.5" /> Copy
+        </>
+      )}
+    </Button>
+  );
+
+  const body = (
+    <>
       <pre className="overflow-auto rounded-md border border-border bg-background/60 px-3 py-2.5 font-mono text-[11.5px] leading-relaxed">
         {text}
       </pre>
@@ -59,6 +63,26 @@ export function RequestPreview({
           ))}
         </div>
       )}
+    </>
+  );
+
+  if (variant === "plain") {
+    return (
+      <div className={className}>
+        {body}
+        <div className="mt-3">{copyButton}</div>
+      </div>
+    );
+  }
+
+  return (
+    <Section
+      title="Final request"
+      description="The exact request on the wire — method, headers, body."
+      className={className}
+      action={copyButton}
+    >
+      {body}
     </Section>
   );
 }

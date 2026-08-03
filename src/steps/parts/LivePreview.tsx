@@ -63,10 +63,12 @@ export function LivePreview(props: LivePreviewProps) {
         <div className="min-w-0">
           {showPar && parEndpoint ? (
             <RequestPreview
+              variant="plain"
               block={previewPar(parEndpoint, props.client, props.authRequest)}
             />
           ) : showJar && authEndpoint ? (
             <RequestPreview
+              variant="plain"
               block={previewAuthorize(
                 authEndpoint,
                 props.client,
