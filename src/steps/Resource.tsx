@@ -399,8 +399,8 @@ function ChallengeGuide({
           — your token doesn't have it.
         </p>
         <p className="mt-1 text-[12.5px] text-muted-foreground">
-          This is the incremental-consent moment: re-authorize with the scope
-          added, exchange the new code, then retry this call.
+          Re-authorize with the scope added, exchange the new code, then retry
+          this call.
         </p>
         <Button size="sm" className="mt-3" onClick={() => onStepUp(scope)}>
           Add <code className="font-mono">{scope}</code> and re-authorize →
