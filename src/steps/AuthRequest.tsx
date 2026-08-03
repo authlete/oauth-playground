@@ -12,7 +12,7 @@ import { Input } from "../components/ui/Input";
 import { Checkbox } from "../components/ui/Checkbox";
 import { Select } from "../components/ui/Select";
 import { Textarea } from "../components/ui/Textarea";
-import { JwtPanel, StatusPill, StepHeader } from "../components/step";
+import { JwtPanel, Section, StatusPill, StepHeader } from "../components/step";
 import { computeCodeChallenge, generateCodeVerifier } from "../lib/pkce";
 import { randomBase64Url } from "../lib/random";
 import { buildAuthorizeUrl } from "../lib/authorizeUrl";
@@ -122,94 +122,98 @@ export function AuthRequestStep() {
         </div>
       )}
 
-      <div className="mt-6 space-y-5">
-        <Field label="Scopes">
-          <div className="flex flex-wrap gap-x-4 gap-y-2">
-            {COMMON_SCOPES.map((s) => (
-              <Checkbox
-                key={s}
-                label={s}
-                checked={req.scopes.includes(s)}
-                onChange={() => toggleScope(s)}
-              />
-            ))}
-          </div>
-          {req.scopes.some((s) => !(COMMON_SCOPES as readonly string[]).includes(s)) && (
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {req.scopes
-                .filter((s) => !(COMMON_SCOPES as readonly string[]).includes(s))
-                .map((s) => (
-                  <button
-                    type="button"
+      <div className="mt-6 space-y-4">
+        <Section title="Request parameters">
+          <div className="space-y-5">
+            <Field label="Scopes">
+              <div className="flex flex-wrap gap-x-4 gap-y-2">
+                {COMMON_SCOPES.map((s) => (
+                  <Checkbox
                     key={s}
-                    onClick={() => toggleScope(s)}
-                    className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/50 px-2 py-0.5 font-mono text-[11px] hover:bg-muted"
-                    title="Click to remove"
-                  >
-                    {s} ✕
-                  </button>
+                    label={s}
+                    checked={req.scopes.includes(s)}
+                    onChange={() => toggleScope(s)}
+                  />
                 ))}
+              </div>
+              {req.scopes.some((s) => !(COMMON_SCOPES as readonly string[]).includes(s)) && (
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {req.scopes
+                    .filter((s) => !(COMMON_SCOPES as readonly string[]).includes(s))
+                    .map((s) => (
+                      <button
+                        type="button"
+                        key={s}
+                        onClick={() => toggleScope(s)}
+                        className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/50 px-2 py-0.5 font-mono text-[11px] hover:bg-muted"
+                        title="Click to remove"
+                      >
+                        {s} ✕
+                      </button>
+                    ))}
+                </div>
+              )}
+              <div className="mt-2 flex gap-2">
+                <Input
+                  mono
+                  value={req.customScope}
+                  onChange={(e) => authRequestUpdate({ customScope: e.target.value })}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      addCustomScope();
+                    }
+                  }}
+                  placeholder="add custom scope, e.g. read:repo"
+                  className="h-8"
+                />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={addCustomScope}
+                  disabled={!req.customScope.trim()}
+                >
+                  Add
+                </Button>
+              </div>
+            </Field>
+
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="response_type" hint="What the AS returns at the callback.">
+                <Select
+                  value={req.responseType}
+                  onChange={(e) => authRequestUpdate({ responseType: e.target.value })}
+                >
+                  {RESPONSE_TYPES.map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+
+              <Field label="response_mode" hint="How the AS delivers the response to the redirect URI.">
+                <Select
+                  value={req.responseMode}
+                  onChange={(e) =>
+                    authRequestUpdate({ responseMode: e.target.value as ResponseMode })
+                  }
+                >
+                  {RESPONSE_MODES.map((m) => (
+                    <option key={m.value} value={m.value}>
+                      {m.label}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
             </div>
-          )}
-          <div className="mt-2 flex gap-2">
-            <Input
-              mono
-              value={req.customScope}
-              onChange={(e) => authRequestUpdate({ customScope: e.target.value })}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  addCustomScope();
-                }
-              }}
-              placeholder="add custom scope, e.g. read:repo"
-              className="h-8"
-            />
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={addCustomScope}
-              disabled={!req.customScope.trim()}
-            >
-              Add
-            </Button>
           </div>
-        </Field>
+        </Section>
 
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="response_type" hint="What the AS returns at the callback.">
-            <Select
-              value={req.responseType}
-              onChange={(e) => authRequestUpdate({ responseType: e.target.value })}
-            >
-              {RESPONSE_TYPES.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </Select>
-          </Field>
-
-          <Field label="response_mode" hint="How the AS delivers the response to the redirect URI.">
-            <Select
-              value={req.responseMode}
-              onChange={(e) =>
-                authRequestUpdate({ responseMode: e.target.value as ResponseMode })
-              }
-            >
-              {RESPONSE_MODES.map((m) => (
-                <option key={m.value} value={m.value}>
-                  {m.label}
-                </option>
-              ))}
-            </Select>
-          </Field>
-        </div>
-
-        <Field
-          label="Extensions"
-          hint={
+        <Section
+          title="Extensions"
+          description={
             parSupported
               ? "PKCE is on by default — leave it on unless the AS can't handle it. PAR adds a step that pushes the request to the AS first."
               : "PKCE is on by default — leave it on unless the AS can't handle it. PAR is unavailable: this AS doesn't advertise a /par endpoint."
@@ -245,39 +249,46 @@ export function AuthRequestStep() {
               </button>
             </p>
           )}
-        </Field>
+        </Section>
 
-        <ParamRow
-          label="state"
-          value={req.state}
-          onRegen={regenState}
-          hint="Anti-CSRF. Echoed back at the callback and compared."
-        />
-        <ParamRow
-          label="nonce"
-          value={req.nonce}
-          onRegen={regenNonce}
-          hint="Bound into the ID token; mitigates replay."
-        />
-        {req.pkceEnabled && (
-          <ParamRow
-            label="code_verifier"
-            value={req.codeVerifier}
-            onRegen={regenPkce}
-            regenerating={pkceRegenerating}
-            hint="Held in memory; sent to /token at Token exchange. Challenge = SHA-256(verifier)."
-            secondary={
-              req.codeChallenge ? (
-                <span className="font-mono text-[11.5px] text-muted-foreground">
-                  code_challenge · {req.codeChallenge}{" "}
-                  <span className="text-foreground">(S256)</span>
-                </span>
-              ) : (
-                <span className="text-[11.5px] text-muted-foreground">computing…</span>
-              )
-            }
-          />
-        )}
+        <Section
+          title="Security parameters"
+          description="Generated fresh for each run — regenerate any value manually with ↻."
+        >
+          <div className="space-y-4">
+            <ParamRow
+              label="state"
+              value={req.state}
+              onRegen={regenState}
+              hint="Anti-CSRF. Echoed back at the callback and compared."
+            />
+            <ParamRow
+              label="nonce"
+              value={req.nonce}
+              onRegen={regenNonce}
+              hint="Bound into the ID token; mitigates replay."
+            />
+            {req.pkceEnabled && (
+              <ParamRow
+                label="code_verifier"
+                value={req.codeVerifier}
+                onRegen={regenPkce}
+                regenerating={pkceRegenerating}
+                hint="Held in memory; sent to /token at Token exchange. Challenge = SHA-256(verifier)."
+                secondary={
+                  req.codeChallenge ? (
+                    <span className="font-mono text-[11.5px] text-muted-foreground">
+                      code_challenge · {req.codeChallenge}{" "}
+                      <span className="text-foreground">(S256)</span>
+                    </span>
+                  ) : (
+                    <span className="text-[11.5px] text-muted-foreground">computing…</span>
+                  )
+                }
+              />
+            )}
+          </div>
+        </Section>
 
         <AdvancedExpander req={req} update={authRequestUpdate} />
 

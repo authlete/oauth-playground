@@ -9,6 +9,7 @@ import { Checkbox } from "../components/ui/Checkbox";
 import {
   Banner,
   ErrorPanel,
+  Section,
   StatusPill,
   StepHeader,
   type StatusTone,
@@ -84,68 +85,75 @@ export function ResourceStep() {
     <div className="mx-auto max-w-3xl">
       <StepHeader step="resource" right={renderPill(rc.status)} />
 
-      <div className="mt-5 space-y-4">
-        <div className="flex gap-2">
-          <Select
-            value={rc.method}
-            onChange={(e) => resourceCallUpdate({ method: e.target.value })}
-            className="w-28 shrink-0"
-          >
-            {METHODS.map((m) => (
-              <option key={m} value={m}>
-                {m}
-              </option>
-            ))}
-          </Select>
-          <Input
-            mono
-            value={rc.url}
-            onChange={(e) => resourceCallUpdate({ url: e.target.value })}
-            placeholder="https://api.example.com/me"
-            autoComplete="off"
-            spellCheck={false}
-          />
-        </div>
-
-        <Field
-          label="Headers (JSON object, optional)"
-          hint='e.g. {"Accept":"application/json","X-Trace-Id":"abc"}'
+      <div className="mt-5">
+        <Section
+          title="Request"
+          description="Hits your own resource server; the playground only adds the Bearer header."
         >
-          <Textarea
-            mono
-            rows={3}
-            value={rc.headersText}
-            onChange={(e) => resourceCallUpdate({ headersText: e.target.value })}
-            placeholder="{}"
-            className="resize-y"
-          />
-        </Field>
+          <div className="space-y-4">
+            <div className="flex gap-2">
+              <Select
+                value={rc.method}
+                onChange={(e) => resourceCallUpdate({ method: e.target.value })}
+                className="w-28 shrink-0"
+              >
+                {METHODS.map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
+              </Select>
+              <Input
+                mono
+                value={rc.url}
+                onChange={(e) => resourceCallUpdate({ url: e.target.value })}
+                placeholder="https://api.example.com/me"
+                autoComplete="off"
+                spellCheck={false}
+              />
+            </div>
 
-        {rc.method !== "GET" && rc.method !== "HEAD" && (
-          <Field
-            label="Body (JSON or form-encoded)"
-            hint="Content-Type auto-detected if not in headers."
-          >
-            <Textarea
-              mono
-              rows={4}
-              value={rc.bodyText}
-              onChange={(e) => resourceCallUpdate({ bodyText: e.target.value })}
-              className="resize-y"
+            <Field
+              label="Headers (JSON object, optional)"
+              hint='e.g. {"Accept":"application/json","X-Trace-Id":"abc"}'
+            >
+              <Textarea
+                mono
+                rows={3}
+                value={rc.headersText}
+                onChange={(e) => resourceCallUpdate({ headersText: e.target.value })}
+                placeholder="{}"
+                className="resize-y"
+              />
+            </Field>
+
+            {rc.method !== "GET" && rc.method !== "HEAD" && (
+              <Field
+                label="Body (JSON or form-encoded)"
+                hint="Content-Type auto-detected if not in headers."
+              >
+                <Textarea
+                  mono
+                  rows={4}
+                  value={rc.bodyText}
+                  onChange={(e) => resourceCallUpdate({ bodyText: e.target.value })}
+                  className="resize-y"
+                />
+              </Field>
+            )}
+
+            <Checkbox
+              label={
+                state.token.accessToken
+                  ? `Attach Bearer ${shorten(state.token.accessToken, 10, 6)}`
+                  : "Attach Bearer (no access token available)"
+              }
+              checked={rc.attachBearer}
+              disabled={!state.token.accessToken}
+              onChange={(e) => resourceCallUpdate({ attachBearer: e.target.checked })}
             />
-          </Field>
-        )}
-
-        <Checkbox
-          label={
-            state.token.accessToken
-              ? `Attach Bearer ${shorten(state.token.accessToken, 10, 6)}`
-              : "Attach Bearer (no access token available)"
-          }
-          checked={rc.attachBearer}
-          disabled={!state.token.accessToken}
-          onChange={(e) => resourceCallUpdate({ attachBearer: e.target.checked })}
-        />
+          </div>
+        </Section>
       </div>
 
       <div className="mt-5 flex flex-wrap gap-2">

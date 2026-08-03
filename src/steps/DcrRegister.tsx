@@ -19,6 +19,7 @@ import {
   InfoCard,
   KV,
   KVList,
+  Section,
   StatusPill,
   StepHeader,
   type StatusTone,
@@ -158,81 +159,87 @@ export function DcrRegisterStep() {
             </p>
           </InfoCard>
 
-          <div className="mt-6 space-y-5">
-            <Field label="client_name" hint="Human-readable name shown on the consent screen.">
-              <Input
-                mono
-                value={reg.clientName}
-                onChange={(e) => dcrRegisterUpdate({ clientName: e.target.value })}
-                placeholder="OAuth Playground"
-              />
-            </Field>
-
-            <Field
-              label="redirect_uris"
-              hint="One per line. Required for the authorization_code grant."
-            >
-              <Textarea
-                mono
-                rows={2}
-                spellCheck={false}
-                className="text-[12px]"
-                value={reg.redirectUris}
-                onChange={(e) => dcrRegisterUpdate({ redirectUris: e.target.value })}
-                placeholder="http://localhost:5173/callback"
-              />
-            </Field>
-
-            <div className="grid grid-cols-2 gap-4">
-              <Field
-                label="token_endpoint_auth_method"
-                hint="How the registered client authenticates at /token."
-              >
-                <Select
-                  value={reg.tokenEndpointAuthMethod}
-                  onChange={(e) =>
-                    dcrRegisterUpdate({
-                      tokenEndpointAuthMethod: e.target.value as ClientAuthMethod,
-                    })
-                  }
-                >
-                  {AUTH_METHODS.map((m) => (
-                    <option key={m.value} value={m.value}>
-                      {m.label}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-
-              <Field label="scope" hint="Space-separated scopes to register for.">
-                <Input
-                  mono
-                  value={reg.scope}
-                  onChange={(e) => dcrRegisterUpdate({ scope: e.target.value })}
-                  placeholder="openid profile email"
-                />
-              </Field>
-            </div>
-
-            <Field label="grant_types" hint="response_types is derived (code for authorization_code).">
-              <div className="flex flex-wrap gap-x-6 gap-y-2">
-                {DCR_GRANT_TYPES.map((g) => (
-                  <Checkbox
-                    key={g}
-                    label={g}
-                    checked={reg.grantTypes.includes(g)}
-                    onChange={() => toggleGrant(g)}
+          <div className="mt-6 space-y-4">
+            <Section title="Client metadata">
+              <div className="space-y-5">
+                <Field label="client_name" hint="Human-readable name shown on the consent screen.">
+                  <Input
+                    mono
+                    value={reg.clientName}
+                    onChange={(e) => dcrRegisterUpdate({ clientName: e.target.value })}
+                    placeholder="OAuth Playground"
                   />
-                ))}
-              </div>
-            </Field>
+                </Field>
 
-            <div>
-              <div className="mb-1.5 text-[12.5px] font-medium">Request body</div>
+                <Field
+                  label="redirect_uris"
+                  hint="One per line. Required for the authorization_code grant."
+                >
+                  <Textarea
+                    mono
+                    rows={2}
+                    spellCheck={false}
+                    className="text-[12px]"
+                    value={reg.redirectUris}
+                    onChange={(e) => dcrRegisterUpdate({ redirectUris: e.target.value })}
+                    placeholder="http://localhost:5173/callback"
+                  />
+                </Field>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <Field
+                    label="token_endpoint_auth_method"
+                    hint="How the registered client authenticates at /token."
+                  >
+                    <Select
+                      value={reg.tokenEndpointAuthMethod}
+                      onChange={(e) =>
+                        dcrRegisterUpdate({
+                          tokenEndpointAuthMethod: e.target.value as ClientAuthMethod,
+                        })
+                      }
+                    >
+                      {AUTH_METHODS.map((m) => (
+                        <option key={m.value} value={m.value}>
+                          {m.label}
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
+
+                  <Field label="scope" hint="Space-separated scopes to register for.">
+                    <Input
+                      mono
+                      value={reg.scope}
+                      onChange={(e) => dcrRegisterUpdate({ scope: e.target.value })}
+                      placeholder="openid profile email"
+                    />
+                  </Field>
+                </div>
+
+                <Field label="grant_types" hint="response_types is derived (code for authorization_code).">
+                  <div className="flex flex-wrap gap-x-6 gap-y-2">
+                    {DCR_GRANT_TYPES.map((g) => (
+                      <Checkbox
+                        key={g}
+                        label={g}
+                        checked={reg.grantTypes.includes(g)}
+                        onChange={() => toggleGrant(g)}
+                      />
+                    ))}
+                  </div>
+                </Field>
+              </div>
+            </Section>
+
+            <Section
+              title="Request body"
+              description="POSTed as JSON to the registration endpoint."
+            >
               <pre className="max-h-[220px] overflow-auto rounded-md border border-border bg-background/60 p-3 font-mono text-[11.5px] leading-relaxed">
                 {JSON.stringify(request, null, 2)}
               </pre>
-            </div>
+            </Section>
 
             <div className="flex flex-wrap gap-2">
               {reg.status === "loading" ? (

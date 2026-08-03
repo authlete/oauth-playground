@@ -6,6 +6,7 @@ import { Input } from "../components/ui/Input";
 import { Select } from "../components/ui/Select";
 import {
   Banner,
+  Section,
   StatusPill,
   StepHeader as SharedStepHeader,
 } from "../components/step";
@@ -361,96 +362,108 @@ function ManualForm({
     }
   };
   return (
-    <div className="mt-4 space-y-3">
+    <div className="mt-4 space-y-4">
       <p className="text-[12.5px] text-muted-foreground">
         {prefilled
           ? "Pre-filled from the last successful Discovery — edit any endpoint to override."
-          : "Use when the AS has no .well-known endpoint or you're targeting a stub/test server."}{" "}
-        Required fields marked with *.
+          : "Use when the AS has no .well-known endpoint or you're targeting a stub/test server."}
       </p>
-      <ManualField
-        label="issuer *"
-        hint="Compared against the iss param the AS echoes at the callback (RFC 9207)."
+
+      <Section title="Required endpoints">
+        <div className="space-y-3">
+          <ManualField
+            label="issuer"
+            hint="Compared against the iss param the AS echoes at the callback (RFC 9207)."
+          >
+            <Input
+              mono
+              value={endpoints.issuer}
+              onChange={(e) => onChange({ issuer: e.target.value })}
+              placeholder="https://my-as.example.com"
+            />
+          </ManualField>
+          <ManualField label="authorization_endpoint">
+            <Input
+              mono
+              value={endpoints.authorization_endpoint}
+              onChange={(e) => onChange({ authorization_endpoint: e.target.value })}
+              placeholder="https://my-as.example.com/authorize"
+            />
+          </ManualField>
+          <ManualField label="token_endpoint">
+            <Input
+              mono
+              value={endpoints.token_endpoint}
+              onChange={(e) => onChange({ token_endpoint: e.target.value })}
+              placeholder="https://my-as.example.com/token"
+            />
+          </ManualField>
+        </div>
+      </Section>
+
+      <Section
+        title="Optional endpoints"
+        description="Leave an endpoint blank and the matching step stays unavailable."
       >
-        <Input
-          mono
-          value={endpoints.issuer}
-          onChange={(e) => onChange({ issuer: e.target.value })}
-          placeholder="https://my-as.example.com"
-        />
-      </ManualField>
-      <ManualField label="authorization_endpoint *">
-        <Input
-          mono
-          value={endpoints.authorization_endpoint}
-          onChange={(e) => onChange({ authorization_endpoint: e.target.value })}
-          placeholder="https://my-as.example.com/authorize"
-        />
-      </ManualField>
-      <ManualField label="token_endpoint *">
-        <Input
-          mono
-          value={endpoints.token_endpoint}
-          onChange={(e) => onChange({ token_endpoint: e.target.value })}
-          placeholder="https://my-as.example.com/token"
-        />
-      </ManualField>
-      <ManualField
-        label="jwks_uri"
-        hint="Optional. Fetched on Apply; the Token inspector uses it to verify signatures."
-      >
-        <Input
-          mono
-          value={endpoints.jwks_uri}
-          onChange={(e) => onChange({ jwks_uri: e.target.value })}
-          placeholder="https://my-as.example.com/jwks"
-        />
-      </ManualField>
-      <ManualField label="userinfo_endpoint">
-        <Input
-          mono
-          value={endpoints.userinfo_endpoint}
-          onChange={(e) => onChange({ userinfo_endpoint: e.target.value })}
-        />
-      </ManualField>
-      <ManualField label="introspection_endpoint">
-        <Input
-          mono
-          value={endpoints.introspection_endpoint}
-          onChange={(e) =>
-            onChange({ introspection_endpoint: e.target.value })
-          }
-        />
-      </ManualField>
-      <ManualField label="revocation_endpoint">
-        <Input
-          mono
-          value={endpoints.revocation_endpoint}
-          onChange={(e) => onChange({ revocation_endpoint: e.target.value })}
-        />
-      </ManualField>
-      <ManualField label="pushed_authorization_request_endpoint">
-        <Input
-          mono
-          value={endpoints.pushed_authorization_request_endpoint}
-          onChange={(e) =>
-            onChange({
-              pushed_authorization_request_endpoint: e.target.value,
-            })
-          }
-        />
-      </ManualField>
-      <ManualField label="federation_registration_endpoint">
-        <Input
-          mono
-          value={endpoints.federation_registration_endpoint}
-          onChange={(e) =>
-            onChange({
-              federation_registration_endpoint: e.target.value,
-            })
-          }
-        />
-      </ManualField>
+        <div className="space-y-3">
+          <ManualField
+            label="jwks_uri"
+            hint="Fetched on Apply; the Token inspector uses it to verify signatures."
+          >
+            <Input
+              mono
+              value={endpoints.jwks_uri}
+              onChange={(e) => onChange({ jwks_uri: e.target.value })}
+              placeholder="https://my-as.example.com/jwks"
+            />
+          </ManualField>
+          <ManualField label="userinfo_endpoint">
+            <Input
+              mono
+              value={endpoints.userinfo_endpoint}
+              onChange={(e) => onChange({ userinfo_endpoint: e.target.value })}
+            />
+          </ManualField>
+          <ManualField label="introspection_endpoint">
+            <Input
+              mono
+              value={endpoints.introspection_endpoint}
+              onChange={(e) =>
+                onChange({ introspection_endpoint: e.target.value })
+              }
+            />
+          </ManualField>
+          <ManualField label="revocation_endpoint">
+            <Input
+              mono
+              value={endpoints.revocation_endpoint}
+              onChange={(e) => onChange({ revocation_endpoint: e.target.value })}
+            />
+          </ManualField>
+          <ManualField label="pushed_authorization_request_endpoint">
+            <Input
+              mono
+              value={endpoints.pushed_authorization_request_endpoint}
+              onChange={(e) =>
+                onChange({
+                  pushed_authorization_request_endpoint: e.target.value,
+                })
+              }
+            />
+          </ManualField>
+          <ManualField label="federation_registration_endpoint">
+            <Input
+              mono
+              value={endpoints.federation_registration_endpoint}
+              onChange={(e) =>
+                onChange({
+                  federation_registration_endpoint: e.target.value,
+                })
+              }
+            />
+          </ManualField>
+        </div>
+      </Section>
 
       <div className="flex flex-wrap gap-2 pt-2">
         <Button onClick={handleApply} disabled={applying}>

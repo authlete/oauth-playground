@@ -40,8 +40,10 @@ export function LivePreview(props: LivePreviewProps) {
   // plain-params block would misrepresent it — show the wire preview instead.
   const showJar = !showPar && props.authRequest.jarEnabled && !!authEndpoint;
 
+  // Card chrome matching <Section> so the preview reads as the page's final
+  // section; the header stays custom because the title is state-dependent.
   return (
-    <div>
+    <div className="rounded-lg border border-border bg-muted/20 p-4">
       <PreviewHeader
         title={showPar ? "PAR request" : showJar ? "Authorize URL (JAR)" : "Authorize URL"}
         subtitle={subtitleFor(showPar, props.parEnabled, props.parPushed)}
@@ -108,9 +110,9 @@ function PreviewHeader({
   endpoint?: string;
 }) {
   return (
-    <div className="mb-1.5 flex items-center justify-between gap-3">
+    <div className="mb-3 flex items-center justify-between gap-3">
       <div className="min-w-0">
-        <span className="text-[12.5px] font-medium">{title}</span>
+        <span className="text-[13px] font-semibold">{title}</span>
         <span className="ml-2 text-[11px] text-muted-foreground">
           {subtitle}
         </span>

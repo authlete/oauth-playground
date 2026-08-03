@@ -10,7 +10,7 @@ import { usePlayground } from "../store/playground";
 import { Input } from "../components/ui/Input";
 import { Select } from "../components/ui/Select";
 import { Textarea } from "../components/ui/Textarea";
-import { StatusPill, StepHeader } from "../components/step";
+import { Section, StatusPill, StepHeader } from "../components/step";
 import { cn } from "../lib/cn";
 import { validateClientConfig } from "../lib/clientConfig";
 import { validateAndImportJwk } from "../lib/jwk";
@@ -113,128 +113,143 @@ export function ClientStep() {
         }
       />
 
-      <div className="mt-6 space-y-5">
-        <Field
-          label="Client ID"
-          hint="Accepts a plain ID or a URL. ASes that support OpenID Federation or Client ID Metadata Document will resolve a URL automatically."
+      <div className="mt-6 space-y-4">
+        <Section
+          title="Identity"
+          description="Who this client is, and where the AS sends the authorization response."
         >
-          <Input
-            mono
-            value={cfg.clientId}
-            onChange={(e) => clientUpdate({ clientId: e.target.value })}
-            placeholder="2234376661"
-            autoComplete="off"
-            spellCheck={false}
-          />
-          {looksUrlShaped(cfg.clientId) && (
-            <span className="mt-1 inline-block rounded-sm bg-[color-mix(in_oklch,var(--playground-accent)_12%,transparent)] px-1.5 py-0.5 font-mono text-[10.5px] text-[var(--playground-accent)]">
-              URL identifier
-            </span>
-          )}
-        </Field>
+          <div className="space-y-5">
+            <Field
+              label="Client ID"
+              hint="Accepts a plain ID or a URL. ASes that support OpenID Federation or Client ID Metadata Document will resolve a URL automatically."
+            >
+              <Input
+                mono
+                value={cfg.clientId}
+                onChange={(e) => clientUpdate({ clientId: e.target.value })}
+                placeholder="2234376661"
+                autoComplete="off"
+                spellCheck={false}
+              />
+              {looksUrlShaped(cfg.clientId) && (
+                <span className="mt-1 inline-block rounded-sm bg-[color-mix(in_oklch,var(--playground-accent)_12%,transparent)] px-1.5 py-0.5 font-mono text-[10.5px] text-[var(--playground-accent)]">
+                  URL identifier
+                </span>
+              )}
+            </Field>
 
-        <Field
-          label="Authentication method"
-          hint={AUTH_METHODS.find((m) => m.value === cfg.authMethod)?.hint}
-        >
-          <Select
-            value={cfg.authMethod}
-            onChange={(e) =>
-              clientUpdate({ authMethod: e.target.value as ClientAuthMethod })
-            }
-          >
-            {AUTH_METHODS.map((m) => (
-              <option key={m.value} value={m.value}>
-                {m.label}
-              </option>
-            ))}
-          </Select>
-        </Field>
-
-        {(cfg.authMethod === "client_secret_basic" ||
-          cfg.authMethod === "client_secret_post") && (
-          <Field
-            label="Client secret"
-            hint="Held in memory for this session only — never persisted, never shared via URL."
-          >
-            <Input
-              type="password"
-              mono
-              value={cfg.clientSecret}
-              onChange={(e) => clientUpdate({ clientSecret: e.target.value })}
-              placeholder="paste secret"
-              autoComplete="off"
-              spellCheck={false}
-            />
-          </Field>
-        )}
-
-        {needsSigningKey && (
-          <Field
-            label="Private key (JWK)"
-            hint={
-              cfg.authMethod === "private_key_jwt"
-                ? "Signs the client_assertion (private_key_jwt) and, if JAR is on, the request object. Paste a JWK with a private exponent (`d`); never persisted."
-                : "Signs the JAR request object (RFC 9101). Paste a JWK with a private exponent (`d`); never persisted."
-            }
-            action={
-              cfg.privateKey.jwkText.trim() ? (
-                <button
-                  type="button"
-                  onClick={() => setShowKey((v) => !v)}
-                  className="inline-flex items-center gap-1 text-[11.5px] text-muted-foreground hover:text-foreground"
-                >
-                  {showKey ? (
-                    <>
-                      <EyeOff className="h-3.5 w-3.5" /> Hide
-                    </>
-                  ) : (
-                    <>
-                      <Eye className="h-3.5 w-3.5" /> Show
-                    </>
-                  )}
-                </button>
-              ) : undefined
-            }
-          >
-            <Textarea
-              mono
-              rows={10}
-              value={cfg.privateKey.jwkText}
-              onChange={(e) =>
-                clientUpdate({
-                  privateKey: { ...cfg.privateKey, jwkText: e.target.value },
-                })
+            <Field
+              label="Redirect URI"
+              hint={
+                "Pre-filled to this playground's /callback; override only if your AS expects a different one."
               }
-              placeholder={'{\n  "kty": "EC",\n  "crv": "P-256",\n  "kid": "...",\n  "x": "...",\n  "y": "...",\n  "d": "..."\n}'}
-              className="min-h-[200px] resize-y"
-              style={showKey ? undefined : MASK_STYLE}
-            />
-            <JwkStatusLine
-              validating={jwkValidating}
-              status={cfg.privateKey.status}
-              alg={cfg.privateKey.alg}
-              kid={cfg.privateKey.kid}
-              errorMessage={cfg.privateKey.errorMessage}
-            />
-          </Field>
-        )}
+            >
+              <Input
+                mono
+                value={cfg.redirectUri}
+                onChange={(e) => clientUpdate({ redirectUri: e.target.value })}
+                placeholder="http://localhost:5173/callback"
+                autoComplete="off"
+                spellCheck={false}
+              />
+            </Field>
+          </div>
+        </Section>
 
-        <Field
-          label="Redirect URI"
-          hint={
-            "Where the AS sends the authorization response. Pre-filled to this playground's /callback; override only if your AS expects a different one."
-          }
+        <Section
+          title="Authentication"
+          description="How the client proves itself at /token (and /introspect, /revoke)."
         >
-          <Input
-            mono
-            value={cfg.redirectUri}
-            onChange={(e) => clientUpdate({ redirectUri: e.target.value })}
-            placeholder="http://localhost:5173/callback"
-            autoComplete="off"
-            spellCheck={false}
-          />
-        </Field>
+          <div className="space-y-5">
+            <Field
+              label="Method"
+              hint={AUTH_METHODS.find((m) => m.value === cfg.authMethod)?.hint}
+            >
+              <Select
+                value={cfg.authMethod}
+                onChange={(e) =>
+                  clientUpdate({ authMethod: e.target.value as ClientAuthMethod })
+                }
+              >
+                {AUTH_METHODS.map((m) => (
+                  <option key={m.value} value={m.value}>
+                    {m.label}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+
+            {(cfg.authMethod === "client_secret_basic" ||
+              cfg.authMethod === "client_secret_post") && (
+              <Field
+                label="Client secret"
+                hint="Held in memory for this session only — never persisted, never shared via URL."
+              >
+                <Input
+                  type="password"
+                  mono
+                  value={cfg.clientSecret}
+                  onChange={(e) => clientUpdate({ clientSecret: e.target.value })}
+                  placeholder="paste secret"
+                  autoComplete="off"
+                  spellCheck={false}
+                />
+              </Field>
+            )}
+
+            {needsSigningKey && (
+              <Field
+                label="Private key (JWK)"
+                hint={
+                  cfg.authMethod === "private_key_jwt"
+                    ? "Signs the client_assertion (private_key_jwt) and, if JAR is on, the request object. Paste a JWK with a private exponent (`d`); never persisted."
+                    : "Signs the JAR request object (RFC 9101). Paste a JWK with a private exponent (`d`); never persisted."
+                }
+                action={
+                  cfg.privateKey.jwkText.trim() ? (
+                    <button
+                      type="button"
+                      onClick={() => setShowKey((v) => !v)}
+                      className="inline-flex items-center gap-1 text-[11.5px] text-muted-foreground hover:text-foreground"
+                    >
+                      {showKey ? (
+                        <>
+                          <EyeOff className="h-3.5 w-3.5" /> Hide
+                        </>
+                      ) : (
+                        <>
+                          <Eye className="h-3.5 w-3.5" /> Show
+                        </>
+                      )}
+                    </button>
+                  ) : undefined
+                }
+              >
+                <Textarea
+                  mono
+                  rows={10}
+                  value={cfg.privateKey.jwkText}
+                  onChange={(e) =>
+                    clientUpdate({
+                      privateKey: { ...cfg.privateKey, jwkText: e.target.value },
+                    })
+                  }
+                  placeholder={'{\n  "kty": "EC",\n  "crv": "P-256",\n  "kid": "...",\n  "x": "...",\n  "y": "...",\n  "d": "..."\n}'}
+                  className="min-h-[200px] resize-y"
+                  style={showKey ? undefined : MASK_STYLE}
+                />
+                <JwkStatusLine
+                  validating={jwkValidating}
+                  status={cfg.privateKey.status}
+                  alg={cfg.privateKey.alg}
+                  kid={cfg.privateKey.kid}
+                  errorMessage={cfg.privateKey.errorMessage}
+                />
+              </Field>
+            )}
+
+          </div>
+        </Section>
 
         {!validation.ok && (
           <div className="rounded-md border border-border bg-muted/40 p-3 text-[12.5px] text-muted-foreground">
