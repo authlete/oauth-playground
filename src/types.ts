@@ -318,6 +318,11 @@ export type IntrospectStatus = "idle" | "loading" | "success" | "error";
 export interface IntrospectState {
   status: IntrospectStatus;
   tokenSource: "access" | "refresh";
+  /** Sent verbatim as the Authorization header — RFC 7662, Section 2.1
+   * requires the introspection caller (typically the resource server) to
+   * authenticate, separately from OAuth client auth. Defaults to a demo
+   * value that satisfies test servers which only check the header exists. */
+  callerAuthorization: string;
   result?: { active: boolean } & Record<string, unknown>;
   fetchedAt?: number;
   errorMessage?: string;
@@ -328,6 +333,7 @@ export interface IntrospectState {
 export const DEFAULT_INTROSPECT: IntrospectState = {
   status: "idle",
   tokenSource: "access",
+  callerAuthorization: "Bearer playground-demo-rs",
 };
 
 export type ResourceCallStatus = "idle" | "loading" | "success" | "error";

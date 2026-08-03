@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { ArrowRight, Check, Loader2, RotateCw, XCircle } from "lucide-react";
 import { usePlayground } from "../store/playground";
 import { Button } from "../components/ui/Button";
+import { Input } from "../components/ui/Input";
 import { Select } from "../components/ui/Select";
 import {
   Banner,
@@ -49,10 +50,10 @@ export function IntrospectStep() {
     });
     const result = await introspect({
       metadata: state.discovery.metadata,
-      client: state.client,
       token: selectedToken,
       tokenHint:
         intro.tokenSource === "access" ? "access_token" : "refresh_token",
+      callerAuthorization: intro.callerAuthorization,
       onStart: networkAdd,
       onFinish: networkUpdate,
     });
@@ -129,13 +130,28 @@ export function IntrospectStep() {
                 </option>
               </Select>
             </div>
-            <p className="text-muted-foreground">
-              Authenticating with{" "}
-              <span className="font-mono text-foreground">
-                {state.client.authMethod}
-              </span>
-              .
-            </p>
+            <div>
+              <label className="mb-1.5 block text-[12.5px] font-medium">
+                Caller credential (Authorization header)
+              </label>
+              <Input
+                mono
+                value={intro.callerAuthorization}
+                onChange={(e) =>
+                  introspectUpdate({ callerAuthorization: e.target.value })
+                }
+                placeholder="Bearer …"
+                autoComplete="off"
+                spellCheck={false}
+              />
+              <p className="mt-1 text-[12px] text-muted-foreground">
+                The AS protects this endpoint itself (RFC 7662, Section 2.1):
+                the caller — typically a resource server — presents its own
+                credential, separate from the OAuth client authentication used
+                at /token. This demo value satisfies test servers; a production
+                AS must validate a real credential here.
+              </p>
+            </div>
           </InfoCard>
 
           <div className="mt-5 flex flex-wrap gap-2">

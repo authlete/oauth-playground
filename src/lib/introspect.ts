@@ -1,8 +1,11 @@
-// POST introspection_endpoint (RFC 7662). Client auth is required;
-// the AS uses it to decide whether the caller is allowed to introspect.
+// POST introspection_endpoint (RFC 7662). Unlike /token — where the AS
+// forwards credentials to Authlete and Authlete authenticates the client —
+// the AS protects this endpoint itself (RFC 7662, Section 2.1): the caller
+// (typically a resource server) presents its own Authorization credential,
+// and the body carries only token + token_type_hint. OAuth client
+// authentication plays no part here.
 
-import { applyClientAuth } from "./clientAuth";
-import type { ClientConfigState, NetworkEntry, OidcMetadata } from "../types";
+import type { NetworkEntry, OidcMetadata } from "../types";
 
 export type IntrospectResult =
   | { ok: true; result: { active: boolean } & Record<string, unknown> }
@@ -15,9 +18,12 @@ export type IntrospectResult =
 
 export interface IntrospectInput {
   metadata: OidcMetadata;
-  client: ClientConfigState;
   token: string;
   tokenHint?: "access_token" | "refresh_token";
+  /** Raw Authorization header value for the introspection caller (e.g.
+   * "Bearer …" or "Basic …"). Blank sends no Authorization header — most
+   * ASes will then reject the request, which is honest wire behavior. */
+  callerAuthorization?: string;
   onStart: (entry: NetworkEntry) => void;
   onFinish: (id: string, patch: Partial<NetworkEntry>) => void;
 }
@@ -42,14 +48,9 @@ export async function introspect(
     "Content-Type": "application/x-www-form-urlencoded",
     Accept: "application/json",
   });
-  const auth = await applyClientAuth({
-    client: input.client,
-    audience: endpoint,
-    headers,
-    body,
-  });
-  if (!auth.ok) {
-    return { ok: false, message: auth.message };
+  const callerAuth = input.callerAuthorization?.trim();
+  if (callerAuth) {
+    headers.set("Authorization", callerAuth);
   }
 
   const id = crypto.randomUUID();
