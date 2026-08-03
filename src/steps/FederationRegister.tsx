@@ -24,7 +24,11 @@ import { parseJwt, type JwtParsed } from "../lib/jwt";
 import { submitFederationRegistration } from "../lib/federationRegister";
 import type { FederationRegisterMode } from "../types";
 
-const MODES: Array<{ id: FederationRegisterMode; label: string; hint: string }> = [
+const MODES: Array<{
+  id: FederationRegisterMode;
+  label: string;
+  hint: string;
+}> = [
   {
     id: "entity-config",
     label: "Entity Configuration",
@@ -102,7 +106,8 @@ export function FederationRegisterStep() {
 
       {!endpoint && (
         <Banner tone="warn" className="mt-5">
-          This AS does not advertise <code>federation_registration_endpoint</code>.
+          This AS does not advertise{" "}
+          <code>federation_registration_endpoint</code>.
         </Banner>
       )}
 
@@ -141,7 +146,9 @@ export function FederationRegisterStep() {
               : '[ "eyJhbGciOi...", "eyJhbGciOi...", "eyJhbGciOi..." ]'
           }
           value={reg.payload}
-          onChange={(e) => federationRegisterUpdate({ payload: e.target.value })}
+          onChange={(e) =>
+            federationRegisterUpdate({ payload: e.target.value })
+          }
         />
       </Section>
 
@@ -196,8 +203,7 @@ function SuccessPanel({
   onApply: () => void;
   currentClientId: string;
 }) {
-  const alreadyApplied =
-    !!issuedClientId && issuedClientId === currentClientId;
+  const alreadyApplied = !!issuedClientId && issuedClientId === currentClientId;
   return (
     <div className="mt-4 space-y-4">
       <Banner tone="success" className="p-4">

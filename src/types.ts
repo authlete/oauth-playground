@@ -20,13 +20,7 @@ export type StepId =
 // executed — rendered as a quiet dot, never a checkmark. "done" is reserved
 // for steps where something actually happened (a request ran, a code arrived).
 export type StepStatus =
-  | "locked"
-  | "ready"
-  | "active"
-  | "valid"
-  | "done"
-  | "stale"
-  | "hidden";
+  "locked" | "ready" | "active" | "valid" | "done" | "stale" | "hidden";
 
 export interface StepDef {
   id: StepId;
@@ -110,7 +104,13 @@ export interface OidcMetadata {
 }
 
 export interface Jwks {
-  keys: Array<{ kid?: string; kty: string; alg?: string; use?: string; [k: string]: unknown }>;
+  keys: Array<{
+    kid?: string;
+    kty: string;
+    alg?: string;
+    use?: string;
+    [k: string]: unknown;
+  }>;
 }
 
 export interface DiscoveryState {
@@ -151,10 +151,7 @@ export const EMPTY_MANUAL_ENDPOINTS: ManualEndpoints = {
 };
 
 export type ClientAuthMethod =
-  | "none"
-  | "client_secret_basic"
-  | "client_secret_post"
-  | "private_key_jwt";
+  "none" | "client_secret_basic" | "client_secret_post" | "private_key_jwt";
 
 export interface PrivateKeyState {
   jwkText: string;
@@ -437,11 +434,7 @@ export const DCR_GRANT_TYPES = [
 
 export type FederationRegisterMode = "entity-config" | "trust-chain";
 
-export type FederationRegisterStatus =
-  | "idle"
-  | "loading"
-  | "success"
-  | "error";
+export type FederationRegisterStatus = "idle" | "loading" | "success" | "error";
 
 export interface FederationRegisterState {
   status: FederationRegisterStatus;

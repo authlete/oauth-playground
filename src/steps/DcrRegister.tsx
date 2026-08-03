@@ -6,7 +6,15 @@
 // feeds the credentials into Client config so the OAuth flows run with it.
 
 import { useMemo, useState, type ReactNode } from "react";
-import { ArrowRight, Check, Copy, Eye, EyeOff, Loader2, RotateCw } from "lucide-react";
+import {
+  ArrowRight,
+  Check,
+  Copy,
+  Eye,
+  EyeOff,
+  Loader2,
+  RotateCw,
+} from "lucide-react";
 import { usePlayground } from "../store/playground";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
@@ -24,7 +32,11 @@ import {
   StepHeader,
   type StatusTone,
 } from "../components/step";
-import { buildRegistrationRequest, parseRedirectUris, registerClient } from "../lib/dcrClient";
+import {
+  buildRegistrationRequest,
+  parseRedirectUris,
+  registerClient,
+} from "../lib/dcrClient";
 import {
   DCR_GRANT_TYPES,
   type ClientAuthMethod,
@@ -62,13 +74,18 @@ export function DcrRegisterStep() {
         grantTypes: reg.grantTypes,
         scope: reg.scope,
       }),
-    [reg.clientName, reg.redirectUris, reg.tokenEndpointAuthMethod, reg.grantTypes, reg.scope],
+    [
+      reg.clientName,
+      reg.redirectUris,
+      reg.tokenEndpointAuthMethod,
+      reg.grantTypes,
+      reg.scope,
+    ],
   );
 
-  const hasRedirect =
-    reg.grantTypes.includes("authorization_code")
-      ? reg.redirectUris.trim().length > 0
-      : true;
+  const hasRedirect = reg.grantTypes.includes("authorization_code")
+    ? reg.redirectUris.trim().length > 0
+    : true;
   const canSubmit = !!endpoint && reg.grantTypes.length > 0 && hasRedirect;
 
   const onSubmit = async () => {
@@ -119,11 +136,14 @@ export function DcrRegisterStep() {
     // otherwise keep the method the user picked, which is always supported.
     const echoedAuth = c.raw.token_endpoint_auth_method;
     const authMethod =
-      typeof echoedAuth === "string" && SUPPORTED_AUTH_METHODS.includes(echoedAuth)
+      typeof echoedAuth === "string" &&
+      SUPPORTED_AUTH_METHODS.includes(echoedAuth)
         ? (echoedAuth as ClientAuthMethod)
         : reg.tokenEndpointAuthMethod;
     // Prefer the AS-echoed redirect, then the form's first, then Client config's.
-    const echoedRedirects = Array.isArray(c.raw.redirect_uris) ? c.raw.redirect_uris : [];
+    const echoedRedirects = Array.isArray(c.raw.redirect_uris)
+      ? c.raw.redirect_uris
+      : [];
     const redirectUri =
       (typeof echoedRedirects[0] === "string" && echoedRedirects[0]) ||
       parseRedirectUris(reg.redirectUris)[0] ||
@@ -163,11 +183,16 @@ export function DcrRegisterStep() {
               description="What the AS registers for this client (RFC 7591)."
             >
               <div className="space-y-5">
-                <Field label="client_name" hint="Human-readable name shown on the consent screen.">
+                <Field
+                  label="client_name"
+                  hint="Human-readable name shown on the consent screen."
+                >
                   <Input
                     mono
                     value={reg.clientName}
-                    onChange={(e) => dcrRegisterUpdate({ clientName: e.target.value })}
+                    onChange={(e) =>
+                      dcrRegisterUpdate({ clientName: e.target.value })
+                    }
                     placeholder="OAuth Playground"
                   />
                 </Field>
@@ -182,7 +207,9 @@ export function DcrRegisterStep() {
                     spellCheck={false}
                     className="text-[12px]"
                     value={reg.redirectUris}
-                    onChange={(e) => dcrRegisterUpdate({ redirectUris: e.target.value })}
+                    onChange={(e) =>
+                      dcrRegisterUpdate({ redirectUris: e.target.value })
+                    }
                     placeholder="http://localhost:5173/callback"
                   />
                 </Field>
@@ -196,7 +223,8 @@ export function DcrRegisterStep() {
                       value={reg.tokenEndpointAuthMethod}
                       onChange={(e) =>
                         dcrRegisterUpdate({
-                          tokenEndpointAuthMethod: e.target.value as ClientAuthMethod,
+                          tokenEndpointAuthMethod: e.target
+                            .value as ClientAuthMethod,
                         })
                       }
                     >
@@ -208,17 +236,25 @@ export function DcrRegisterStep() {
                     </Select>
                   </Field>
 
-                  <Field label="scope" hint="Space-separated scopes to register for.">
+                  <Field
+                    label="scope"
+                    hint="Space-separated scopes to register for."
+                  >
                     <Input
                       mono
                       value={reg.scope}
-                      onChange={(e) => dcrRegisterUpdate({ scope: e.target.value })}
+                      onChange={(e) =>
+                        dcrRegisterUpdate({ scope: e.target.value })
+                      }
                       placeholder="openid profile email"
                     />
                   </Field>
                 </div>
 
-                <Field label="grant_types" hint="response_types is derived (code for authorization_code).">
+                <Field
+                  label="grant_types"
+                  hint="response_types is derived (code for authorization_code)."
+                >
                   <div className="flex flex-wrap gap-x-6 gap-y-2">
                     {DCR_GRANT_TYPES.map((g) => (
                       <Checkbox
@@ -249,7 +285,11 @@ export function DcrRegisterStep() {
                   Registering…
                 </Button>
               ) : reg.status === "success" ? (
-                <Button variant="secondary" onClick={onSubmit} disabled={!canSubmit}>
+                <Button
+                  variant="secondary"
+                  onClick={onSubmit}
+                  disabled={!canSubmit}
+                >
                   <RotateCw className="h-4 w-4" />
                   Re-register
                 </Button>
@@ -314,8 +354,17 @@ function SuccessPanel({
           <KV label="client_id" labelWidth="w-40">
             <span className="inline-flex items-center gap-2">
               <code className="font-mono">{client.clientId}</code>
-              <Button variant="ghost" size="sm" onClick={copyId} className="shrink-0">
-                {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={copyId}
+                className="shrink-0"
+              >
+                {copied ? (
+                  <Check className="h-3.5 w-3.5" />
+                ) : (
+                  <Copy className="h-3.5 w-3.5" />
+                )}
               </Button>
             </span>
           </KV>
@@ -331,14 +380,19 @@ function SuccessPanel({
                   onClick={() => setShowSecret((v) => !v)}
                   className="shrink-0"
                 >
-                  {showSecret ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                  {showSecret ? (
+                    <EyeOff className="h-3.5 w-3.5" />
+                  ) : (
+                    <Eye className="h-3.5 w-3.5" />
+                  )}
                 </Button>
               </span>
             </KV>
           )}
           <KV label="client_secret_expires_at" labelWidth="w-40">
             <span className="font-mono">
-              {client.clientSecretExpiresAt === 0 || client.clientSecretExpiresAt === undefined
+              {client.clientSecretExpiresAt === 0 ||
+              client.clientSecretExpiresAt === undefined
                 ? "0 (never)"
                 : new Date(client.clientSecretExpiresAt * 1000).toISOString()}
             </span>
@@ -390,7 +444,9 @@ function Field({
     <div>
       <label className="mb-1.5 block text-[12.5px] font-medium">{label}</label>
       {children}
-      {hint && <p className="mt-1.5 text-[12px] text-muted-foreground">{hint}</p>}
+      {hint && (
+        <p className="mt-1.5 text-[12px] text-muted-foreground">{hint}</p>
+      )}
     </div>
   );
 }

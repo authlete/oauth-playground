@@ -51,7 +51,8 @@ export function IntrospectStep() {
       metadata: state.discovery.metadata,
       client: state.client,
       token: selectedToken,
-      tokenHint: intro.tokenSource === "access" ? "access_token" : "refresh_token",
+      tokenHint:
+        intro.tokenSource === "access" ? "access_token" : "refresh_token",
       onStart: networkAdd,
       onFinish: networkUpdate,
     });
@@ -92,7 +93,9 @@ export function IntrospectStep() {
 
       {(tokens.access || tokens.refresh) && !endpoint && (
         <Banner tone="error" className="mt-5">
-          <p className="font-medium">This AS does not advertise introspection_endpoint.</p>
+          <p className="font-medium">
+            This AS does not advertise introspection_endpoint.
+          </p>
         </Banner>
       )}
 
@@ -113,7 +116,8 @@ export function IntrospectStep() {
                 value={intro.tokenSource}
                 onChange={(e) =>
                   introspectUpdate({
-                    tokenSource: e.target.value as IntrospectState["tokenSource"],
+                    tokenSource: e.target
+                      .value as IntrospectState["tokenSource"],
                   })
                 }
               >
@@ -127,7 +131,10 @@ export function IntrospectStep() {
             </div>
             <p className="text-muted-foreground">
               Authenticating with{" "}
-              <span className="font-mono text-foreground">{state.client.authMethod}</span>.
+              <span className="font-mono text-foreground">
+                {state.client.authMethod}
+              </span>
+              .
             </p>
           </InfoCard>
 
@@ -138,7 +145,11 @@ export function IntrospectStep() {
                 Introspecting…
               </Button>
             ) : intro.status === "success" ? (
-              <Button variant="secondary" onClick={onRun} disabled={!canIntrospect}>
+              <Button
+                variant="secondary"
+                onClick={onRun}
+                disabled={!canIntrospect}
+              >
                 <RotateCw className="h-4 w-4" />
                 Re-introspect
               </Button>
@@ -207,7 +218,10 @@ function ResultPanel({
 
 function renderPill(status: "idle" | "loading" | "success" | "error") {
   if (status === "idle") return null;
-  const map: Record<Exclude<typeof status, "idle">, { tone: StatusTone; label: string; spinning?: boolean }> = {
+  const map: Record<
+    Exclude<typeof status, "idle">,
+    { tone: StatusTone; label: string; spinning?: boolean }
+  > = {
     loading: { tone: "muted", label: "introspecting", spinning: true },
     success: { tone: "success", label: "done" },
     error: { tone: "error", label: "failed" },

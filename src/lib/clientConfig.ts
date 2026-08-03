@@ -1,8 +1,7 @@
 import type { ClientConfigState } from "../types";
 
 export type ClientConfigValidation =
-  | { ok: true }
-  | { ok: false; message: string };
+  { ok: true } | { ok: false; message: string };
 
 export function validateClientConfig(
   cfg: ClientConfigState,

@@ -50,7 +50,8 @@ export function RevokeStep() {
       metadata: state.discovery.metadata,
       client: state.client,
       token: selectedToken,
-      tokenHint: rev.tokenSource === "access" ? "access_token" : "refresh_token",
+      tokenHint:
+        rev.tokenSource === "access" ? "access_token" : "refresh_token",
       onStart: networkAdd,
       onFinish: networkUpdate,
     });
@@ -82,7 +83,10 @@ export function RevokeStep() {
 
       {!tokens.access && !tokens.refresh && (
         <Banner tone="warn" className="mt-5">
-          <p>No tokens to revoke. Token exchange hasn't run, or both were already cleared.</p>
+          <p>
+            No tokens to revoke. Token exchange hasn't run, or both were already
+            cleared.
+          </p>
           <Button
             variant="ghost"
             size="sm"
@@ -96,7 +100,9 @@ export function RevokeStep() {
 
       {(tokens.access || tokens.refresh) && !endpoint && (
         <Banner tone="error" className="mt-5">
-          <p className="font-medium">This AS does not advertise revocation_endpoint.</p>
+          <p className="font-medium">
+            This AS does not advertise revocation_endpoint.
+          </p>
         </Banner>
       )}
 
@@ -131,7 +137,10 @@ export function RevokeStep() {
             </div>
             <p className="text-muted-foreground">
               Authenticating with{" "}
-              <span className="font-mono text-foreground">{state.client.authMethod}</span>.
+              <span className="font-mono text-foreground">
+                {state.client.authMethod}
+              </span>
+              .
             </p>
           </InfoCard>
 
@@ -142,7 +151,11 @@ export function RevokeStep() {
                 Revoking…
               </Button>
             ) : rev.status === "success" ? (
-              <Button variant="secondary" onClick={onRevoke} disabled={!canRevoke}>
+              <Button
+                variant="secondary"
+                onClick={onRevoke}
+                disabled={!canRevoke}
+              >
                 <RotateCw className="h-4 w-4" />
                 Revoke another
               </Button>
@@ -190,7 +203,8 @@ function SuccessPanel({
       </p>
       <p className="mt-1 text-[13px] text-muted-foreground">
         The AS responds 200 regardless of whether the token was actually
-        recognized — see RFC 7009, Section 2.2 (clients can't probe for valid tokens).
+        recognized — see RFC 7009, Section 2.2 (clients can't probe for valid
+        tokens).
       </p>
       {revokedKind === "access" && (
         <Button
@@ -208,7 +222,10 @@ function SuccessPanel({
 
 function renderPill(status: "idle" | "loading" | "success" | "error") {
   if (status === "idle") return null;
-  const map: Record<Exclude<typeof status, "idle">, { tone: StatusTone; label: string; spinning?: boolean }> = {
+  const map: Record<
+    Exclude<typeof status, "idle">,
+    { tone: StatusTone; label: string; spinning?: boolean }
+  > = {
     loading: { tone: "muted", label: "revoking", spinning: true },
     success: { tone: "success", label: "revoked" },
     error: { tone: "error", label: "failed" },

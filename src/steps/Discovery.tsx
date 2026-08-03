@@ -60,8 +60,7 @@ export function DiscoveryStep() {
         status: errorStatusFromKind(result.error),
         errorMessage: errorMessage(result.error),
         errorBody: "body" in result.error ? result.error.body : undefined,
-        errorStatus:
-          "status" in result.error ? result.error.status : undefined,
+        errorStatus: "status" in result.error ? result.error.status : undefined,
         durationMs: result.durationMs,
       });
       return;
@@ -191,7 +190,10 @@ export function DiscoveryStep() {
                 ? "Pick a configured server (or Custom… for any issuer URL), then Run — "
                 : "Type any issuer URL, then Run — "}
               the playground fetches{" "}
-              <code className="font-mono">/.well-known/openid-configuration</code>.
+              <code className="font-mono">
+                /.well-known/openid-configuration
+              </code>
+              .
             </p>
           )}
         </>
@@ -251,7 +253,7 @@ export function DiscoveryStep() {
       case "loading":
         return null;
       case "cors-error":
-        return <CorsErrorPanel message={discovery.errorMessage ?? ""} />;
+        return <CorsErrorPanel />;
       case "http-error":
         return (
           <HttpErrorPanel
@@ -265,7 +267,9 @@ export function DiscoveryStep() {
         return (
           <MalformedPanel
             body={discovery.errorBody ?? ""}
-            missing={(discovery.errorMessage ?? "").split(",").map((s) => s.trim())}
+            missing={(discovery.errorMessage ?? "")
+              .split(",")
+              .map((s) => s.trim())}
           />
         );
       case "partial":
@@ -275,7 +279,9 @@ export function DiscoveryStep() {
             metadata={discovery.metadata!}
             jwks={discovery.jwks}
             jwksError={
-              discovery.status === "partial" ? discovery.errorMessage : undefined
+              discovery.status === "partial"
+                ? discovery.errorMessage
+                : undefined
             }
             tab={tab}
             setTab={setTab}
@@ -306,7 +312,10 @@ function ModeTabs({
 }) {
   return (
     <div className="mt-4 inline-flex rounded-md border border-border bg-card p-0.5 text-[12.5px]">
-      <ModeTab active={mode === "wellknown"} onClick={() => onChange("wellknown")}>
+      <ModeTab
+        active={mode === "wellknown"}
+        onClick={() => onChange("wellknown")}
+      >
         Discovery
       </ModeTab>
       <ModeTab active={mode === "manual"} onClick={() => onChange("manual")}>
@@ -389,7 +398,9 @@ function ManualForm({
             <Input
               mono
               value={endpoints.authorization_endpoint}
-              onChange={(e) => onChange({ authorization_endpoint: e.target.value })}
+              onChange={(e) =>
+                onChange({ authorization_endpoint: e.target.value })
+              }
               placeholder="https://my-as.example.com/authorize"
             />
           </ManualField>
@@ -440,7 +451,9 @@ function ManualForm({
             <Input
               mono
               value={endpoints.revocation_endpoint}
-              onChange={(e) => onChange({ revocation_endpoint: e.target.value })}
+              onChange={(e) =>
+                onChange({ revocation_endpoint: e.target.value })
+              }
             />
           </ManualField>
           <ManualField label="pushed_authorization_request_endpoint">
@@ -506,7 +519,9 @@ function ManualField({
         {label}
       </label>
       {children}
-      {hint && <p className="mt-1 text-[11.5px] text-muted-foreground">{hint}</p>}
+      {hint && (
+        <p className="mt-1 text-[11.5px] text-muted-foreground">{hint}</p>
+      )}
     </div>
   );
 }
@@ -543,8 +558,9 @@ function ErrorBanner({
   );
 }
 
-function CorsErrorPanel({ message: _message }: { message: string }) {
-  const origin = typeof window !== "undefined" ? window.location.origin : "the playground";
+function CorsErrorPanel() {
+  const origin =
+    typeof window !== "undefined" ? window.location.origin : "the playground";
   return (
     <ErrorBanner tone="error">
       <p className="font-medium">CORS blocked.</p>
@@ -569,8 +585,9 @@ function CorsErrorPanel({ message: _message }: { message: string }) {
               <code className="font-mono">{origin}</code>, or
             </li>
             <li>
-              Serve the playground at <code className="font-mono">/playground/*</code>{" "}
-              on the same origin as the AS.
+              Serve the playground at{" "}
+              <code className="font-mono">/playground/*</code> on the same
+              origin as the AS.
             </li>
           </ul>
         </div>
@@ -608,7 +625,13 @@ function NetworkErrorPanel({ message }: { message: string }) {
   );
 }
 
-function MalformedPanel({ body, missing }: { body: string; missing: string[] }) {
+function MalformedPanel({
+  body,
+  missing,
+}: {
+  body: string;
+  missing: string[];
+}) {
   return (
     <ErrorBanner tone="warn">
       <p className="font-medium">
@@ -655,7 +678,10 @@ function SuccessPanel({
       )}
 
       <div className="flex items-center gap-4 border-b border-border">
-        <TabButton active={tab === "endpoints"} onClick={() => setTab("endpoints")}>
+        <TabButton
+          active={tab === "endpoints"}
+          onClick={() => setTab("endpoints")}
+        >
           Endpoints ({endpoints.length})
         </TabButton>
         <TabButton active={tab === "jwks"} onClick={() => setTab("jwks")}>

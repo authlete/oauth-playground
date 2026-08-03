@@ -150,7 +150,9 @@ export async function refreshTokens(
     expiresIn:
       typeof parsed.expires_in === "number" ? parsed.expires_in : undefined,
     refreshToken:
-      typeof parsed.refresh_token === "string" ? parsed.refresh_token : undefined,
+      typeof parsed.refresh_token === "string"
+        ? parsed.refresh_token
+        : undefined,
     idToken: typeof parsed.id_token === "string" ? parsed.id_token : undefined,
     scope: typeof parsed.scope === "string" ? parsed.scope : undefined,
     raw: parsed,

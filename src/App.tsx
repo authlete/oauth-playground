@@ -42,7 +42,8 @@ function Shell() {
 }
 
 function useKeyboardShortcuts() {
-  const { state, toggleTheme, networkClear, networkSetCollapsed } = usePlayground();
+  const { state, toggleTheme, networkClear, networkSetCollapsed } =
+    usePlayground();
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       // Ignore shortcuts while typing into inputs / textareas.

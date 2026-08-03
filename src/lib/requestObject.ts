@@ -35,7 +35,10 @@ export async function signRequestObject(
 ): Promise<SignRequestObjectResult> {
   const validated = await validateAndImportJwk(input.client.privateKey.jwkText);
   if (!validated.ok) {
-    return { ok: false, message: `JAR needs a signing key — ${validated.message}` };
+    return {
+      ok: false,
+      message: `JAR needs a signing key — ${validated.message}`,
+    };
   }
 
   const now = Math.floor(Date.now() / 1000);

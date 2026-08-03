@@ -35,7 +35,9 @@ export function NetworkLog() {
         >
           <Activity className="h-4 w-4" />
           {state.network.length > 0 && (
-            <span className="font-mono text-[10.5px]">{state.network.length}</span>
+            <span className="font-mono text-[10.5px]">
+              {state.network.length}
+            </span>
           )}
         </button>
       </aside>
@@ -51,7 +53,8 @@ export function NetworkLog() {
         <h2 className="text-[13px] font-medium">
           Network
           <span className="ml-1.5 text-muted-foreground">
-            · {state.network.length} {state.network.length === 1 ? "call" : "calls"}
+            · {state.network.length}{" "}
+            {state.network.length === 1 ? "call" : "calls"}
           </span>
         </h2>
         <div className="flex items-center gap-0.5">
@@ -117,7 +120,8 @@ function NetworkRow({
   expanded: boolean;
   onToggle: () => void;
 }) {
-  const pending = entry.status === undefined && entry.errorMessage === undefined;
+  const pending =
+    entry.status === undefined && entry.errorMessage === undefined;
   const failed = entry.errorMessage !== undefined;
   const path = (() => {
     try {
@@ -155,7 +159,10 @@ function NetworkRow({
         >
           {entry.method}
         </span>
-        <span className="flex-1 truncate font-mono text-[12.5px]" title={entry.url}>
+        <span
+          className="flex-1 truncate font-mono text-[12.5px]"
+          title={entry.url}
+        >
           {path}
         </span>
         <span
@@ -246,5 +253,7 @@ function DetailBlock({
 }
 
 function truncate(s: string, n: number) {
-  return s.length > n ? `${s.slice(0, n)}\n…[truncated, ${s.length - n} bytes more]` : s;
+  return s.length > n
+    ? `${s.slice(0, n)}\n…[truncated, ${s.length - n} bytes more]`
+    : s;
 }

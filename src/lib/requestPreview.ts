@@ -72,7 +72,11 @@ export function previewAuthorize(
     params.set("client_id", client.clientId);
     params.set("request_uri", parRequestUri);
   } else if (authRequest.jarEnabled) {
-    for (const [k, v] of buildJarParams(client, authRequest, jarRequestValue(authRequest))) {
+    for (const [k, v] of buildJarParams(
+      client,
+      authRequest,
+      jarRequestValue(authRequest),
+    )) {
       params.set(k, v);
     }
     notes.push(jarNote(client, !!authRequest.requestObjectJwt));

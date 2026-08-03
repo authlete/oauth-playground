@@ -14,8 +14,7 @@ const variants: Record<Variant, string> = {
     "bg-[var(--playground-accent)] text-[var(--playground-accent-foreground)] hover:opacity-90 disabled:opacity-50",
   secondary:
     "bg-secondary text-secondary-foreground hover:bg-muted disabled:opacity-50",
-  ghost:
-    "bg-transparent text-foreground hover:bg-accent disabled:opacity-50",
+  ghost: "bg-transparent text-foreground hover:bg-accent disabled:opacity-50",
 };
 
 const sizes: Record<Size, string> = {

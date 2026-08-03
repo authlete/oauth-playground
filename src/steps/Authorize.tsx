@@ -35,7 +35,8 @@ import {
 } from "../lib/authorizeFlow";
 
 export function AuthorizeStep() {
-  const { state, authorizeUpdate, authRequestUpdate, setActiveStep } = usePlayground();
+  const { state, authorizeUpdate, authRequestUpdate, setActiveStep } =
+    usePlayground();
   const auth = state.authorize;
   const popupRef = useRef<Window | null>(null);
   const stopRef = useRef<(() => void) | null>(null);
@@ -208,7 +209,9 @@ export function AuthorizeStep() {
             size="sm"
             className="ml-2 text-[var(--playground-accent)]"
             onClick={() =>
-              setActiveStep(state.authRequest.scopes.length ? "auth-request" : "discovery")
+              setActiveStep(
+                state.authRequest.scopes.length ? "auth-request" : "discovery",
+              )
             }
           >
             Fix it →
@@ -325,7 +328,10 @@ export function AuthorizeStep() {
 
 function renderPill(status: "idle" | "waiting" | "received" | "error") {
   if (status === "idle") return null;
-  const map: Record<Exclude<typeof status, "idle">, { tone: StatusTone; label: string; spinning?: boolean }> = {
+  const map: Record<
+    Exclude<typeof status, "idle">,
+    { tone: StatusTone; label: string; spinning?: boolean }
+  > = {
     waiting: { tone: "muted", label: "waiting", spinning: true },
     received: { tone: "success", label: "code received" },
     error: { tone: "error", label: "failed" },
@@ -359,7 +365,12 @@ function ResultPanel({
             <code className="flex-1 truncate font-mono text-[12px]">
               {auth.code}
             </code>
-            <Button variant="ghost" size="sm" onClick={onCopy} className="shrink-0">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onCopy}
+              className="shrink-0"
+            >
               {copied ? (
                 <>
                   <Check className="h-3.5 w-3.5" />
@@ -461,4 +472,3 @@ function ErrorPanel({
     </Banner>
   );
 }
-

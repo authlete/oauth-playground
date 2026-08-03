@@ -14,7 +14,12 @@ export interface StepHeaderProps {
   right?: ReactNode;
 }
 
-export function StepHeader({ step, stepLabel, titleSuffix, right }: StepHeaderProps) {
+export function StepHeader({
+  step,
+  stepLabel,
+  titleSuffix,
+  right,
+}: StepHeaderProps) {
   const def = getStep(step);
   const eyebrow =
     stepLabel ?? (def.number !== undefined ? `Step ${def.number}` : "Optional");

@@ -15,8 +15,7 @@ export interface JwtParsed {
 }
 
 export type JwtParseResult =
-  | { ok: true; jwt: JwtParsed }
-  | { ok: false; reason: string };
+  { ok: true; jwt: JwtParsed } | { ok: false; reason: string };
 
 export function parseJwt(raw: string): JwtParseResult {
   const trimmed = raw.trim();
@@ -31,14 +30,23 @@ export function parseJwt(raw: string): JwtParseResult {
   let header: Record<string, unknown>;
   let payload: Record<string, unknown>;
   try {
-    header = JSON.parse(base64urlDecodeText(parts[0])) as Record<string, unknown>;
+    header = JSON.parse(base64urlDecodeText(parts[0])) as Record<
+      string,
+      unknown
+    >;
   } catch {
     return { ok: false, reason: "Header is not valid base64url-encoded JSON." };
   }
   try {
-    payload = JSON.parse(base64urlDecodeText(parts[1])) as Record<string, unknown>;
+    payload = JSON.parse(base64urlDecodeText(parts[1])) as Record<
+      string,
+      unknown
+    >;
   } catch {
-    return { ok: false, reason: "Payload is not valid base64url-encoded JSON." };
+    return {
+      ok: false,
+      reason: "Payload is not valid base64url-encoded JSON.",
+    };
   }
   return {
     ok: true,
@@ -160,11 +168,7 @@ function matchesAlg(key: Record<string, unknown>, alg: string): boolean {
 
 function importAlgParams(
   alg: string,
-):
-  | AlgorithmIdentifier
-  | EcKeyImportParams
-  | RsaHashedImportParams
-  | null {
+): AlgorithmIdentifier | EcKeyImportParams | RsaHashedImportParams | null {
   switch (alg) {
     case "ES256":
       return { name: "ECDSA", namedCurve: "P-256" };
@@ -263,5 +267,7 @@ export function computeJwtTimings(
 }
 
 function numericClaim(value: unknown): number | undefined {
-  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+  return typeof value === "number" && Number.isFinite(value)
+    ? value
+    : undefined;
 }

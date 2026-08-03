@@ -11,8 +11,7 @@ import type {
 } from "../types";
 
 export type AuthorizeUrlResult =
-  | { ok: true; url: string }
-  | { ok: false; message: string };
+  { ok: true; url: string } | { ok: false; message: string };
 
 export function buildAuthorizeParams(
   client: ClientConfigState,
@@ -24,7 +23,8 @@ export function buildAuthorizeParams(
   if (client.redirectUri) params.set("redirect_uri", client.redirectUri);
   params.set("scope", req.scopes.join(" "));
   if (req.state) params.set("state", req.state);
-  if (req.nonce && req.scopes.includes("openid")) params.set("nonce", req.nonce);
+  if (req.nonce && req.scopes.includes("openid"))
+    params.set("nonce", req.nonce);
   if (
     req.responseMode &&
     req.responseMode !== defaultResponseMode(req.responseType)
@@ -50,13 +50,22 @@ export function buildAuthorizeUrl(
   parRequestUri?: string,
 ): AuthorizeUrlResult {
   if (!metadata?.authorization_endpoint) {
-    return { ok: false, message: "Authorization endpoint not loaded — run Discovery first." };
+    return {
+      ok: false,
+      message: "Authorization endpoint not loaded — run Discovery first.",
+    };
   }
   if (!client.clientId.trim()) {
-    return { ok: false, message: "Client ID is empty — set it in Client config." };
+    return {
+      ok: false,
+      message: "Client ID is empty — set it in Client config.",
+    };
   }
   if (!client.redirectUri.trim()) {
-    return { ok: false, message: "Redirect URI is empty — set it in Client config." };
+    return {
+      ok: false,
+      message: "Redirect URI is empty — set it in Client config.",
+    };
   }
   if (req.scopes.length === 0) {
     return { ok: false, message: "Pick at least one scope." };

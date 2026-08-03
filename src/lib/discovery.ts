@@ -67,7 +67,9 @@ interface RunFetchOptions {
   onFinish: (id: string, patch: Partial<NetworkEntry>) => void;
 }
 
-async function runFetch(opts: RunFetchOptions): Promise<
+async function runFetch(
+  opts: RunFetchOptions,
+): Promise<
   | { ok: true; status: number; body: string; headers: Record<string, string> }
   | { ok: false; error: DiscoveryError }
 > {
@@ -185,8 +187,7 @@ export async function fetchDiscovery(
   }
 
   const missing = REQUIRED_OIDC_FIELDS.filter(
-    (field) =>
-      typeof (metadata as Record<string, unknown>)[field] !== "string",
+    (field) => typeof (metadata as Record<string, unknown>)[field] !== "string",
   );
   if (missing.length > 0) {
     return {

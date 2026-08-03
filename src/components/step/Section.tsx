@@ -18,7 +18,13 @@ export interface SectionProps {
  * Layout adapts to the center pane (container query, not viewport): stacked
  * title-above-controls normally, console-style two-column (title/description
  * left, controls right) once the pane is @4xl or wider. */
-export function Section({ title, description, action, children, className }: SectionProps) {
+export function Section({
+  title,
+  description,
+  action,
+  children,
+  className,
+}: SectionProps) {
   return (
     <section
       className={cn(

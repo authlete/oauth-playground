@@ -24,13 +24,8 @@ import { pushPar } from "../lib/parClient";
 import { jarReadiness } from "../lib/requestObject";
 
 export function ParStep() {
-  const {
-    state,
-    parUpdate,
-    networkAdd,
-    networkUpdate,
-    setActiveStep,
-  } = usePlayground();
+  const { state, parUpdate, networkAdd, networkUpdate, setActiveStep } =
+    usePlayground();
   const par = state.par;
   const [remaining, setRemaining] = useState<number | null>(null);
 
@@ -103,12 +98,18 @@ export function ParStep() {
       <Header status={par.status} enabled={par.enabled} remaining={remaining} />
 
       {!par.enabled && (
-        <Banner tone="info" className="mt-5 text-[12.5px] text-muted-foreground">
+        <Banner
+          tone="info"
+          className="mt-5 text-[12.5px] text-muted-foreground"
+        >
           <p>
-            PAR is off — toggle <span className="font-medium text-foreground">PAR (RFC 9126)</span>{" "}
+            PAR is off — toggle{" "}
+            <span className="font-medium text-foreground">PAR (RFC 9126)</span>{" "}
             in Auth request's Extensions to enable it.
           </p>
-          <p className="mt-1">Authorize will use the full URL built in Auth request.</p>
+          <p className="mt-1">
+            Authorize will use the full URL built in Auth request.
+          </p>
           <Button
             variant="ghost"
             size="sm"
@@ -125,8 +126,10 @@ export function ParStep() {
           <p className="font-medium">This AS doesn't support PAR.</p>
           <p className="mt-1 text-muted-foreground">
             Discovery metadata has no{" "}
-            <code className="font-mono">pushed_authorization_request_endpoint</code>.
-            Toggle PAR off in Auth request, or pick an AS that advertises one.
+            <code className="font-mono">
+              pushed_authorization_request_endpoint
+            </code>
+            . Toggle PAR off in Auth request, or pick an AS that advertises one.
           </p>
         </Banner>
       )}
@@ -259,7 +262,10 @@ function SuccessPanel({
 }) {
   const expired = remaining !== null && remaining <= 0;
   return (
-    <Banner tone={expired ? "warn" : "success"} className="mt-4 p-4 text-[13.5px]">
+    <Banner
+      tone={expired ? "warn" : "success"}
+      className="mt-4 p-4 text-[13.5px]"
+    >
       <p className="flex items-center gap-1.5 font-medium">
         {expired ? (
           <AlertTriangle className="h-4 w-4 text-[var(--status-warn)]" />

@@ -144,8 +144,8 @@ function HelpPopover({ onClose }: { onClose: () => void }) {
         <Shortcut keys="?" desc="Open / close this help" />
       </dl>
       <div className="mt-3 border-t border-border pt-2 text-[11px] text-muted-foreground">
-        Step state stays in this tab. Tokens and keys are in-memory only —
-        never persisted, never sent anywhere except the AS you targeted.
+        Step state stays in this tab. Tokens and keys are in-memory only — never
+        persisted, never sent anywhere except the AS you targeted.
       </div>
     </div>
   );
@@ -222,5 +222,8 @@ function normalizeIssuer(url: string): string {
 }
 
 function stripScheme(url: string): string {
-  return url.trim().replace(/^https?:\/\//i, "").replace(/\/+$/, "");
+  return url
+    .trim()
+    .replace(/^https?:\/\//i, "")
+    .replace(/\/+$/, "");
 }

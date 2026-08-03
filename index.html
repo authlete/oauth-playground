@@ -10,9 +10,12 @@
       (function () {
         try {
           var stored = localStorage.getItem("playground.theme");
-          var prefersLight = window.matchMedia("(prefers-color-scheme: light)").matches;
+          var prefersLight = window.matchMedia(
+            "(prefers-color-scheme: light)",
+          ).matches;
           var theme = stored || (prefersLight ? "light" : "dark");
-          if (theme === "light") document.documentElement.classList.remove("dark");
+          if (theme === "light")
+            document.documentElement.classList.remove("dark");
           else document.documentElement.classList.add("dark");
         } catch (e) {}
       })();

@@ -5,7 +5,14 @@ import {
   type CSSProperties,
   type ReactNode,
 } from "react";
-import { Check, CircleAlert, Eye, EyeOff, KeyRound, Loader2 } from "lucide-react";
+import {
+  Check,
+  CircleAlert,
+  Eye,
+  EyeOff,
+  KeyRound,
+  Loader2,
+} from "lucide-react";
 import { usePlayground } from "../store/playground";
 import { Input } from "../components/ui/Input";
 import { Select } from "../components/ui/Select";
@@ -19,7 +26,11 @@ import type { ClientAuthMethod } from "../types";
 // Mask the sensitive JWK text when hidden (Chromium/WebKit -webkit-text-security).
 const MASK_STYLE = { WebkitTextSecurity: "disc" } as CSSProperties;
 
-const AUTH_METHODS: Array<{ value: ClientAuthMethod; label: string; hint: string }> = [
+const AUTH_METHODS: Array<{
+  value: ClientAuthMethod;
+  label: string;
+  hint: string;
+}> = [
   {
     value: "none",
     label: "none (public — PKCE only)",
@@ -168,7 +179,9 @@ export function ClientStep() {
               <Select
                 value={cfg.authMethod}
                 onChange={(e) =>
-                  clientUpdate({ authMethod: e.target.value as ClientAuthMethod })
+                  clientUpdate({
+                    authMethod: e.target.value as ClientAuthMethod,
+                  })
                 }
               >
                 {AUTH_METHODS.map((m) => (
@@ -189,7 +202,9 @@ export function ClientStep() {
                   type="password"
                   mono
                   value={cfg.clientSecret}
-                  onChange={(e) => clientUpdate({ clientSecret: e.target.value })}
+                  onChange={(e) =>
+                    clientUpdate({ clientSecret: e.target.value })
+                  }
                   placeholder="paste secret"
                   autoComplete="off"
                   spellCheck={false}
@@ -231,10 +246,15 @@ export function ClientStep() {
                   value={cfg.privateKey.jwkText}
                   onChange={(e) =>
                     clientUpdate({
-                      privateKey: { ...cfg.privateKey, jwkText: e.target.value },
+                      privateKey: {
+                        ...cfg.privateKey,
+                        jwkText: e.target.value,
+                      },
                     })
                   }
-                  placeholder={'{\n  "kty": "EC",\n  "crv": "P-256",\n  "kid": "...",\n  "x": "...",\n  "y": "...",\n  "d": "..."\n}'}
+                  placeholder={
+                    '{\n  "kty": "EC",\n  "crv": "P-256",\n  "kid": "...",\n  "x": "...",\n  "y": "...",\n  "d": "..."\n}'
+                  }
                   className="min-h-[200px] resize-y"
                   style={showKey ? undefined : MASK_STYLE}
                 />
@@ -247,7 +267,6 @@ export function ClientStep() {
                 />
               </Field>
             )}
-
           </div>
         </Section>
 
@@ -346,4 +365,3 @@ function JwkStatusLine({
     </p>
   );
 }
-

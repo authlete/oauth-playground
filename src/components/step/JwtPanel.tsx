@@ -35,11 +35,17 @@ export function JwtPanel({
     <div className="space-y-3">
       <div className="grid grid-cols-2 gap-3">
         <JwtBlock title="Header" subtitle={headerSubtitle} json={jwt.header} />
-        <JwtBlock title="Payload" subtitle={payloadSubtitle} json={jwt.payload} />
+        <JwtBlock
+          title="Payload"
+          subtitle={payloadSubtitle}
+          json={jwt.payload}
+        />
       </div>
       <div className="flex items-center gap-2 rounded-md border border-border bg-card/40 p-3 text-[12px]">
         <span className="text-muted-foreground">Raw JWT</span>
-        <code className="flex-1 truncate font-mono text-[11.5px]">{jwt.raw}</code>
+        <code className="flex-1 truncate font-mono text-[11.5px]">
+          {jwt.raw}
+        </code>
         <Button variant="ghost" size="sm" onClick={onCopy}>
           {copied ? (
             <>

@@ -13,9 +13,10 @@ const AUTO_CLOSE_SECONDS = 3;
 
 export function CallbackPage() {
   const [result, setResult] = useState<CallbackParams | null>(null);
-  const [delivered, setDelivered] = useState<{ post: boolean; storage: boolean }>(
-    { post: false, storage: false },
-  );
+  const [delivered, setDelivered] = useState<{
+    post: boolean;
+    storage: boolean;
+  }>({ post: false, storage: false });
   const [remaining, setRemaining] = useState(AUTO_CLOSE_SECONDS);
 
   useEffect(() => {
@@ -132,7 +133,13 @@ export function CallbackPage() {
   );
 }
 
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
+function Row({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="flex items-baseline gap-2">
       <dt className="w-14 shrink-0 font-medium">{label}</dt>

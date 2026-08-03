@@ -41,7 +41,9 @@ export async function applyManual(
       return { ok: false, message: `${field} is required.` };
     }
   }
-  for (const [key, value] of Object.entries(e) as Array<[keyof ManualEndpoints, string]>) {
+  for (const [key, value] of Object.entries(e) as Array<
+    [keyof ManualEndpoints, string]
+  >) {
     if (!value.trim()) continue;
     try {
       const u = new URL(value);
@@ -54,7 +56,9 @@ export async function applyManual(
   }
 
   const metadata: OidcMetadata = { issuer: e.issuer };
-  for (const [key, value] of Object.entries(e) as Array<[keyof ManualEndpoints, string]>) {
+  for (const [key, value] of Object.entries(e) as Array<
+    [keyof ManualEndpoints, string]
+  >) {
     if (key !== "issuer" && value.trim()) {
       (metadata as Record<string, unknown>)[key] = value.trim();
     }
@@ -71,19 +75,25 @@ export async function applyManual(
 }
 
 type JwksFetchResult =
-  | { ok: true; jwks: Jwks }
-  | { ok: false; message: string };
+  { ok: true; jwks: Jwks } | { ok: false; message: string };
 
 async function fetchJwks(
   url: string,
-  cb: { onStart: ManualApplyInput["onStart"]; onFinish: ManualApplyInput["onFinish"] },
+  cb: {
+    onStart: ManualApplyInput["onStart"];
+    onFinish: ManualApplyInput["onFinish"];
+  },
 ): Promise<JwksFetchResult> {
   const id = crypto.randomUUID();
   const startedAt = performance.now();
   cb.onStart({ id, startedAt, method: "GET", url });
   let response: Response;
   try {
-    response = await fetch(url, { method: "GET", mode: "cors", credentials: "omit" });
+    response = await fetch(url, {
+      method: "GET",
+      mode: "cors",
+      credentials: "omit",
+    });
   } catch (err) {
     const finishedAt = performance.now();
     const message =

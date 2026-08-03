@@ -75,7 +75,8 @@ export function RefreshStep() {
         refreshToken: result.refreshToken ?? state.token.refreshToken,
         idToken: result.idToken ?? state.token.idToken,
         expiresIn: result.expiresIn,
-        rotated: !!result.refreshToken && result.refreshToken !== previousRefresh,
+        rotated:
+          !!result.refreshToken && result.refreshToken !== previousRefresh,
         idTokenChanged: !!result.idToken && result.idToken !== previousId,
       });
     } else {
@@ -96,10 +97,13 @@ export function RefreshStep() {
 
       {!refreshToken && (
         <Banner tone="warn" className="mt-5">
-          <p>No refresh token — Token exchange either didn't return one or hasn't run.</p>
+          <p>
+            No refresh token — Token exchange either didn't return one or hasn't
+            run.
+          </p>
           <p className="mt-1 text-muted-foreground">
-            Add <code className="font-mono">offline_access</code> to scopes in Auth
-            request and re-run the flow.
+            Add <code className="font-mono">offline_access</code> to scopes in
+            Auth request and re-run the flow.
           </p>
           <Button
             variant="ghost"
@@ -123,7 +127,9 @@ export function RefreshStep() {
           >
             <KVGrid>
               <KVRow label="grant_type">refresh_token</KVRow>
-              <KVRow label="refresh_token">{shorten(refreshToken, 10, 6)}</KVRow>
+              <KVRow label="refresh_token">
+                {shorten(refreshToken, 10, 6)}
+              </KVRow>
               <KVRow label="client auth">{state.client.authMethod}</KVRow>
             </KVGrid>
             <div>
@@ -137,8 +143,8 @@ export function RefreshStep() {
                 placeholder="e.g. openid (subset of original)"
               />
               <p className="mt-1 text-[12px] text-muted-foreground">
-                The AS may issue a narrower access token. Leave blank to keep the
-                original scopes.
+                The AS may issue a narrower access token. Leave blank to keep
+                the original scopes.
               </p>
             </div>
           </InfoCard>
@@ -197,7 +203,9 @@ function SuccessPanel({ diff }: { diff: TokenDiff }) {
       <KVList className="mt-3">
         {diff.accessToken && (
           <KV label="access_token">
-            <span className="font-mono">{shorten(diff.accessToken, 10, 6)}</span>
+            <span className="font-mono">
+              {shorten(diff.accessToken, 10, 6)}
+            </span>
             <span className="ml-2 text-muted-foreground">(new)</span>
           </KV>
         )}
@@ -211,7 +219,9 @@ function SuccessPanel({ diff }: { diff: TokenDiff }) {
         )}
         {diff.refreshToken && (
           <KV label="refresh_token">
-            <span className="font-mono">{shorten(diff.refreshToken, 10, 6)}</span>
+            <span className="font-mono">
+              {shorten(diff.refreshToken, 10, 6)}
+            </span>
             {diff.rotated ? (
               <span className="ml-2 text-[var(--status-success)]">
                 rotated — keep the new one
@@ -233,7 +243,10 @@ function SuccessPanel({ diff }: { diff: TokenDiff }) {
 
 function renderPill(status: "idle" | "loading" | "success" | "error") {
   if (status === "idle") return null;
-  const map: Record<Exclude<typeof status, "idle">, { tone: StatusTone; label: string; spinning?: boolean }> = {
+  const map: Record<
+    Exclude<typeof status, "idle">,
+    { tone: StatusTone; label: string; spinning?: boolean }
+  > = {
     loading: { tone: "muted", label: "refreshing", spinning: true },
     success: { tone: "success", label: "rotated" },
     error: { tone: "error", label: "failed" },

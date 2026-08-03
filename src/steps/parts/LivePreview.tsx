@@ -1,7 +1,11 @@
 import { ArrowRight, Check, Copy, Info } from "lucide-react";
 import { Button } from "../../components/ui/Button";
 import { RequestPreview } from "../../components/step";
-import { previewAuthorize, previewPar, prettyUrl } from "../../lib/requestPreview";
+import {
+  previewAuthorize,
+  previewPar,
+  prettyUrl,
+} from "../../lib/requestPreview";
 import { cn } from "../../lib/cn";
 import type { AuthorizeUrlResult } from "../../lib/authorizeUrl";
 import type {
@@ -46,7 +50,13 @@ export function LivePreview(props: LivePreviewProps) {
     <div className="rounded-lg border border-border bg-muted/20 p-4 @4xl:p-5">
       <div className="@4xl:grid @4xl:grid-cols-[220px_1fr] @4xl:gap-8">
         <PreviewHeader
-          title={showPar ? "PAR request" : showJar ? "Authorize URL (JAR)" : "Authorize URL"}
+          title={
+            showPar
+              ? "PAR request"
+              : showJar
+                ? "Authorize URL (JAR)"
+                : "Authorize URL"
+          }
           subtitle={subtitleFor(showPar, props.parEnabled, props.parPushed)}
         />
 
@@ -57,7 +67,11 @@ export function LivePreview(props: LivePreviewProps) {
             />
           ) : showJar && authEndpoint ? (
             <RequestPreview
-              block={previewAuthorize(authEndpoint, props.client, props.authRequest)}
+              block={previewAuthorize(
+                authEndpoint,
+                props.client,
+                props.authRequest,
+              )}
             />
           ) : (
             <AuthorizeUrlBlock
@@ -103,7 +117,13 @@ function subtitleFor(
 
 // No endpoint line here on purpose: the full URL is the first line of the
 // preview block itself — repeating it truncated in a 220px column adds noise.
-function PreviewHeader({ title, subtitle }: { title: string; subtitle: string }) {
+function PreviewHeader({
+  title,
+  subtitle,
+}: {
+  title: string;
+  subtitle: string;
+}) {
   return (
     <div className="mb-4 min-w-0 @4xl:mb-0">
       <h2 className="text-[13px] font-semibold leading-5">{title}</h2>
@@ -134,8 +154,16 @@ function AuthorizeUrlBlock({
         {prettyUrl(url)}
       </pre>
       <div className="mt-3 flex flex-wrap gap-2">
-        <CopyButton kind="url" copied={copied === "url"} onClick={() => onCopy("url")} />
-        <CopyButton kind="curl" copied={copied === "curl"} onClick={() => onCopy("curl")} />
+        <CopyButton
+          kind="url"
+          copied={copied === "url"}
+          onClick={() => onCopy("url")}
+        />
+        <CopyButton
+          kind="curl"
+          copied={copied === "curl"}
+          onClick={() => onCopy("curl")}
+        />
       </div>
     </>
   );

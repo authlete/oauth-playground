@@ -91,7 +91,9 @@ export function UserInfoStep() {
 
       {accessToken && !endpoint && (
         <Banner tone="error" className="mt-5">
-          <p className="font-medium">This AS does not advertise userinfo_endpoint.</p>
+          <p className="font-medium">
+            This AS does not advertise userinfo_endpoint.
+          </p>
           <p className="mt-1 text-muted-foreground">
             The AS may not be an OIDC provider (pure OAuth 2.0).
           </p>
@@ -212,15 +214,21 @@ interface ImageInfo {
 
 function parseImageValue(value: string): ImageInfo | null {
   // Inline data URI — safe to render directly.
-  const dataMatch = value.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,([A-Za-z0-9+/=]+)$/);
+  const dataMatch = value.match(
+    /^data:(image\/[a-zA-Z0-9.+-]+);base64,([A-Za-z0-9+/=]+)$/,
+  );
   if (dataMatch) {
     const [, mime, b64] = dataMatch;
     // Approximate decoded byte count from base64 length.
-    const bytes = Math.floor((b64.length * 3) / 4) - (b64.endsWith("==") ? 2 : b64.endsWith("=") ? 1 : 0);
+    const bytes =
+      Math.floor((b64.length * 3) / 4) -
+      (b64.endsWith("==") ? 2 : b64.endsWith("=") ? 1 : 0);
     return { src: value, mime, sizeLabel: formatBytes(bytes) };
   }
   // External image URL — must be https and end in a known image extension.
-  if (/^https:\/\/[^\s]+\.(png|jpg|jpeg|gif|webp|svg)(\?[^\s]*)?$/i.test(value)) {
+  if (
+    /^https:\/\/[^\s]+\.(png|jpg|jpeg|gif|webp|svg)(\?[^\s]*)?$/i.test(value)
+  ) {
     return { src: value };
   }
   return null;
@@ -275,7 +283,10 @@ function ImageClaim({
 
 function renderPill(status: "idle" | "loading" | "success" | "error") {
   if (status === "idle") return null;
-  const map: Record<Exclude<typeof status, "idle">, { tone: StatusTone; label: string; spinning?: boolean }> = {
+  const map: Record<
+    Exclude<typeof status, "idle">,
+    { tone: StatusTone; label: string; spinning?: boolean }
+  > = {
     loading: { tone: "muted", label: "fetching", spinning: true },
     success: { tone: "success", label: "claims received" },
     error: { tone: "error", label: "failed" },

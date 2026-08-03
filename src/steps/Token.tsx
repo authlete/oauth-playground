@@ -33,7 +33,9 @@ export function TokenStep() {
     networkUpdate,
   } = usePlayground();
   const tok = state.token;
-  const [copied, setCopied] = useState<"access" | "id" | "refresh" | null>(null);
+  const [copied, setCopied] = useState<"access" | "id" | "refresh" | null>(
+    null,
+  );
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
 
   useEffect(() => {
@@ -42,7 +44,9 @@ export function TokenStep() {
       return;
     }
     const update = () =>
-      setSecondsLeft(Math.max(0, Math.round((tok.expiresAt! - Date.now()) / 1000)));
+      setSecondsLeft(
+        Math.max(0, Math.round((tok.expiresAt! - Date.now()) / 1000)),
+      );
     update();
     const t = window.setInterval(update, 1000);
     return () => window.clearInterval(t);
@@ -144,12 +148,13 @@ export function TokenStep() {
           <KVGrid className="mt-2">
             <KVRow label="grant_type">authorization_code</KVRow>
             <KVRow label="code">{shorten(code, 12, 8)}</KVRow>
-            {state.authRequest.pkceEnabled && state.authRequest.codeVerifier && (
-              <KVRow label="code_verifier">
-                {shorten(state.authRequest.codeVerifier, 12, 8)}{" "}
-                <span className="text-muted-foreground">(PKCE)</span>
-              </KVRow>
-            )}
+            {state.authRequest.pkceEnabled &&
+              state.authRequest.codeVerifier && (
+                <KVRow label="code_verifier">
+                  {shorten(state.authRequest.codeVerifier, 12, 8)}{" "}
+                  <span className="text-muted-foreground">(PKCE)</span>
+                </KVRow>
+              )}
             <KVRow label="redirect_uri">{state.client.redirectUri}</KVRow>
             <KVRow label="client auth">{state.client.authMethod}</KVRow>
           </KVGrid>
@@ -163,7 +168,11 @@ export function TokenStep() {
             Exchanging…
           </Button>
         ) : tok.status === "success" ? (
-          <Button variant="secondary" onClick={onExchange} disabled={!canExchange}>
+          <Button
+            variant="secondary"
+            onClick={onExchange}
+            disabled={!canExchange}
+          >
             <RotateCw className="h-4 w-4" />
             Re-exchange
           </Button>
@@ -304,7 +313,9 @@ function TokenRow({
           {tag}
         </span>
         {subline && (
-          <span className="text-[11.5px] text-muted-foreground">· {subline}</span>
+          <span className="text-[11.5px] text-muted-foreground">
+            · {subline}
+          </span>
         )}
         <span className="flex-1" />
         <Button variant="ghost" size="sm" onClick={onCopy}>

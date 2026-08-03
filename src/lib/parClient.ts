@@ -48,9 +48,16 @@ export async function pushPar(input: PushParInput): Promise<PushParResult> {
   let body: URLSearchParams;
   if (input.authRequest.jarEnabled) {
     if (!input.requestObjectJwt) {
-      return { ok: false, message: "No signed request object — set a valid JWK in Client config." };
+      return {
+        ok: false,
+        message: "No signed request object — set a valid JWK in Client config.",
+      };
     }
-    body = buildJarParams(input.client, input.authRequest, input.requestObjectJwt);
+    body = buildJarParams(
+      input.client,
+      input.authRequest,
+      input.requestObjectJwt,
+    );
   } else {
     body = buildAuthorizeParams(input.client, input.authRequest);
   }

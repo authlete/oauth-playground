@@ -110,8 +110,10 @@ export async function registerClient(
     };
   }
 
-  const str = (k: string) => (typeof raw[k] === "string" ? (raw[k] as string) : undefined);
-  const num = (k: string) => (typeof raw[k] === "number" ? (raw[k] as number) : undefined);
+  const str = (k: string) =>
+    typeof raw[k] === "string" ? (raw[k] as string) : undefined;
+  const num = (k: string) =>
+    typeof raw[k] === "number" ? (raw[k] as number) : undefined;
 
   return {
     ok: true,
@@ -150,7 +152,8 @@ export function buildRegistrationRequest(form: {
   };
   // Omit response_types when empty — RFC 7591 defaults an absent value to
   // ["code"], and some AS validators reject an explicit empty array.
-  if (form.grantTypes.includes("authorization_code")) req.response_types = ["code"];
+  if (form.grantTypes.includes("authorization_code"))
+    req.response_types = ["code"];
   if (form.clientName.trim()) req.client_name = form.clientName.trim();
   if (redirectUris.length) req.redirect_uris = redirectUris;
   if (form.scope.trim()) req.scope = form.scope.trim();

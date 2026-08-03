@@ -2,7 +2,11 @@ import { useState } from "react";
 import { Check, Copy } from "lucide-react";
 import { Button } from "../ui/Button";
 import { Section } from "./Section";
-import { formatFormBody, prettyUrl, type PreviewBlock } from "../../lib/requestPreview";
+import {
+  formatFormBody,
+  prettyUrl,
+  type PreviewBlock,
+} from "../../lib/requestPreview";
 
 /** Wire-level request preview — a Section under the hood so it matches the
  * form sections around it; the copy button rides in the header/action slot. */

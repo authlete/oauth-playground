@@ -1,10 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import {
-  AlertTriangle,
-  Check,
-  CircleAlert,
-  KeyRound,
-} from "lucide-react";
+import { AlertTriangle, Check, CircleAlert, KeyRound } from "lucide-react";
 import { usePlayground } from "../store/playground";
 import { Textarea } from "../components/ui/Textarea";
 import { Banner, JwtPanel, Section, StepHeader } from "../components/step";
@@ -77,13 +72,11 @@ export function InspectStep() {
   const raw = active.id === "paste" ? inspector.pastedText : active.raw;
   const parsed = useMemo(() => parseJwt(raw), [raw]);
   const expectedIss = discovery.metadata?.issuer;
-  const audienceMatches = expectedAudienceCheck(
-    parsed,
-    state.client.clientId,
-    expectedIss,
-  );
+  const audienceMatches = expectedAudienceCheck(parsed, state.client.clientId);
 
-  const [verify, setVerify] = useState<JwtVerifyResult | "pending" | null>(null);
+  const [verify, setVerify] = useState<JwtVerifyResult | "pending" | null>(
+    null,
+  );
   useEffect(() => {
     if (!parsed.ok) {
       setVerify(null);
@@ -104,7 +97,9 @@ export function InspectStep() {
     const t = window.setInterval(() => setNowMs(Date.now()), 1000);
     return () => window.clearInterval(t);
   }, []);
-  const timings = parsed.ok ? computeJwtTimings(parsed.jwt.payload, nowMs) : null;
+  const timings = parsed.ok
+    ? computeJwtTimings(parsed.jwt.payload, nowMs)
+    : null;
 
   return (
     <div className="mx-auto max-w-3xl @4xl:max-w-5xl">
@@ -353,14 +348,11 @@ function ClaimsRow({
   audienceMatches: boolean | null;
 }) {
   const iss = typeof payload.iss === "string" ? payload.iss : undefined;
-  const issMatches =
-    expectedIss && iss ? iss === expectedIss : undefined;
+  const issMatches = expectedIss && iss ? iss === expectedIss : undefined;
   return (
     <div className="rounded-md border border-border bg-card/40 p-3 text-[12.5px]">
       <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
-        {iss && (
-          <ClaimRow label="iss" ok={issMatches} value={iss} />
-        )}
+        {iss && <ClaimRow label="iss" ok={issMatches} value={iss} />}
         {audienceMatches !== null && (
           <ClaimRow
             label="aud"
@@ -406,7 +398,6 @@ function ClaimRow({
 function expectedAudienceCheck(
   parsed: ReturnType<typeof parseJwt>,
   clientId: string,
-  _expectedIss?: string,
 ): boolean | null {
   if (!parsed.ok) return null;
   const aud = parsed.jwt.payload.aud;
@@ -424,6 +415,7 @@ function renderAud(aud: unknown): string {
 function payloadSubtitle(payload: Record<string, unknown>): string {
   const sub = typeof payload.sub === "string" ? payload.sub : undefined;
   const claims = Object.keys(payload).length;
-  return sub ? `sub=${shorten(sub, 8, 4)} · ${claims} claims` : `${claims} claims`;
+  return sub
+    ? `sub=${shorten(sub, 8, 4)} · ${claims} claims`
+    : `${claims} claims`;
 }
-

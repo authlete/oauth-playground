@@ -88,7 +88,10 @@ type Action =
   | { type: "discovery-reset" }
   | { type: "client-update"; patch: Partial<ClientConfigState> }
   | { type: "dcr-register-update"; patch: Partial<DcrRegisterState> }
-  | { type: "federation-register-update"; patch: Partial<FederationRegisterState> }
+  | {
+      type: "federation-register-update";
+      patch: Partial<FederationRegisterState>;
+    }
   | { type: "auth-request-update"; patch: Partial<AuthRequestState> }
   | { type: "par-update"; patch: Partial<ParState> }
   | { type: "authorize-update"; patch: Partial<AuthorizeState> }
@@ -187,7 +190,10 @@ function loadPersistedManualEndpoints(): ManualEndpoints | null {
   }
 }
 
-function persistDiscovery(mode: "wellknown" | "manual", manual: ManualEndpoints) {
+function persistDiscovery(
+  mode: "wellknown" | "manual",
+  manual: ManualEndpoints,
+) {
   if (typeof window === "undefined") return;
   try {
     window.localStorage.setItem(DISCOVERY_MODE_PERSIST_KEY, mode);
@@ -301,7 +307,8 @@ function reducer(state: State, action: Action): State {
       return {
         ...state,
         network: [...state.network, action.entry],
-        networkCollapsed: state.network.length === 0 ? false : state.networkCollapsed,
+        networkCollapsed:
+          state.network.length === 0 ? false : state.networkCollapsed,
       };
     case "network-update":
       return {
@@ -420,9 +427,7 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
     const clientId =
       share?.client?.id ?? persistedClient?.clientId ?? s.client.clientId;
     const authMethod =
-      share?.client?.auth ??
-      persistedClient?.authMethod ??
-      s.client.authMethod;
+      share?.client?.auth ?? persistedClient?.authMethod ?? s.client.authMethod;
     const redirectUri =
       share?.client?.redirect ??
       persistedClient?.redirectUri ??
@@ -461,9 +466,7 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
           : {}),
         ...applyShareToAuthRequest(share),
       },
-      par: share?.par
-        ? { ...s.par, enabled: true }
-        : s.par,
+      par: share?.par ? { ...s.par, enabled: true } : s.par,
     };
   });
 
@@ -482,7 +485,11 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     persistClient(state.client);
-  }, [state.client.clientId, state.client.authMethod, state.client.redirectUri]);
+  }, [
+    state.client.clientId,
+    state.client.authMethod,
+    state.client.redirectUri,
+  ]);
 
   useEffect(() => {
     persistDiscovery(state.discovery.mode, state.discovery.manual);
@@ -698,7 +705,10 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
       dispatch({ type: "network-update", id, patch }),
     [],
   );
-  const networkClear = useCallback(() => dispatch({ type: "network-clear" }), []);
+  const networkClear = useCallback(
+    () => dispatch({ type: "network-clear" }),
+    [],
+  );
   const networkSetCollapsed = useCallback(
     (collapsed: boolean) =>
       dispatch({ type: "network-set-collapsed", collapsed }),
@@ -709,7 +719,10 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
       dispatch({ type: "discovery-update", patch }),
     [],
   );
-  const discoveryReset = useCallback(() => dispatch({ type: "discovery-reset" }), []);
+  const discoveryReset = useCallback(
+    () => dispatch({ type: "discovery-reset" }),
+    [],
+  );
   const clientUpdate = useCallback(
     (patch: Partial<ClientConfigState>) =>
       dispatch({ type: "client-update", patch }),
@@ -837,6 +850,7 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
 
 export function usePlayground() {
   const ctx = useContext(PlaygroundContext);
-  if (!ctx) throw new Error("usePlayground must be used inside PlaygroundProvider");
+  if (!ctx)
+    throw new Error("usePlayground must be used inside PlaygroundProvider");
   return ctx;
 }

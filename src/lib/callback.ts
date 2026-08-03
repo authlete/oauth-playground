@@ -24,7 +24,9 @@ export function parseCallbackUrl(url: string): CallbackParams {
   const u = new URL(url);
   const query = u.searchParams;
   // Some flows return params in the fragment (response_mode=fragment).
-  const fragmentParams = u.hash ? new URLSearchParams(u.hash.replace(/^#/, "")) : null;
+  const fragmentParams = u.hash
+    ? new URLSearchParams(u.hash.replace(/^#/, ""))
+    : null;
   const get = (k: string): string | undefined =>
     query.get(k) ?? fragmentParams?.get(k) ?? undefined;
   return {

@@ -1,9 +1,4 @@
-import {
-  useCallback,
-  useMemo,
-  useState,
-  type ReactNode,
-} from "react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { Loader2, RotateCw } from "lucide-react";
 import { LivePreview } from "./parts/LivePreview";
 import { usePlayground } from "../store/playground";
@@ -33,12 +28,8 @@ const RESPONSE_MODES: Array<{ value: ResponseMode; label: string }> = [
 ];
 
 export function AuthRequestStep() {
-  const {
-    state,
-    authRequestUpdate,
-    parUpdate,
-    setActiveStep,
-  } = usePlayground();
+  const { state, authRequestUpdate, parUpdate, setActiveStep } =
+    usePlayground();
   const req = state.authRequest;
   const metadata = state.discovery.metadata;
   const client = state.client;
@@ -59,7 +50,6 @@ export function AuthRequestStep() {
   const jarReady = jarReadiness(client, req);
   const isValid = builtUrl.ok && req.scopes.length > 0 && jarReady.ok;
 
-
   const regenState = () => authRequestUpdate({ state: randomBase64Url(16) });
   const regenNonce = () => authRequestUpdate({ nonce: randomBase64Url(16) });
   const regenPkce = async () => {
@@ -74,7 +64,9 @@ export function AuthRequestStep() {
     (scope: string) => {
       const has = req.scopes.includes(scope);
       authRequestUpdate({
-        scopes: has ? req.scopes.filter((s) => s !== scope) : [...req.scopes, scope],
+        scopes: has
+          ? req.scopes.filter((s) => s !== scope)
+          : [...req.scopes, scope],
       });
     },
     [req.scopes, authRequestUpdate],
@@ -91,11 +83,17 @@ export function AuthRequestStep() {
 
   const onCopy = async (kind: "url" | "curl") => {
     if (!builtUrl.ok) return;
-    const value = kind === "url" ? builtUrl.url : `curl -i -L '${builtUrl.url.replace(/'/g, "'\\''")}'`;
+    const value =
+      kind === "url"
+        ? builtUrl.url
+        : `curl -i -L '${builtUrl.url.replace(/'/g, "'\\''")}'`;
     try {
       await navigator.clipboard.writeText(value);
       setCopied(kind);
-      window.setTimeout(() => setCopied((cur) => (cur === kind ? null : cur)), 1500);
+      window.setTimeout(
+        () => setCopied((cur) => (cur === kind ? null : cur)),
+        1500,
+      );
     } catch {
       // ignore
     }
@@ -109,7 +107,8 @@ export function AuthRequestStep() {
         <div className="mt-5 rounded-md border border-[var(--status-warn)]/40 bg-[color-mix(in_oklch,var(--status-warn)_8%,transparent)] p-3 text-[13px]">
           <p>
             Run Discovery first — this step needs{" "}
-            <code className="font-mono">authorization_endpoint</code> from the AS.
+            <code className="font-mono">authorization_endpoint</code> from the
+            AS.
           </p>
           <Button
             variant="ghost"
@@ -139,10 +138,14 @@ export function AuthRequestStep() {
                   />
                 ))}
               </div>
-              {req.scopes.some((s) => !(COMMON_SCOPES as readonly string[]).includes(s)) && (
+              {req.scopes.some(
+                (s) => !(COMMON_SCOPES as readonly string[]).includes(s),
+              ) && (
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {req.scopes
-                    .filter((s) => !(COMMON_SCOPES as readonly string[]).includes(s))
+                    .filter(
+                      (s) => !(COMMON_SCOPES as readonly string[]).includes(s),
+                    )
                     .map((s) => (
                       <button
                         type="button"
@@ -160,7 +163,9 @@ export function AuthRequestStep() {
                 <Input
                   mono
                   value={req.customScope}
-                  onChange={(e) => authRequestUpdate({ customScope: e.target.value })}
+                  onChange={(e) =>
+                    authRequestUpdate({ customScope: e.target.value })
+                  }
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       e.preventDefault();
@@ -183,10 +188,15 @@ export function AuthRequestStep() {
             </Field>
 
             <div className="grid grid-cols-2 gap-4">
-              <Field label="response_type" hint="What the AS returns at the callback.">
+              <Field
+                label="response_type"
+                hint="What the AS returns at the callback."
+              >
                 <Select
                   value={req.responseType}
-                  onChange={(e) => authRequestUpdate({ responseType: e.target.value })}
+                  onChange={(e) =>
+                    authRequestUpdate({ responseType: e.target.value })
+                  }
                 >
                   {RESPONSE_TYPES.map((t) => (
                     <option key={t} value={t}>
@@ -196,11 +206,16 @@ export function AuthRequestStep() {
                 </Select>
               </Field>
 
-              <Field label="response_mode" hint="How the AS delivers the response to the redirect URI.">
+              <Field
+                label="response_mode"
+                hint="How the AS delivers the response to the redirect URI."
+              >
                 <Select
                   value={req.responseMode}
                   onChange={(e) =>
-                    authRequestUpdate({ responseMode: e.target.value as ResponseMode })
+                    authRequestUpdate({
+                      responseMode: e.target.value as ResponseMode,
+                    })
                   }
                 >
                   {RESPONSE_MODES.map((m) => (
@@ -226,7 +241,9 @@ export function AuthRequestStep() {
             <Checkbox
               label="PKCE (S256, RFC 7636)"
               checked={req.pkceEnabled}
-              onChange={(e) => authRequestUpdate({ pkceEnabled: e.target.checked })}
+              onChange={(e) =>
+                authRequestUpdate({ pkceEnabled: e.target.checked })
+              }
             />
             <Checkbox
               label="PAR (RFC 9126)"
@@ -237,7 +254,9 @@ export function AuthRequestStep() {
             <Checkbox
               label="JAR (RFC 9101 — signed request object)"
               checked={req.jarEnabled}
-              onChange={(e) => authRequestUpdate({ jarEnabled: e.target.checked })}
+              onChange={(e) =>
+                authRequestUpdate({ jarEnabled: e.target.checked })
+              }
             />
           </div>
           {req.jarEnabled && !jarReady.ok && (
@@ -285,7 +304,9 @@ export function AuthRequestStep() {
                       <span className="text-foreground">(S256)</span>
                     </span>
                   ) : (
-                    <span className="text-[11.5px] text-muted-foreground">computing…</span>
+                    <span className="text-[11.5px] text-muted-foreground">
+                      computing…
+                    </span>
                   )
                 }
               />
@@ -345,7 +366,9 @@ function Field({
     <div>
       <label className="mb-1.5 block text-[12.5px] font-medium">{label}</label>
       {children}
-      {hint && <p className="mt-1.5 text-[12px] text-muted-foreground">{hint}</p>}
+      {hint && (
+        <p className="mt-1.5 text-[12px] text-muted-foreground">{hint}</p>
+      )}
     </div>
   );
 }
@@ -387,7 +410,11 @@ function ParamRow({
         </Button>
       </div>
       {secondary && <div className="ml-32 mt-1 pl-2">{secondary}</div>}
-      {hint && <p className="ml-32 mt-1 pl-2 text-[11.5px] text-muted-foreground">{hint}</p>}
+      {hint && (
+        <p className="ml-32 mt-1 pl-2 text-[11.5px] text-muted-foreground">
+          {hint}
+        </p>
+      )}
     </div>
   );
 }
@@ -500,7 +527,9 @@ function RequestObjectPanel({
           Decoded request object{" "}
           <span className="font-normal text-muted-foreground">(JAR)</span>
         </span>
-        <span className="font-mono text-[11px] text-muted-foreground">{summary}</span>
+        <span className="font-mono text-[11px] text-muted-foreground">
+          {summary}
+        </span>
       </summary>
       <div className="mt-4 @4xl:grid @4xl:grid-cols-[220px_1fr] @4xl:gap-8">
         <p className="mb-4 text-[12px] leading-relaxed text-muted-foreground @4xl:mb-0">
@@ -543,4 +572,3 @@ function validateTrustChain(value: string): string | null {
   }
   return null;
 }
-

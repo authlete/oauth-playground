@@ -25,10 +25,7 @@ export interface AuthorizeCallbackEvent {
 export function listenForCallback(opts: AuthorizeListenerOptions): () => void {
   let fired = false;
 
-  const fire = (
-    source: "postMessage" | "storage",
-    params: CallbackParams,
-  ) => {
+  const fire = (source: "postMessage" | "storage", params: CallbackParams) => {
     if (fired) return;
     fired = true;
     opts.onResult({

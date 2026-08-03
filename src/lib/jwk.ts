@@ -48,7 +48,8 @@ const SUPPORTED_ALGS = new Set([
 ]);
 
 function algToSubtleParams(alg: string): {
-  importAlgorithm: AlgorithmIdentifier | EcKeyImportParams | RsaHashedImportParams;
+  importAlgorithm:
+    AlgorithmIdentifier | EcKeyImportParams | RsaHashedImportParams;
 } | null {
   switch (alg) {
     case "ES256":
@@ -81,7 +82,8 @@ function algToSubtleParams(alg: string): {
 }
 
 function deriveAlg(jwk: JwkLike): string | null {
-  if (typeof jwk.alg === "string" && SUPPORTED_ALGS.has(jwk.alg)) return jwk.alg;
+  if (typeof jwk.alg === "string" && SUPPORTED_ALGS.has(jwk.alg))
+    return jwk.alg;
   if (jwk.kty === "EC" && typeof jwk.crv === "string") {
     return EC_ALG_BY_CURVE[jwk.crv] ?? null;
   }

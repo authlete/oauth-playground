@@ -36,7 +36,9 @@ export interface SignCompactJwsOpts {
   alg: string;
 }
 
-export async function signCompactJws(opts: SignCompactJwsOpts): Promise<string> {
+export async function signCompactJws(
+  opts: SignCompactJwsOpts,
+): Promise<string> {
   const headerB64 = base64urlEncode(
     new TextEncoder().encode(JSON.stringify(opts.header)),
   );

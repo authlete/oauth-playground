@@ -26,20 +26,20 @@ below.
 
 **12 steps, each a focused OAuth surface:**
 
-| # | Step | What it does |
-|---|---|---|
-| 1 | Discovery | `GET /.well-known/openid-configuration` + JWKS; or paste endpoints manually |
-| 2 | Client config | `none` / `client_secret_basic` / `client_secret_post` / `private_key_jwt` with JWK paste-and-validate |
-| 3 | Authorization request | URL builder; scopes / response_type / response_mode; PKCE catalog; PAR / JAR / JARM toggles |
-| 4 | PAR push (optional) | `POST /par` with selected client auth; `request_uri` + expiry countdown |
-| 5 | Authorize → Callback | New-tab redirect to `/authorize`; captures `code` via postMessage + storage events; state / `iss` (RFC 9207) validation |
-| 6 | Token exchange | `POST /token` with PKCE verifier + client auth |
-| 7 | Token inspector | JWT header + payload decode; signature verify against the loaded JWKS for ES/RS/PS 256–512; expiry countdown |
-| 8 | UserInfo | `GET /userinfo` with Bearer |
-| 9 | Introspection (RFC 7662) | `POST /introspect` with client auth; pick which token |
-| 10 | Resource call | Generic HTTP client for hitting a user-owned RS with the access token attached |
-| 11 | Refresh | `grant_type=refresh_token`, optional downscope; rotated refresh detection |
-| 12 | Revoke (RFC 7009) | `POST /revoke`; pick which token |
+| #   | Step                     | What it does                                                                                                            |
+| --- | ------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
+| 1   | Discovery                | `GET /.well-known/openid-configuration` + JWKS; or paste endpoints manually                                             |
+| 2   | Client config            | `none` / `client_secret_basic` / `client_secret_post` / `private_key_jwt` with JWK paste-and-validate                   |
+| 3   | Authorization request    | URL builder; scopes / response_type / response_mode; PKCE catalog; PAR / JAR / JARM toggles                             |
+| 4   | PAR push (optional)      | `POST /par` with selected client auth; `request_uri` + expiry countdown                                                 |
+| 5   | Authorize → Callback     | New-tab redirect to `/authorize`; captures `code` via postMessage + storage events; state / `iss` (RFC 9207) validation |
+| 6   | Token exchange           | `POST /token` with PKCE verifier + client auth                                                                          |
+| 7   | Token inspector          | JWT header + payload decode; signature verify against the loaded JWKS for ES/RS/PS 256–512; expiry countdown            |
+| 8   | UserInfo                 | `GET /userinfo` with Bearer                                                                                             |
+| 9   | Introspection (RFC 7662) | `POST /introspect` with client auth; pick which token                                                                   |
+| 10  | Resource call            | Generic HTTP client for hitting a user-owned RS with the access token attached                                          |
+| 11  | Refresh                  | `grant_type=refresh_token`, optional downscope; rotated refresh detection                                               |
+| 12  | Revoke (RFC 7009)        | `POST /revoke`; pick which token                                                                                        |
 
 **Beyond the steps:**
 
@@ -84,7 +84,6 @@ In practice:
   will hit a CORS error from those.
 - **Your own AS**: enable CORS for the playground origin on
   `/token`, `/par`, `/introspect`, `/revoke`, `/userinfo` and it will work.
-
 
 ## Architecture (one paragraph)
 

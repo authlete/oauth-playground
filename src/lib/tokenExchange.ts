@@ -55,7 +55,8 @@ export async function exchangeCode(
   const body = new URLSearchParams();
   body.set("grant_type", "authorization_code");
   body.set("code", input.code);
-  if (input.client.redirectUri) body.set("redirect_uri", input.client.redirectUri);
+  if (input.client.redirectUri)
+    body.set("redirect_uri", input.client.redirectUri);
   if (input.authRequest.pkceEnabled && input.authRequest.codeVerifier) {
     body.set("code_verifier", input.authRequest.codeVerifier);
   }
@@ -168,7 +169,9 @@ export async function exchangeCode(
     expiresIn:
       typeof parsed.expires_in === "number" ? parsed.expires_in : undefined,
     refreshToken:
-      typeof parsed.refresh_token === "string" ? parsed.refresh_token : undefined,
+      typeof parsed.refresh_token === "string"
+        ? parsed.refresh_token
+        : undefined,
     idToken: typeof parsed.id_token === "string" ? parsed.id_token : undefined,
     scope: typeof parsed.scope === "string" ? parsed.scope : undefined,
     raw: parsed,

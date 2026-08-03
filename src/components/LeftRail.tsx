@@ -89,7 +89,13 @@ export function LeftRail() {
         )}
         <RailButton
           label={shared ? "Copied!" : "Share"}
-          icon={shared ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+          icon={
+            shared ? (
+              <Check className="h-3.5 w-3.5" />
+            ) : (
+              <Copy className="h-3.5 w-3.5" />
+            )
+          }
           onClick={onShare}
         />
       </div>
@@ -219,7 +225,12 @@ function StepRow({
 
 function StatusIcon({ status }: { status: StepStatus }) {
   if (status === "done")
-    return <Check className="h-4 w-4 text-[var(--status-success)]" aria-label="done" />;
+    return (
+      <Check
+        className="h-4 w-4 text-[var(--status-success)]"
+        aria-label="done"
+      />
+    );
   // Config is valid but nothing was executed — a quiet dot, not a checkmark.
   if (status === "valid")
     return (
@@ -230,9 +241,16 @@ function StatusIcon({ status }: { status: StepStatus }) {
       />
     );
   if (status === "stale")
-    return <RotateCw className="h-4 w-4 text-[var(--status-warn)]" aria-label="stale" />;
+    return (
+      <RotateCw
+        className="h-4 w-4 text-[var(--status-warn)]"
+        aria-label="stale"
+      />
+    );
   if (status === "locked")
-    return <Lock className="h-3.5 w-3.5 text-muted-foreground" aria-label="locked" />;
+    return (
+      <Lock className="h-3.5 w-3.5 text-muted-foreground" aria-label="locked" />
+    );
   return <span className="w-4" aria-hidden />;
 }
 
@@ -257,7 +275,9 @@ function RailButton({
   );
 }
 
-function discoverySummary(state: ReturnType<typeof usePlayground>["state"]): string | undefined {
+function discoverySummary(
+  state: ReturnType<typeof usePlayground>["state"],
+): string | undefined {
   const d = state.discovery;
   if (d.status !== "success" && d.status !== "partial") return undefined;
   const host = (() => {
@@ -275,7 +295,9 @@ function discoverySummary(state: ReturnType<typeof usePlayground>["state"]): str
   return `${host} · ${endpointCount} endpoints`;
 }
 
-function clientSummary(state: ReturnType<typeof usePlayground>["state"]): string | undefined {
+function clientSummary(
+  state: ReturnType<typeof usePlayground>["state"],
+): string | undefined {
   if (state.stepStatus.client !== "valid") return undefined;
   const c = state.client;
   const method = c.authMethod === "none" ? "PKCE only" : c.authMethod;
@@ -302,7 +324,9 @@ function dcrRegisterSummary(
   return id ? `client_id: ${shortStr(id, 12)}` : "registered";
 }
 
-function authRequestSummary(state: ReturnType<typeof usePlayground>["state"]): string | undefined {
+function authRequestSummary(
+  state: ReturnType<typeof usePlayground>["state"],
+): string | undefined {
   if (state.stepStatus["auth-request"] !== "valid") return undefined;
   const r = state.authRequest;
   const scopes = r.scopes.join(" ") || "no scopes";
@@ -311,14 +335,18 @@ function authRequestSummary(state: ReturnType<typeof usePlayground>["state"]): s
   return `${scopes}${pkce}${par}`;
 }
 
-function parSummary(state: ReturnType<typeof usePlayground>["state"]): string | undefined {
+function parSummary(
+  state: ReturnType<typeof usePlayground>["state"],
+): string | undefined {
   if (state.par.status !== "success" || !state.par.requestUri) return undefined;
   const uri = state.par.requestUri;
   const tail = uri.length > 12 ? `…${uri.slice(-8)}` : uri;
   return `request_uri: ${tail}`;
 }
 
-function authorizeSummary(state: ReturnType<typeof usePlayground>["state"]): string | undefined {
+function authorizeSummary(
+  state: ReturnType<typeof usePlayground>["state"],
+): string | undefined {
   if (state.stepStatus.authorize !== "done") return undefined;
   const code = state.authorize.code;
   if (!code) return undefined;
@@ -328,7 +356,9 @@ function authorizeSummary(state: ReturnType<typeof usePlayground>["state"]): str
   return `code: ${tail}${valid}`;
 }
 
-function tokenSummary(state: ReturnType<typeof usePlayground>["state"]): string | undefined {
+function tokenSummary(
+  state: ReturnType<typeof usePlayground>["state"],
+): string | undefined {
   if (state.stepStatus.token !== "done") return undefined;
   const t = state.token;
   const parts: string[] = [];
@@ -361,7 +391,9 @@ function jwtAlg(value: string): string | undefined {
   }
 }
 
-function userInfoSummary(state: ReturnType<typeof usePlayground>["state"]): string | undefined {
+function userInfoSummary(
+  state: ReturnType<typeof usePlayground>["state"],
+): string | undefined {
   if (state.stepStatus.userinfo !== "done") return undefined;
   const count = state.userInfo.claims
     ? Object.keys(state.userInfo.claims).length
@@ -373,7 +405,9 @@ function userInfoSummary(state: ReturnType<typeof usePlayground>["state"]): stri
   return sub ? `sub: ${shortStr(sub, 8)} · ${count} claims` : `${count} claims`;
 }
 
-function introspectSummary(state: ReturnType<typeof usePlayground>["state"]): string | undefined {
+function introspectSummary(
+  state: ReturnType<typeof usePlayground>["state"],
+): string | undefined {
   if (state.stepStatus.introspect !== "done") return undefined;
   const r = state.introspect.result;
   if (!r) return undefined;
@@ -381,19 +415,25 @@ function introspectSummary(state: ReturnType<typeof usePlayground>["state"]): st
   return `${r.active ? "active" : "inactive"}${scope ? ` · scope: ${scope}` : ""}`;
 }
 
-function resourceSummary(state: ReturnType<typeof usePlayground>["state"]): string | undefined {
+function resourceSummary(
+  state: ReturnType<typeof usePlayground>["state"],
+): string | undefined {
   if (state.stepStatus.resource !== "done") return undefined;
   const r = state.resourceCall.response;
   if (!r) return undefined;
   return `${r.status} · ${r.durationMs}ms`;
 }
 
-function refreshSummary(state: ReturnType<typeof usePlayground>["state"]): string | undefined {
+function refreshSummary(
+  state: ReturnType<typeof usePlayground>["state"],
+): string | undefined {
   if (state.stepStatus.refresh !== "done") return undefined;
   return "new access · rotated refresh";
 }
 
-function revokeSummary(state: ReturnType<typeof usePlayground>["state"]): string | undefined {
+function revokeSummary(
+  state: ReturnType<typeof usePlayground>["state"],
+): string | undefined {
   if (state.stepStatus.revoke !== "done") return undefined;
   const kind = state.revoke.lastRevokedKind;
   return `${kind ?? "token"} revoked`;

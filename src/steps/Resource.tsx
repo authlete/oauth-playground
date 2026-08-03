@@ -121,7 +121,9 @@ export function ResourceStep() {
                 mono
                 rows={3}
                 value={rc.headersText}
-                onChange={(e) => resourceCallUpdate({ headersText: e.target.value })}
+                onChange={(e) =>
+                  resourceCallUpdate({ headersText: e.target.value })
+                }
                 placeholder="{}"
                 className="resize-y"
               />
@@ -136,7 +138,9 @@ export function ResourceStep() {
                   mono
                   rows={4}
                   value={rc.bodyText}
-                  onChange={(e) => resourceCallUpdate({ bodyText: e.target.value })}
+                  onChange={(e) =>
+                    resourceCallUpdate({ bodyText: e.target.value })
+                  }
                   className="resize-y"
                 />
               </Field>
@@ -150,7 +154,9 @@ export function ResourceStep() {
               }
               checked={rc.attachBearer}
               disabled={!state.token.accessToken}
-              onChange={(e) => resourceCallUpdate({ attachBearer: e.target.checked })}
+              onChange={(e) =>
+                resourceCallUpdate({ attachBearer: e.target.checked })
+              }
             />
           </div>
         </Section>
@@ -163,7 +169,11 @@ export function ResourceStep() {
             Calling…
           </Button>
         ) : rc.status === "success" ? (
-          <Button variant="secondary" onClick={onCall} disabled={!rc.url.trim()}>
+          <Button
+            variant="secondary"
+            onClick={onCall}
+            disabled={!rc.url.trim()}
+          >
             <RotateCw className="h-4 w-4" />
             Re-call
           </Button>
@@ -177,16 +187,23 @@ export function ResourceStep() {
 
       {!hasBearer && rc.attachBearer === false && state.token.accessToken && (
         <p className="mt-3 text-[11.5px] text-muted-foreground">
-          Bearer not attached — the resource server will likely return 401 unless
-          it accepts unauthenticated calls.
+          Bearer not attached — the resource server will likely return 401
+          unless it accepts unauthenticated calls.
         </p>
       )}
 
       {rc.status === "success" && rc.response && (
-        <ResponsePanel response={rc.response} onCopyBody={onCopyBody} copied={copied} />
+        <ResponsePanel
+          response={rc.response}
+          onCopyBody={onCopyBody}
+          copied={copied}
+        />
       )}
       {rc.status === "error" && (
-        <ErrorPanel className="mt-4" message={rc.errorMessage ?? "Unknown error."} />
+        <ErrorPanel
+          className="mt-4"
+          message={rc.errorMessage ?? "Unknown error."}
+        />
       )}
     </div>
   );
@@ -197,7 +214,9 @@ function ResponsePanel({
   onCopyBody,
   copied,
 }: {
-  response: NonNullable<ReturnType<typeof usePlayground>["state"]["resourceCall"]["response"]>;
+  response: NonNullable<
+    ReturnType<typeof usePlayground>["state"]["resourceCall"]["response"]
+  >;
   onCopyBody: () => void;
   copied: boolean;
 }) {
@@ -208,7 +227,9 @@ function ResponsePanel({
         <span
           className={cn(
             "font-mono",
-            is2xx ? "text-[var(--status-success)]" : "text-[var(--status-warn)]",
+            is2xx
+              ? "text-[var(--status-success)]"
+              : "text-[var(--status-warn)]",
           )}
         >
           {response.status} {response.statusText}
@@ -264,7 +285,9 @@ function Field({
     <div>
       <label className="mb-1.5 block text-[12.5px] font-medium">{label}</label>
       {children}
-      {hint && <p className="mt-1.5 text-[12px] text-muted-foreground">{hint}</p>}
+      {hint && (
+        <p className="mt-1.5 text-[12px] text-muted-foreground">{hint}</p>
+      )}
     </div>
   );
 }
@@ -283,7 +306,10 @@ function prettyJsonOrText(s: string): string {
 
 function renderPill(status: "idle" | "loading" | "success" | "error") {
   if (status === "idle") return null;
-  const map: Record<Exclude<typeof status, "idle">, { tone: StatusTone; label: string; spinning?: boolean }> = {
+  const map: Record<
+    Exclude<typeof status, "idle">,
+    { tone: StatusTone; label: string; spinning?: boolean }
+  > = {
     loading: { tone: "muted", label: "calling", spinning: true },
     success: { tone: "success", label: "responded" },
     error: { tone: "error", label: "failed" },

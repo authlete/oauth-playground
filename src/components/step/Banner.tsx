@@ -7,8 +7,7 @@ const TONE_CLASS: Record<BannerTone, string> = {
   info: "border-border bg-muted/30",
   success:
     "border-[var(--status-success)]/40 bg-[color-mix(in_oklch,var(--status-success)_6%,transparent)]",
-  warn:
-    "border-[var(--status-warn)]/40 bg-[color-mix(in_oklch,var(--status-warn)_8%,transparent)]",
+  warn: "border-[var(--status-warn)]/40 bg-[color-mix(in_oklch,var(--status-warn)_8%,transparent)]",
   error:
     "border-[var(--status-error)]/40 bg-[color-mix(in_oklch,var(--status-error)_8%,transparent)]",
 };

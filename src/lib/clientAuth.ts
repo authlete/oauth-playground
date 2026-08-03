@@ -39,12 +39,16 @@ export async function applyClientAuth(
   switch (client.authMethod) {
     case "none":
       // Public client. The body must already include client_id.
-      if (!opts.body.has("client_id")) opts.body.set("client_id", client.clientId);
+      if (!opts.body.has("client_id"))
+        opts.body.set("client_id", client.clientId);
       return { ok: true };
 
     case "client_secret_basic": {
       if (!client.clientSecret) {
-        return { ok: false, message: "client_secret is empty — set it in Client config." };
+        return {
+          ok: false,
+          message: "client_secret is empty — set it in Client config.",
+        };
       }
       const encoded = btoa(`${client.clientId}:${client.clientSecret}`);
       opts.headers.set("Authorization", `Basic ${encoded}`);
@@ -53,7 +57,10 @@ export async function applyClientAuth(
 
     case "client_secret_post": {
       if (!client.clientSecret) {
-        return { ok: false, message: "client_secret is empty — set it in Client config." };
+        return {
+          ok: false,
+          message: "client_secret is empty — set it in Client config.",
+        };
       }
       opts.body.set("client_id", client.clientId);
       opts.body.set("client_secret", client.clientSecret);

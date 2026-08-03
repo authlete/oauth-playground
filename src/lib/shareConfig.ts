@@ -103,4 +103,3 @@ export function buildPayloadFromState(state: {
     maxAge: state.authRequest.maxAge || undefined,
   };
 }
-

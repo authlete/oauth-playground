@@ -66,7 +66,11 @@ export async function resourceCall(
       };
     }
   }
-  if (input.attachBearer && input.accessToken && !headers.has("Authorization")) {
+  if (
+    input.attachBearer &&
+    input.accessToken &&
+    !headers.has("Authorization")
+  ) {
     headers.set("Authorization", `Bearer ${input.accessToken}`);
   }
 

@@ -14,8 +14,7 @@ const TONE_CLASS: Record<StatusTone, string> = {
   muted: "bg-muted text-muted-foreground",
   success:
     "bg-[color-mix(in_oklch,var(--status-success)_18%,transparent)] text-[var(--status-success)]",
-  warn:
-    "bg-[color-mix(in_oklch,var(--status-warn)_18%,transparent)] text-[var(--status-warn)]",
+  warn: "bg-[color-mix(in_oklch,var(--status-warn)_18%,transparent)] text-[var(--status-warn)]",
   error:
     "bg-[color-mix(in_oklch,var(--status-error)_18%,transparent)] text-[var(--status-error)]",
 };

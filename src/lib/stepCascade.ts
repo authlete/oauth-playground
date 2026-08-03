@@ -25,19 +25,24 @@ interface CascadeState {
   discoveryMetadata: Parameters<typeof buildAuthorizeUrl>[0];
 }
 
-export function computeStepStatuses(state: CascadeState): Record<StepId, StepStatus> {
+export function computeStepStatuses(
+  state: CascadeState,
+): Record<StepId, StepStatus> {
   const discoveryDone =
-    state.discovery.status === "success" || state.discovery.status === "partial";
+    state.discovery.status === "success" ||
+    state.discovery.status === "partial";
   const clientValid = validateClientConfig(state.client).ok;
   const authUrlBuilt =
-    buildAuthorizeUrl(state.discoveryMetadata, state.client, state.authRequest).ok &&
+    buildAuthorizeUrl(state.discoveryMetadata, state.client, state.authRequest)
+      .ok &&
     state.authRequest.scopes.length > 0 &&
     jarReadiness(state.client, state.authRequest).ok;
   const parReady = state.par.enabled
     ? state.par.status === "success" && !!state.par.requestUri
     : true;
   const authorizeReceived =
-    state.authorize.status === "received" && state.authorize.stateMatches === true;
+    state.authorize.status === "received" &&
+    state.authorize.stateMatches === true;
   const tokenSucceeded =
     state.token.status === "success" && !!state.token.accessToken;
 
@@ -47,7 +52,8 @@ export function computeStepStatuses(state: CascadeState): Record<StepId, StepSta
   const dcrEndpoint =
     typeof state.discoveryMetadata?.registration_endpoint === "string";
   const federationEndpoint =
-    typeof state.discoveryMetadata?.federation_registration_endpoint === "string";
+    typeof state.discoveryMetadata?.federation_registration_endpoint ===
+    "string";
 
   // Steps unlock strictly in order — each gate includes every earlier gate, so
   // a later step is never open while an earlier one is locked. Config steps
