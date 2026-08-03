@@ -9,15 +9,12 @@ import {
   type CallbackParams,
 } from "../lib/callback";
 
-const AUTO_CLOSE_SECONDS = 3;
-
 export function CallbackPage() {
   const [result, setResult] = useState<CallbackParams | null>(null);
   const [delivered, setDelivered] = useState<{
     post: boolean;
     storage: boolean;
   }>({ post: false, storage: false });
-  const [remaining, setRemaining] = useState(AUTO_CLOSE_SECONDS);
 
   useEffect(() => {
     const params = parseCallbackUrl(window.location.href);
@@ -48,23 +45,17 @@ export function CallbackPage() {
 
     setDelivered({ post: postOk, storage: storageOk });
 
-    const interval = window.setInterval(() => {
-      setRemaining((n) => {
-        if (n <= 1) {
-          window.clearInterval(interval);
-          if (window.opener && !window.opener.closed) {
-            try {
-              window.close();
-            } catch {
-              // ignore
-            }
-          }
-          return 0;
-        }
-        return n - 1;
-      });
-    }, 1000);
-    return () => window.clearInterval(interval);
+    // Delivered to a live playground tab → this page has nothing to add
+    // (the Authorize step shows the same result); close immediately. When
+    // there's no opener, close() is silently refused by the browser and the
+    // summary below is the only record of the callback — so it stays.
+    if (postOk) {
+      try {
+        window.close();
+      } catch {
+        // ignore
+      }
+    }
   }, []);
 
   if (!result) return null;
@@ -122,11 +113,7 @@ export function CallbackPage() {
             {" · "}
             {delivered.storage ? "storage ✓" : "storage —"}
           </span>
-          <span>
-            {remaining > 0
-              ? `Closing in ${remaining}s`
-              : "You can close this tab."}
-          </span>
+          <span>You can close this tab.</span>
         </div>
       </div>
     </div>
