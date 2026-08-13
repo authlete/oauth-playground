@@ -65,6 +65,10 @@ export function DcrRegisterStep() {
   const reg = state.dcrRegister;
   const endpoint = state.discovery.metadata?.registration_endpoint;
 
+  // RAR types the AS advertises — the menu of types this client can register.
+  const supportedAdTypes =
+    state.discovery.metadata?.authorization_details_types_supported ?? [];
+
   const request = useMemo(
     () =>
       buildRegistrationRequest({
@@ -73,6 +77,7 @@ export function DcrRegisterStep() {
         tokenEndpointAuthMethod: reg.tokenEndpointAuthMethod,
         grantTypes: reg.grantTypes,
         scope: reg.scope,
+        authorizationDetailsTypes: reg.authorizationDetailsTypes,
       }),
     [
       reg.clientName,
@@ -80,6 +85,7 @@ export function DcrRegisterStep() {
       reg.tokenEndpointAuthMethod,
       reg.grantTypes,
       reg.scope,
+      reg.authorizationDetailsTypes,
     ],
   );
 
@@ -125,6 +131,15 @@ export function DcrRegisterStep() {
       grantTypes: has
         ? reg.grantTypes.filter((x) => x !== g)
         : [...reg.grantTypes, g],
+    });
+  };
+
+  const toggleAdType = (t: string) => {
+    const has = reg.authorizationDetailsTypes.includes(t);
+    dcrRegisterUpdate({
+      authorizationDetailsTypes: has
+        ? reg.authorizationDetailsTypes.filter((x) => x !== t)
+        : [...reg.authorizationDetailsTypes, t],
     });
   };
 
@@ -266,6 +281,42 @@ export function DcrRegisterStep() {
                     ))}
                   </div>
                 </Field>
+
+                {supportedAdTypes.length > 0 && (
+                  <Field label="authorization_details_types">
+                    <div className="flex flex-wrap gap-x-5 gap-y-2">
+                      {supportedAdTypes.map((t) => (
+                        <Checkbox
+                          key={t}
+                          label={t}
+                          checked={reg.authorizationDetailsTypes.includes(t)}
+                          onChange={() => toggleAdType(t)}
+                        />
+                      ))}
+                    </div>
+                    <p className="mt-2 text-[12px] text-muted-foreground">
+                      The RAR types this client may request.{" "}
+                      <button
+                        type="button"
+                        className="underline hover:text-foreground"
+                        onClick={() =>
+                          dcrRegisterUpdate({
+                            authorizationDetailsTypes:
+                              reg.authorizationDetailsTypes.length ===
+                              supportedAdTypes.length
+                                ? []
+                                : [...supportedAdTypes],
+                          })
+                        }
+                      >
+                        {reg.authorizationDetailsTypes.length ===
+                        supportedAdTypes.length
+                          ? "Clear all"
+                          : "Select all"}
+                      </button>
+                    </p>
+                  </Field>
+                )}
               </div>
             </Section>
 

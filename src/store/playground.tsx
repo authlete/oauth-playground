@@ -24,6 +24,7 @@ import {
   DEFAULT_CLIENT_CONFIG,
   DEFAULT_DCR_REGISTER,
   DEFAULT_FEDERATION_REGISTER,
+  DEFAULT_GRANT_MANAGEMENT,
   DEFAULT_INSPECTOR,
   DEFAULT_INTROSPECT,
   DEFAULT_PAR,
@@ -40,6 +41,7 @@ import {
   type DcrRegisterState,
   type DiscoveryState,
   type FederationRegisterState,
+  type GrantManagementState,
   type InspectorState,
   type IntrospectState,
   type ManualEndpoints,
@@ -75,6 +77,7 @@ interface State {
   inspector: InspectorState;
   userInfo: UserInfoState;
   introspect: IntrospectState;
+  grantManagement: GrantManagementState;
   resourceCall: ResourceCallState;
   refresh: RefreshState;
   revoke: RevokeState;
@@ -104,6 +107,11 @@ type Action =
   | { type: "inspector-update"; patch: Partial<InspectorState> }
   | { type: "userinfo-update"; patch: Partial<UserInfoState> }
   | { type: "introspect-update"; patch: Partial<IntrospectState> }
+  | {
+      type: "grant-management-update";
+      patch: Partial<GrantManagementState>;
+    }
+  | { type: "grant-management-reset" }
   | { type: "resource-call-update"; patch: Partial<ResourceCallState> }
   | { type: "refresh-update"; patch: Partial<RefreshState> }
   | { type: "revoke-update"; patch: Partial<RevokeState> };
@@ -162,6 +170,8 @@ interface PersistedAuthRequest {
   prompt: string;
   loginHint: string;
   maxAge: string;
+  authorizationDetailsEnabled?: boolean;
+  authorizationDetails?: string;
 }
 
 function loadPersistedAuthRequest(): PersistedAuthRequest | null {
@@ -227,6 +237,8 @@ function persistAuthRequest(state: AuthRequestState) {
       prompt: state.prompt,
       loginHint: state.loginHint,
       maxAge: state.maxAge,
+      authorizationDetailsEnabled: state.authorizationDetailsEnabled,
+      authorizationDetails: state.authorizationDetails,
     };
     window.localStorage.setItem(
       AUTH_REQUEST_PERSIST_KEY,
@@ -252,6 +264,7 @@ const initialState: State = {
     inspect: "locked",
     userinfo: "locked",
     introspect: "locked",
+    "grant-management": "hidden",
     resource: "locked",
     refresh: "locked",
     revoke: "locked",
@@ -275,6 +288,7 @@ const initialState: State = {
   inspector: DEFAULT_INSPECTOR,
   userInfo: DEFAULT_USERINFO,
   introspect: DEFAULT_INTROSPECT,
+  grantManagement: DEFAULT_GRANT_MANAGEMENT,
   resourceCall: DEFAULT_RESOURCE_CALL,
   refresh: DEFAULT_REFRESH,
   revoke: DEFAULT_REVOKE,
@@ -373,6 +387,13 @@ function reducer(state: State, action: Action): State {
       return { ...state, userInfo: { ...state.userInfo, ...action.patch } };
     case "introspect-update":
       return { ...state, introspect: { ...state.introspect, ...action.patch } };
+    case "grant-management-update":
+      return {
+        ...state,
+        grantManagement: { ...state.grantManagement, ...action.patch },
+      };
+    case "grant-management-reset":
+      return { ...state, grantManagement: DEFAULT_GRANT_MANAGEMENT };
     case "resource-call-update":
       return {
         ...state,
@@ -408,6 +429,7 @@ interface PlaygroundContextValue {
   inspectorUpdate: (patch: Partial<InspectorState>) => void;
   userInfoUpdate: (patch: Partial<UserInfoState>) => void;
   introspectUpdate: (patch: Partial<IntrospectState>) => void;
+  grantManagementUpdate: (patch: Partial<GrantManagementState>) => void;
   resourceCallUpdate: (patch: Partial<ResourceCallState>) => void;
   refreshUpdate: (patch: Partial<RefreshState>) => void;
   revokeUpdate: (patch: Partial<RevokeState>) => void;
@@ -474,6 +496,10 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
               prompt: persistedAuthRequest.prompt,
               loginHint: persistedAuthRequest.loginHint,
               maxAge: persistedAuthRequest.maxAge,
+              authorizationDetailsEnabled:
+                persistedAuthRequest.authorizationDetailsEnabled ?? false,
+              authorizationDetails:
+                persistedAuthRequest.authorizationDetails ?? "",
             }
           : {}),
         ...applyShareToAuthRequest(share),
@@ -519,7 +545,22 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
     state.authRequest.prompt,
     state.authRequest.loginHint,
     state.authRequest.maxAge,
+    state.authRequest.authorizationDetailsEnabled,
+    state.authRequest.authorizationDetails,
   ]);
+
+  // Grant management operates on the current access token's grant. The moment
+  // a new access token is minted (a fresh exchange, or a refresh), any prior
+  // query/revoke result is about a now-stale grant — clear it so the step
+  // reflects the new token instead of an old "revoked" banner that no longer
+  // applies. Keyed on the access token only; reading gm here would loop.
+  useEffect(() => {
+    const gm = state.grantManagement;
+    if (gm.status !== "idle" || gm.revoked || gm.grant) {
+      dispatch({ type: "grant-management-reset" });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.token.accessToken]);
 
   // Derive the RFC 8707 resource indicator from the resource context: set
   // when a PRM was loaded and the toggle is on, cleared otherwise. Downstream
@@ -669,6 +710,7 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
       token: state.token,
       userInfo: state.userInfo,
       introspect: state.introspect,
+      grantManagement: state.grantManagement,
       resourceCall: state.resourceCall,
       refresh: state.refresh,
       revoke: state.revoke,
@@ -689,6 +731,7 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
     state.token,
     state.userInfo,
     state.introspect,
+    state.grantManagement,
     state.resourceCall,
     state.refresh,
     state.revoke,
@@ -808,6 +851,11 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
       dispatch({ type: "introspect-update", patch }),
     [],
   );
+  const grantManagementUpdate = useCallback(
+    (patch: Partial<GrantManagementState>) =>
+      dispatch({ type: "grant-management-update", patch }),
+    [],
+  );
   const resourceCallUpdate = useCallback(
     (patch: Partial<ResourceCallState>) =>
       dispatch({ type: "resource-call-update", patch }),
@@ -847,6 +895,7 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
       inspectorUpdate,
       userInfoUpdate,
       introspectUpdate,
+      grantManagementUpdate,
       resourceCallUpdate,
       refreshUpdate,
       revokeUpdate,
@@ -874,6 +923,7 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
       inspectorUpdate,
       userInfoUpdate,
       introspectUpdate,
+      grantManagementUpdate,
       resourceCallUpdate,
       refreshUpdate,
       revokeUpdate,

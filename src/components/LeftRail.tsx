@@ -44,6 +44,7 @@ export function LeftRail() {
     token: tokenSummary(state),
     userinfo: userInfoSummary(state),
     introspect: introspectSummary(state),
+    "grant-management": grantManagementSummary(state),
     resource: resourceSummary(state),
     refresh: refreshSummary(state),
     revoke: revokeSummary(state),
@@ -413,6 +414,13 @@ function introspectSummary(
   if (!r) return undefined;
   const scope = typeof r.scope === "string" ? r.scope : "";
   return `${r.active ? "active" : "inactive"}${scope ? ` · scope: ${scope}` : ""}`;
+}
+
+function grantManagementSummary(
+  state: ReturnType<typeof usePlayground>["state"],
+): string | undefined {
+  if (state.stepStatus["grant-management"] !== "done") return undefined;
+  return state.grantManagement.revoked ? "grant revoked" : "grant queried";
 }
 
 function resourceSummary(

@@ -10,6 +10,7 @@ import {
 import { usePlayground } from "../store/playground";
 import { Button } from "../components/ui/Button";
 import {
+  AuthorizationDetailsBlock,
   Banner,
   ErrorPanel,
   InfoCard,
@@ -21,13 +22,16 @@ import {
 } from "../components/step";
 import { formatDuration, shorten } from "../lib/format";
 import { looksLikeJwt } from "../lib/jwt";
+import { parseAuthorizationDetails } from "../lib/authorizationDetails";
 import { exchangeCode } from "../lib/tokenExchange";
+import { GRANT_MANAGEMENT_ACTIONS } from "../types";
 
 export function TokenStep() {
   const {
     state,
     tokenUpdate,
     inspectorUpdate,
+    authRequestUpdate,
     setActiveStep,
     networkAdd,
     networkUpdate,
@@ -88,6 +92,8 @@ export function TokenStep() {
         refreshToken: result.refreshToken,
         idToken: result.idToken,
         scope: result.scope,
+        authorizationDetails: result.authorizationDetails,
+        grantId: result.grantId,
         exchangedAt: Date.now(),
       });
     } else {
@@ -117,6 +123,24 @@ export function TokenStep() {
   const openInInspector = (source: "access" | "id" | "refresh") => {
     inspectorUpdate({ source });
     setActiveStep("inspect");
+  };
+
+  // Loop back to Auth request to modify the grant this token is bound to,
+  // prefilling grant_id and an update action the AS supports.
+  const modifyGrant = () => {
+    if (!tok.grantId) return;
+    const supported =
+      state.discovery.metadata?.grant_management_actions_supported ?? [];
+    const modify = GRANT_MANAGEMENT_ACTIONS.filter(
+      (a) => a !== "create" && supported.includes(a),
+    );
+    authRequestUpdate({
+      grantManagementAction: modify.includes("update")
+        ? "update"
+        : (modify[0] ?? "update"),
+      grantId: tok.grantId,
+    });
+    setActiveStep("auth-request");
   };
 
   return (
@@ -204,6 +228,29 @@ export function TokenStep() {
         />
       )}
 
+      {tok.status === "success" && (
+        <AuthorizationDetailsPanel
+          requestedText={
+            state.authRequest.authorizationDetailsEnabled
+              ? state.authRequest.authorizationDetails
+              : ""
+          }
+          granted={tok.authorizationDetails}
+        />
+      )}
+
+      {tok.status === "success" && tok.grantId && (
+        <GrantIdPanel
+          grantId={tok.grantId}
+          gmSupported={
+            typeof state.discovery.metadata?.grant_management_endpoint ===
+            "string"
+          }
+          onManage={() => setActiveStep("grant-management")}
+          onModify={modifyGrant}
+        />
+      )}
+
       {tok.status === "error" && (
         <ErrorPanel
           className="mt-4"
@@ -282,6 +329,95 @@ function TokenPanel({
           <span className="font-mono">{token.scope}</span>
         </div>
       )}
+    </div>
+  );
+}
+
+// Requested vs. granted authorization_details — the RAR payoff. The AS often
+// narrows or enriches what was asked for (fills in identifiers, drops actions),
+// so showing both side by side is where the fine-grained story lands.
+function AuthorizationDetailsPanel({
+  requestedText,
+  granted,
+}: {
+  requestedText: string;
+  granted?: Array<Record<string, unknown>>;
+}) {
+  const parsed = requestedText.trim()
+    ? parseAuthorizationDetails(requestedText)
+    : null;
+  const requested = parsed?.ok ? parsed.details : null;
+  const grantedDetails =
+    Array.isArray(granted) && granted.length > 0 ? granted : null;
+  if (!requested && !grantedDetails) return null;
+
+  return (
+    <div className="mt-4 rounded-md border border-border bg-card/40 p-3">
+      <p className="text-[12.5px] font-medium">authorization_details</p>
+      <div className="mt-3 grid gap-4 @2xl:grid-cols-2">
+        {requested && (
+          <div>
+            <Label>Requested</Label>
+            <AuthorizationDetailsBlock details={requested} />
+          </div>
+        )}
+        {(grantedDetails || requested) && (
+          <div>
+            <Label>Granted by the AS</Label>
+            {grantedDetails ? (
+              <AuthorizationDetailsBlock details={grantedDetails} />
+            ) : (
+              <p className="rounded-md border border-border bg-background/60 p-3 text-[11.5px] text-muted-foreground">
+                The token response carried no authorization_details — the AS did
+                not echo the grant back.
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function Label({ children }: { children: string }) {
+  return (
+    <p className="mb-1.5 text-[11.5px] text-muted-foreground">{children}</p>
+  );
+}
+
+// The grant_id anchors the whole grant lifecycle: manage it (query/revoke) or
+// loop back to Auth request to update/replace/merge it.
+function GrantIdPanel({
+  grantId,
+  gmSupported,
+  onManage,
+  onModify,
+}: {
+  grantId: string;
+  gmSupported: boolean;
+  onManage: () => void;
+  onModify: () => void;
+}) {
+  return (
+    <div className="mt-4 rounded-md border border-border bg-card/40 p-3">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <span className="text-muted-foreground text-[12.5px]">grant_id ·</span>
+        <code className="font-mono text-[12.5px]">{grantId}</code>
+        <span className="flex-1" />
+        {gmSupported && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onManage}
+            className="text-[var(--playground-accent)]"
+          >
+            Manage grant →
+          </Button>
+        )}
+        <Button variant="ghost" size="sm" onClick={onModify}>
+          Modify this grant →
+        </Button>
+      </div>
     </div>
   );
 }

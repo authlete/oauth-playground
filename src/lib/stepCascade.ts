@@ -19,6 +19,7 @@ interface CascadeState {
   token: { status: string; accessToken?: string };
   userInfo: { status: string };
   introspect: { status: string };
+  grantManagement: { status: string };
   resourceCall: { status: string };
   refresh: { status: string };
   revoke: { status: string };
@@ -54,6 +55,9 @@ export function computeStepStatuses(
   const federationEndpoint =
     typeof state.discoveryMetadata?.federation_registration_endpoint ===
     "string";
+  // Grant management appears only when the AS advertises the API endpoint.
+  const gmEndpoint =
+    typeof state.discoveryMetadata?.grant_management_endpoint === "string";
 
   // Steps unlock strictly in order — each gate includes every earlier gate, so
   // a later step is never open while an earlier one is locked. Config steps
@@ -106,6 +110,13 @@ export function computeStepStatuses(
       : state.introspect.status === "success"
         ? "done"
         : "ready",
+    "grant-management": !gmEndpoint
+      ? "hidden"
+      : !tokenSucceeded
+        ? "locked"
+        : state.grantManagement.status === "success"
+          ? "done"
+          : "ready",
     resource: !tokenSucceeded
       ? "locked"
       : state.resourceCall.status === "success"

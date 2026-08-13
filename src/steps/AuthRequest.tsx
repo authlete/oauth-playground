@@ -1,4 +1,10 @@
-import { useCallback, useMemo, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import { Loader2, RotateCw } from "lucide-react";
 import { LivePreview } from "./parts/LivePreview";
 import { usePlayground } from "../store/playground";
@@ -7,17 +13,34 @@ import { Input } from "../components/ui/Input";
 import { Checkbox } from "../components/ui/Checkbox";
 import { Select } from "../components/ui/Select";
 import { Textarea } from "../components/ui/Textarea";
-import { JwtPanel, Section, StatusPill, StepHeader } from "../components/step";
+import {
+  AuthorizationDetailChips,
+  JwtPanel,
+  Section,
+  StatusPill,
+  StepHeader,
+} from "../components/step";
+import {
+  AUTHORIZATION_DETAILS_TEMPLATES,
+  parseAuthorizationDetails,
+} from "../lib/authorizationDetails";
 import { computeCodeChallenge, generateCodeVerifier } from "../lib/pkce";
 import { randomBase64Url } from "../lib/random";
 import { buildAuthorizeUrl } from "../lib/authorizeUrl";
+import { cn } from "../lib/cn";
 import { jarReadiness } from "../lib/requestObject";
 import { parseJwt } from "../lib/jwt";
 import {
   COMMON_SCOPES,
+  GRANT_MANAGEMENT_ACTIONS,
   type AuthRequestState,
   type ResponseMode,
 } from "../types";
+
+const GRANT_MANAGEMENT_SCOPES = [
+  "grant_management_query",
+  "grant_management_revoke",
+] as const;
 
 const RESPONSE_TYPES = ["code", "id_token", "code id_token", "token"];
 
@@ -62,6 +85,18 @@ export function AuthRequestStep() {
       (s) => !(COMMON_SCOPES as readonly string[]).includes(s),
     ),
   ];
+
+  // RAR types the AS advertises, offered as a hint next to the editor (never a
+  // hard gate — an AS may accept types it doesn't advertise).
+  const adTypes = metadata?.authorization_details_types_supported ?? [];
+
+  // Grant management: the actions the AS accepts, filtered to the ones sent as
+  // the request parameter (create/update/replace/merge — query/revoke are API
+  // calls). The section only renders when the AS supports at least one.
+  const gmActions = GRANT_MANAGEMENT_ACTIONS.filter((a) =>
+    metadata?.grant_management_actions_supported?.includes(a),
+  );
+  const gmRequired = metadata?.grant_management_action_required === true;
 
   const regenState = () => authRequestUpdate({ state: randomBase64Url(16) });
   const regenNonce = () => authRequestUpdate({ nonce: randomBase64Url(16) });
@@ -258,6 +293,22 @@ export function AuthRequestStep() {
           </div>
         </Section>
 
+        <AuthorizationDetailsSection
+          req={req}
+          update={authRequestUpdate}
+          supportedTypes={adTypes}
+        />
+
+        {gmActions.length > 0 && (
+          <GrantManagementSection
+            req={req}
+            update={authRequestUpdate}
+            actions={gmActions}
+            required={gmRequired}
+            onToggleScope={toggleScope}
+          />
+        )}
+
         <Section
           title="Extensions"
           description={
@@ -399,6 +450,202 @@ function Field({
         <p className="mt-1.5 text-[12px] text-muted-foreground">{hint}</p>
       )}
     </div>
+  );
+}
+
+// RAR editor. The primary control is a raw JSON textarea — authorization_details
+// is open-ended by design, so we validate only the array + per-object `type`
+// and pass everything else through. Templates seed it; a chip strip reads back
+// what's about to go on the wire in plain language.
+function AuthorizationDetailsSection({
+  req,
+  update,
+  supportedTypes,
+}: {
+  req: AuthRequestState;
+  update: (patch: Partial<AuthRequestState>) => void;
+  supportedTypes: string[];
+}) {
+  const enabled = req.authorizationDetailsEnabled;
+  const trimmed = req.authorizationDetails.trim();
+  const parsed = enabled && trimmed ? parseAuthorizationDetails(trimmed) : null;
+  return (
+    <Section
+      title="Authorization details"
+      description="Fine-grained access as a typed JSON array — an alternative or complement to scopes."
+    >
+      <div className="space-y-3">
+        <Checkbox
+          label="Request authorization_details"
+          checked={enabled}
+          onChange={(e) =>
+            update({ authorizationDetailsEnabled: e.target.checked })
+          }
+        />
+
+        {enabled && (
+          <>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[11.5px] text-muted-foreground">
+                Examples
+              </span>
+              {AUTHORIZATION_DETAILS_TEMPLATES.map((t) => (
+                <Button
+                  key={t.label}
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  title={t.hint}
+                  onClick={() => update({ authorizationDetails: t.value })}
+                >
+                  {t.label}
+                </Button>
+              ))}
+            </div>
+
+            <Textarea
+              rows={10}
+              spellCheck={false}
+              className="font-mono text-[11.5px]"
+              value={req.authorizationDetails}
+              onChange={(e) => update({ authorizationDetails: e.target.value })}
+              placeholder={
+                '[\n  { "type": "Accounts", "actions": ["ReadAccounts"], "identifier": "ACC12345" }\n]'
+              }
+            />
+
+            {parsed && !parsed.ok && (
+              <p className="text-[11.5px] text-[var(--status-warn)]">
+                {parsed.message} — sent verbatim.
+              </p>
+            )}
+
+            {parsed?.ok && (
+              <AuthorizationDetailChips details={parsed.details} />
+            )}
+
+            {supportedTypes.length > 0 && (
+              <details className="text-[11.5px] text-muted-foreground">
+                <summary className="cursor-pointer select-none">
+                  Types this AS supports ({supportedTypes.length})
+                </summary>
+                <div className="mt-1.5 flex flex-wrap gap-x-2.5 gap-y-1">
+                  {supportedTypes.map((t) => (
+                    <code key={t} className="font-mono text-foreground">
+                      {t}
+                    </code>
+                  ))}
+                </div>
+              </details>
+            )}
+          </>
+        )}
+      </div>
+    </Section>
+  );
+}
+
+// Grant management request params. `grant_management_action` decides what this
+// authorization does to the grant; update/replace/merge also need the grant_id.
+// Orthogonal to RAR — a grant records whatever was consented (scopes, claims,
+// authorization_details).
+function GrantManagementSection({
+  req,
+  update,
+  actions,
+  required,
+  onToggleScope,
+}: {
+  req: AuthRequestState;
+  update: (patch: Partial<AuthRequestState>) => void;
+  actions: string[];
+  required: boolean;
+  onToggleScope: (scope: string) => void;
+}) {
+  const action = req.grantManagementAction;
+  const needsGrantId =
+    action === "update" || action === "replace" || action === "merge";
+
+  // When the AS mandates an action, there's no "none" — seed the first one so
+  // the control and the wire value never disagree.
+  useEffect(() => {
+    if (required && !action && actions.length) {
+      update({ grantManagementAction: actions[0] });
+    }
+  }, [required, action, actions, update]);
+
+  return (
+    <Section
+      title="Grant management"
+      description="Create or modify the grant this authorization establishes. The grant records the consent — scopes, claims, and any authorization_details."
+    >
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <Field
+            label="grant_management_action"
+            hint={
+              required
+                ? "This AS requires an action on every request."
+                : "How this request affects the grant."
+            }
+          >
+            <Select
+              value={action || (required ? actions[0] : "")}
+              onChange={(e) =>
+                update({ grantManagementAction: e.target.value })
+              }
+            >
+              {!required && <option value="">none</option>}
+              {actions.map((a) => (
+                <option key={a} value={a}>
+                  {a}
+                </option>
+              ))}
+            </Select>
+          </Field>
+
+          {needsGrantId && (
+            <Field label="grant_id" hint="The existing grant to modify.">
+              <Input
+                mono
+                value={req.grantId}
+                onChange={(e) => update({ grantId: e.target.value })}
+                placeholder="grant_id from a previous run"
+                className="h-9"
+              />
+            </Field>
+          )}
+        </div>
+
+        {!!action && (
+          <div>
+            <p className="text-[11.5px] text-muted-foreground">
+              To query or revoke this grant later, the token needs these scopes:
+            </p>
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {GRANT_MANAGEMENT_SCOPES.map((s) => {
+                const on = req.scopes.includes(s);
+                return (
+                  <button
+                    type="button"
+                    key={s}
+                    onClick={() => onToggleScope(s)}
+                    className={cn(
+                      "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-mono text-[11px]",
+                      on
+                        ? "border-[var(--status-success)]/40 bg-[color-mix(in_oklch,var(--status-success)_10%,transparent)]"
+                        : "border-border bg-muted/50 hover:bg-muted",
+                    )}
+                  >
+                    {on ? "✓" : "+"} {s}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+    </Section>
   );
 }
 

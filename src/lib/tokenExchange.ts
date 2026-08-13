@@ -3,6 +3,7 @@
 // PKCE verifier (RFC 7636 §4.5) is included when the auth request used PKCE.
 
 import { applyClientAuth } from "./clientAuth";
+import { authorizationDetailsWireValue } from "./authorizationDetails";
 import type {
   AuthRequestState,
   ClientConfigState,
@@ -18,6 +19,8 @@ export interface TokenSuccess {
   refreshToken?: string;
   idToken?: string;
   scope?: string;
+  authorizationDetails?: Array<Record<string, unknown>>;
+  grantId?: string;
   raw: Record<string, unknown>;
 }
 
@@ -64,6 +67,17 @@ export async function exchangeCode(
   // issued access token is audience-restricted to it.
   if (input.authRequest.resource.trim()) {
     body.set("resource", input.authRequest.resource.trim());
+  }
+  // RAR: repeat authorization_details at the token endpoint so the issued
+  // access token carries the fine-grained grant.
+  if (
+    input.authRequest.authorizationDetailsEnabled &&
+    input.authRequest.authorizationDetails.trim()
+  ) {
+    body.set(
+      "authorization_details",
+      authorizationDetailsWireValue(input.authRequest.authorizationDetails),
+    );
   }
 
   const headers = new Headers({
@@ -179,6 +193,10 @@ export async function exchangeCode(
         : undefined,
     idToken: typeof parsed.id_token === "string" ? parsed.id_token : undefined,
     scope: typeof parsed.scope === "string" ? parsed.scope : undefined,
+    authorizationDetails: Array.isArray(parsed.authorization_details)
+      ? (parsed.authorization_details as Array<Record<string, unknown>>)
+      : undefined,
+    grantId: typeof parsed.grant_id === "string" ? parsed.grant_id : undefined,
     raw: parsed,
   };
 }

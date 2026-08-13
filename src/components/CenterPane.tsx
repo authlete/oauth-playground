@@ -12,6 +12,7 @@ import { TokenStep } from "../steps/Token";
 import { InspectStep } from "../steps/Inspect";
 import { UserInfoStep } from "../steps/UserInfo";
 import { IntrospectStep } from "../steps/Introspect";
+import { GrantManagementStep } from "../steps/GrantManagement";
 import { ResourceStep } from "../steps/Resource";
 import { RefreshStep } from "../steps/Refresh";
 import { RevokeStep } from "../steps/Revoke";
@@ -28,6 +29,7 @@ const STEP_COMPONENTS: Record<StepId, ComponentType> = {
   inspect: InspectStep,
   userinfo: UserInfoStep,
   introspect: IntrospectStep,
+  "grant-management": GrantManagementStep,
   resource: ResourceStep,
   refresh: RefreshStep,
   revoke: RevokeStep,

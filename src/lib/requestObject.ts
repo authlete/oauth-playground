@@ -5,6 +5,7 @@
 // and Auth request / PAR / Authorize all read that one value.
 
 import { buildAuthorizeParams } from "./authorizeUrl";
+import { parseAuthorizationDetails } from "./authorizationDetails";
 import { validateAndImportJwk } from "./jwk";
 import { signCompactJws } from "./jws";
 import { randomBase64Url } from "./random";
@@ -45,6 +46,17 @@ export async function signRequestObject(
   const claims: Record<string, unknown> = {};
   for (const [k, v] of buildAuthorizeParams(input.client, input.authRequest)) {
     claims[k] = v;
+  }
+  // Inside a request object, authorization_details must be the JSON array
+  // itself — not the URL-encoded string buildAuthorizeParams produced.
+  if (
+    input.authRequest.authorizationDetailsEnabled &&
+    input.authRequest.authorizationDetails.trim()
+  ) {
+    const parsed = parseAuthorizationDetails(
+      input.authRequest.authorizationDetails,
+    );
+    if (parsed.ok) claims.authorization_details = parsed.details;
   }
   // Registered claims (RFC 9101 §5.1 / FAPI 2.0 message signing).
   claims.iss = input.client.clientId;

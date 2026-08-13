@@ -3,6 +3,7 @@
 //  - PAR (the body it POSTs to /par),
 //  - Authorize (the URL it navigates to, optionally with request_uri from PAR).
 
+import { authorizationDetailsWireValue } from "./authorizationDetails";
 import type {
   AuthRequestState,
   ClientConfigState,
@@ -38,6 +39,19 @@ export function buildAuthorizeParams(
   // RFC 8707 resource indicator — set from Protected Resource Metadata when
   // the flow started at a resource (RFC 9728); audience-restricts the token.
   if (req.resource.trim()) params.set("resource", req.resource.trim());
+  // Rich Authorization Requests — fine-grained access as a JSON array.
+  if (req.authorizationDetailsEnabled && req.authorizationDetails.trim()) {
+    params.set(
+      "authorization_details",
+      authorizationDetailsWireValue(req.authorizationDetails),
+    );
+  }
+  // Grant Management — the action, plus the grant_id it targets for
+  // update/replace/merge.
+  if (req.grantManagementAction) {
+    params.set("grant_management_action", req.grantManagementAction);
+    if (req.grantId.trim()) params.set("grant_id", req.grantId.trim());
+  }
   if (req.prompt.trim()) params.set("prompt", req.prompt.trim());
   if (req.maxAge.trim()) params.set("max_age", req.maxAge.trim());
   if (req.loginHint.trim()) params.set("login_hint", req.loginHint.trim());

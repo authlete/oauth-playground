@@ -11,3 +11,7 @@ export {
 export { StepHeader, type StepHeaderProps } from "./StepHeader";
 export { RequestPreview } from "./RequestPreview";
 export { JwtPanel } from "./JwtPanel";
+export {
+  AuthorizationDetailChips,
+  AuthorizationDetailsBlock,
+} from "./AuthorizationDetailsView";

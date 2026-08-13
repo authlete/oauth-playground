@@ -144,6 +144,7 @@ export function buildRegistrationRequest(form: {
   tokenEndpointAuthMethod: string;
   grantTypes: string[];
   scope: string;
+  authorizationDetailsTypes: string[];
 }): Record<string, unknown> {
   const redirectUris = parseRedirectUris(form.redirectUris);
   const req: Record<string, unknown> = {
@@ -157,5 +158,8 @@ export function buildRegistrationRequest(form: {
   if (form.clientName.trim()) req.client_name = form.clientName.trim();
   if (redirectUris.length) req.redirect_uris = redirectUris;
   if (form.scope.trim()) req.scope = form.scope.trim();
+  // RAR: register the types the client may request (omitted when none picked).
+  if (form.authorizationDetailsTypes.length)
+    req.authorization_details_types = form.authorizationDetailsTypes;
   return req;
 }

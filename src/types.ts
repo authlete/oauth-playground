@@ -10,6 +10,7 @@ export type StepId =
   | "inspect"
   | "userinfo"
   | "introspect"
+  | "grant-management"
   | "resource"
   | "refresh"
   | "revoke";
@@ -54,6 +55,10 @@ export const STEPS: StepDef[] = [
   { id: "resource", number: 6, name: "Resource call" },
   { id: "userinfo", number: 7, name: "UserInfo" },
   { id: "introspect", number: 8, name: "Introspection" },
+  // Grant Management API (query / revoke a grant). Appears only when the AS
+  // advertises a grant_management_endpoint. Nested + numberless so it reads as
+  // an optional branch and leaves no numbering gap when absent.
+  { id: "grant-management", name: "Grant management", nested: true },
   { id: "refresh", number: 9, name: "Refresh" },
   { id: "revoke", number: 10, name: "Revoke" },
 ];
@@ -103,6 +108,13 @@ export interface OidcMetadata {
   registration_endpoint?: string;
   pushed_authorization_request_endpoint?: string;
   federation_registration_endpoint?: string;
+  // RAR: the authorization_details `type`s the AS accepts.
+  authorization_details_types_supported?: string[];
+  // Grant Management: the API base for reading/revoking grants, the actions the
+  // AS accepts on the authorize/PAR request, and whether an action is mandatory.
+  grant_management_endpoint?: string;
+  grant_management_actions_supported?: string[];
+  grant_management_action_required?: boolean;
   [key: string]: unknown;
 }
 
@@ -265,6 +277,16 @@ export interface AuthRequestState {
   // context (never persisted, never edited directly) — empty means "don't
   // send the parameter".
   resource: string;
+  // Rich Authorization Requests: when enabled, `authorization_details` (raw
+  // JSON text, edited directly) rides on authorize / PAR / token — and inside
+  // the JAR request object when JAR is on. Off = parameter not sent.
+  authorizationDetailsEnabled: boolean;
+  authorizationDetails: string;
+  // Grant Management: the action to take on the grant (create/update/replace/
+  // merge). "" = don't send the parameter. grantId references an existing grant
+  // for update/replace/merge; empty otherwise.
+  grantManagementAction: string;
+  grantId: string;
 }
 
 export const COMMON_SCOPES = [
@@ -292,7 +314,22 @@ export const DEFAULT_AUTH_REQUEST: AuthRequestState = {
   maxAge: "",
   trustChain: "",
   resource: "",
+  authorizationDetailsEnabled: false,
+  authorizationDetails: "",
+  grantManagementAction: "",
+  grantId: "",
 };
+
+// Grant Management action values sent as the grant_management_action request
+// parameter. query/revoke are not here — those are Grant Management API calls
+// (GET/DELETE), gated by the grant_management_query / _revoke scopes, not
+// request parameters.
+export const GRANT_MANAGEMENT_ACTIONS = [
+  "create",
+  "update",
+  "replace",
+  "merge",
+] as const;
 
 export type AuthorizeStatus = "idle" | "waiting" | "received" | "error";
 
@@ -340,6 +377,13 @@ export interface TokenState {
   refreshToken?: string;
   idToken?: string;
   scope?: string;
+  // Granted `authorization_details` echoed by the AS in the token response —
+  // often narrowed/enriched vs. what was requested (identifiers filled in,
+  // actions dropped). Undefined when the response carries none.
+  authorizationDetails?: Array<Record<string, unknown>>;
+  // Grant Management: the grant_id the AS bound this token to (present when the
+  // request used grant_management_action). Anchors the Grant management step.
+  grantId?: string;
   exchangedAt?: number;
   // Error response (RFC 6749 §5.2)
   error?: string;
@@ -396,6 +440,31 @@ export const DEFAULT_INTROSPECT: IntrospectState = {
   status: "idle",
   tokenSource: "access",
   callerAuthorization: "Bearer playground-demo-rs",
+};
+
+export type GrantManagementStatus = "idle" | "loading" | "success" | "error";
+
+// The Grant Management API step: read (GET) or revoke (DELETE) the grant the
+// current access token is bound to. Generic on what a grant contains — scopes,
+// claims, authorization_details — so it works for scope-only grants too.
+export interface GrantManagementState {
+  status: GrantManagementStatus;
+  lastAction?: "query" | "revoke";
+  /** The grant document returned by a successful query. */
+  grant?: { scopes?: unknown; authorization_details?: unknown } & Record<
+    string,
+    unknown
+  >;
+  /** Set once a revoke succeeds — downstream token ops are expected to fail. */
+  revoked?: boolean;
+  fetchedAt?: number;
+  errorMessage?: string;
+  errorStatus?: number;
+  errorBody?: string;
+}
+
+export const DEFAULT_GRANT_MANAGEMENT: GrantManagementState = {
+  status: "idle",
 };
 
 export type ResourceCallStatus = "idle" | "loading" | "success" | "error";
@@ -478,6 +547,10 @@ export interface DcrRegisterState {
   tokenEndpointAuthMethod: ClientAuthMethod;
   grantTypes: string[];
   scope: string;
+  // RAR: the authorization_details `type`s this client is allowed to use.
+  // Registered as the `authorization_details_types` client metadata — without
+  // it the AS rejects RAR requests for types the client never registered.
+  authorizationDetailsTypes: string[];
   result?: DcrRegisteredClient;
   registeredAt?: number;
   errorMessage?: string;
@@ -492,6 +565,7 @@ export const DEFAULT_DCR_REGISTER: DcrRegisterState = {
   tokenEndpointAuthMethod: "none",
   grantTypes: ["authorization_code", "refresh_token"],
   scope: "openid profile email",
+  authorizationDetailsTypes: [],
 };
 
 export const DCR_GRANT_TYPES = [
