@@ -42,6 +42,7 @@ export function LeftRail() {
     par: parSummary(state),
     authorize: authorizeSummary(state),
     token: tokenSummary(state),
+    ciba: cibaSummary(state),
     userinfo: userInfoSummary(state),
     introspect: introspectSummary(state),
     "grant-management": grantManagementSummary(state),
@@ -390,6 +391,18 @@ function jwtAlg(value: string): string | undefined {
   } catch {
     return undefined;
   }
+}
+
+function cibaSummary(
+  state: ReturnType<typeof usePlayground>["state"],
+): string | undefined {
+  const c = state.ciba;
+  if (c.status === "pending")
+    return `polling · ${c.pollCount ?? 0} ${(c.pollCount ?? 0) === 1 ? "poll" : "polls"}`;
+  if (c.status === "success") return "tokens issued";
+  if (c.status === "expired") return "expired";
+  if (c.status === "denied") return "denied";
+  return undefined;
 }
 
 function userInfoSummary(

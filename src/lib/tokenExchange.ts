@@ -35,6 +35,32 @@ export interface TokenError {
 
 export type TokenExchangeResult = TokenSuccess | TokenError;
 
+/** Token response → success shape, or null when there's no `access_token`.
+ * Shared by the code exchange and the CIBA poll. */
+export function parseTokenSuccessBody(
+  parsed: Record<string, unknown>,
+): Omit<TokenSuccess, "ok"> | null {
+  if (typeof parsed.access_token !== "string") return null;
+  return {
+    accessToken: parsed.access_token,
+    tokenType:
+      typeof parsed.token_type === "string" ? parsed.token_type : "Bearer",
+    expiresIn:
+      typeof parsed.expires_in === "number" ? parsed.expires_in : undefined,
+    refreshToken:
+      typeof parsed.refresh_token === "string"
+        ? parsed.refresh_token
+        : undefined,
+    idToken: typeof parsed.id_token === "string" ? parsed.id_token : undefined,
+    scope: typeof parsed.scope === "string" ? parsed.scope : undefined,
+    authorizationDetails: Array.isArray(parsed.authorization_details)
+      ? (parsed.authorization_details as Array<Record<string, unknown>>)
+      : undefined,
+    grantId: typeof parsed.grant_id === "string" ? parsed.grant_id : undefined,
+    raw: parsed,
+  };
+}
+
 export interface TokenExchangeInput {
   metadata: OidcMetadata;
   client: ClientConfigState;
@@ -171,7 +197,8 @@ export async function exchangeCode(
     };
   }
 
-  if (typeof parsed.access_token !== "string") {
+  const success = parseTokenSuccessBody(parsed);
+  if (!success) {
     return {
       ok: false,
       message: "/token response is missing `access_token`.",
@@ -180,23 +207,5 @@ export async function exchangeCode(
     };
   }
 
-  return {
-    ok: true,
-    accessToken: parsed.access_token,
-    tokenType:
-      typeof parsed.token_type === "string" ? parsed.token_type : "Bearer",
-    expiresIn:
-      typeof parsed.expires_in === "number" ? parsed.expires_in : undefined,
-    refreshToken:
-      typeof parsed.refresh_token === "string"
-        ? parsed.refresh_token
-        : undefined,
-    idToken: typeof parsed.id_token === "string" ? parsed.id_token : undefined,
-    scope: typeof parsed.scope === "string" ? parsed.scope : undefined,
-    authorizationDetails: Array.isArray(parsed.authorization_details)
-      ? (parsed.authorization_details as Array<Record<string, unknown>>)
-      : undefined,
-    grantId: typeof parsed.grant_id === "string" ? parsed.grant_id : undefined,
-    raw: parsed,
-  };
+  return { ok: true, ...success };
 }

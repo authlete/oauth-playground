@@ -7,6 +7,7 @@ export type StepId =
   | "par"
   | "authorize"
   | "token"
+  | "ciba"
   | "inspect"
   | "userinfo"
   | "introspect"
@@ -47,6 +48,9 @@ export const STEPS: StepDef[] = [
   { id: "par", name: "PAR push", nested: true },
   { id: "authorize", number: 4, name: "Authorize" },
   { id: "token", number: 5, name: "Token exchange" },
+  // Alternative to the redirect backbone (steps 3-5); shown only when the AS
+  // advertises a backchannel endpoint. Mints into the same token.
+  { id: "ciba", name: "Backchannel (CIBA)", nested: true },
   // Passive JWT viewer hanging off Token exchange; usable with any pasted JWT.
   { id: "inspect", name: "Token inspector", nested: true },
   // The payoff comes right after the mint: the token was issued to call the
@@ -115,6 +119,10 @@ export interface OidcMetadata {
   grant_management_endpoint?: string;
   grant_management_actions_supported?: string[];
   grant_management_action_required?: boolean;
+  // CIBA — the playground only drives `poll`.
+  backchannel_authentication_endpoint?: string;
+  backchannel_token_delivery_modes_supported?: string[];
+  backchannel_user_code_parameter_supported?: boolean;
   [key: string]: unknown;
 }
 
@@ -394,6 +402,41 @@ export interface TokenState {
 
 export const DEFAULT_TOKEN: TokenState = { status: "idle" };
 
+// CIBA, poll mode. login_hint / scopes / resource / authorization_details come
+// from AuthRequestState; only CIBA-specific inputs and transaction state live
+// here. Minted tokens are written into TokenState for downstream steps.
+export type CibaStatus =
+  | "idle"
+  | "starting" // POSTing the backchannel authentication request
+  | "pending" // polling; awaiting approval on the authentication device
+  | "success"
+  | "expired" // auth_req_id expired before approval
+  | "denied" // user rejected on the authentication device
+  | "error";
+
+export interface CibaState {
+  status: CibaStatus;
+  bindingMessage: string;
+  // requested_expiry (seconds); "" = don't send.
+  requestedExpiry: string;
+  authReqId?: string;
+  expiresIn?: number;
+  // Poll interval; `slow_down` bumps it by 5.
+  interval?: number;
+  startedAt?: number;
+  pollCount?: number;
+  lastResult?: "authorization_pending" | "slow_down";
+  errorMessage?: string;
+  errorStatus?: number;
+  errorBody?: string;
+}
+
+export const DEFAULT_CIBA: CibaState = {
+  status: "idle",
+  bindingMessage: "",
+  requestedExpiry: "",
+};
+
 export type InspectorSource = "access" | "id" | "refresh" | "paste";
 
 export interface InspectorState {
@@ -572,6 +615,7 @@ export const DCR_GRANT_TYPES = [
   "authorization_code",
   "refresh_token",
   "client_credentials",
+  "urn:openid:params:grant-type:ciba",
 ] as const;
 
 export type FederationRegisterMode = "entity-config" | "trust-chain";

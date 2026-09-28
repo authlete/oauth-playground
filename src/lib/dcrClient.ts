@@ -155,6 +155,9 @@ export function buildRegistrationRequest(form: {
   // ["code"], and some AS validators reject an explicit empty array.
   if (form.grantTypes.includes("authorization_code"))
     req.response_types = ["code"];
+  // CIBA registration requires a delivery mode — the playground only polls.
+  if (form.grantTypes.includes("urn:openid:params:grant-type:ciba"))
+    req.backchannel_token_delivery_mode = "poll";
   if (form.clientName.trim()) req.client_name = form.clientName.trim();
   if (redirectUris.length) req.redirect_uris = redirectUris;
   if (form.scope.trim()) req.scope = form.scope.trim();

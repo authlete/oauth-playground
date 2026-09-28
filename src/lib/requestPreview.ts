@@ -5,7 +5,8 @@
 // placeholder instead.
 
 import { buildAuthorizeParams, buildJarParams } from "./authorizeUrl";
-import type { AuthRequestState, ClientConfigState } from "../types";
+import { buildBackchannelParams } from "./cibaAuth";
+import type { AuthRequestState, CibaState, ClientConfigState } from "../types";
 
 // Shown only before a valid signing key exists; normally the real signed JWT
 // (authRequest.requestObjectJwt) is in the URL/body and decoded via JwtPanel.
@@ -90,6 +91,28 @@ export function previewAuthorize(
     method: "GET",
     url: `${endpoint}${sep}${params.toString()}`,
     headers: [],
+    notes: notes.length ? notes : undefined,
+  };
+}
+
+export function previewCiba(
+  endpoint: string,
+  client: ClientConfigState,
+  authRequest: AuthRequestState,
+  ciba: CibaState,
+): PreviewBlock {
+  const body = buildBackchannelParams(authRequest, ciba);
+  const headers: Array<[string, string]> = [
+    ["Content-Type", "application/x-www-form-urlencoded"],
+    ["Accept", "application/json"],
+  ];
+  const notes: string[] = [];
+  applyClientAuthPreview(client, headers, body, notes);
+  return {
+    method: "POST",
+    url: endpoint,
+    headers,
+    body: body.toString(),
     notes: notes.length ? notes : undefined,
   };
 }

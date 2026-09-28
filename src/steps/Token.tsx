@@ -147,7 +147,7 @@ export function TokenStep() {
     <div className="mx-auto max-w-3xl @4xl:max-w-5xl">
       <StepHeader step="token" right={renderPill(tok.status, secondsLeft)} />
 
-      {!code && (
+      {!code && tok.status !== "success" && (
         <Banner tone="warn" className="mt-5">
           <p>No authorization code yet — complete Authorize first.</p>
           <Button

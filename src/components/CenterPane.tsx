@@ -9,6 +9,7 @@ import { AuthRequestStep } from "../steps/AuthRequest";
 import { ParStep } from "../steps/Par";
 import { AuthorizeStep } from "../steps/Authorize";
 import { TokenStep } from "../steps/Token";
+import { CibaStep } from "../steps/Ciba";
 import { InspectStep } from "../steps/Inspect";
 import { UserInfoStep } from "../steps/UserInfo";
 import { IntrospectStep } from "../steps/Introspect";
@@ -26,6 +27,7 @@ const STEP_COMPONENTS: Record<StepId, ComponentType> = {
   par: ParStep,
   authorize: AuthorizeStep,
   token: TokenStep,
+  ciba: CibaStep,
   inspect: InspectStep,
   userinfo: UserInfoStep,
   introspect: IntrospectStep,

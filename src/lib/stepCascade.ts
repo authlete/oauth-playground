@@ -17,6 +17,7 @@ interface CascadeState {
   par: { enabled: boolean; status: string; requestUri?: string };
   authorize: { status: string; stateMatches?: boolean };
   token: { status: string; accessToken?: string };
+  ciba: { status: string };
   userInfo: { status: string };
   introspect: { status: string };
   grantManagement: { status: string };
@@ -58,6 +59,10 @@ export function computeStepStatuses(
   // Grant management appears only when the AS advertises the API endpoint.
   const gmEndpoint =
     typeof state.discoveryMetadata?.grant_management_endpoint === "string";
+  // CIBA appears only when the AS advertises a backchannel endpoint.
+  const cibaEndpoint =
+    typeof state.discoveryMetadata?.backchannel_authentication_endpoint ===
+    "string";
 
   // Steps unlock strictly in order — each gate includes every earlier gate, so
   // a later step is never open while an earlier one is locked. Config steps
@@ -96,7 +101,15 @@ export function computeStepStatuses(
         : authorizeReceived
           ? "done"
           : "ready",
-    token: !authorizeReceived ? "locked" : tokenSucceeded ? "done" : "ready",
+    // "done" keys on the token existing — it can come from authorize or CIBA.
+    token: tokenSucceeded ? "done" : !authorizeReceived ? "locked" : "ready",
+    ciba: !cibaEndpoint
+      ? "hidden"
+      : !(discoveryDone && clientValid)
+        ? "locked"
+        : state.ciba.status === "success"
+          ? "done"
+          : "ready",
     // Inspector is passive — unlock as soon as JWKS is available (i.e.
     // Discovery succeeded). It never reaches "done"; it stays ready.
     inspect: !discoveryDone ? "locked" : "ready",
