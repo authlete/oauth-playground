@@ -659,6 +659,7 @@ export const DCR_GRANT_TYPES = [
   "refresh_token",
   "client_credentials",
   "urn:openid:params:grant-type:ciba",
+  "urn:ietf:params:oauth:grant-type:device_code",
 ] as const;
 
 export type FederationRegisterMode = "entity-config" | "trust-chain";
