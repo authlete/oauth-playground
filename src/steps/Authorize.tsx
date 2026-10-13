@@ -35,8 +35,13 @@ import {
 } from "../lib/authorizeFlow";
 
 export function AuthorizeStep() {
-  const { state, authorizeUpdate, authRequestUpdate, setActiveStep } =
-    usePlayground();
+  const {
+    state,
+    authorizeUpdate,
+    authRequestUpdate,
+    setActiveStep,
+    setAutoExchange,
+  } = usePlayground();
   const auth = state.authorize;
   const popupRef = useRef<Window | null>(null);
   const stopRef = useRef<(() => void) | null>(null);
@@ -310,6 +315,22 @@ export function AuthorizeStep() {
         )}
       </div>
 
+      <label className="mt-3 flex cursor-pointer items-start gap-2 text-[12.5px]">
+        <input
+          type="checkbox"
+          checked={state.autoExchange}
+          onChange={(e) => setAutoExchange(e.target.checked)}
+          className="mt-0.5 h-3.5 w-3.5 accent-[var(--playground-accent)]"
+        />
+        <span className="text-muted-foreground">
+          <span className="font-medium text-foreground">
+            Exchange the code for tokens automatically
+          </span>{" "}
+          and open Token exchange. Turn off to stay here and inspect the
+          authorization result, then exchange by hand.
+        </span>
+      </label>
+
       {auth.status === "waiting" && (
         <p className="mt-3 text-[12.5px] text-muted-foreground">
           Opened a new tab to the AS. Complete the consent there; the playground
@@ -318,7 +339,14 @@ export function AuthorizeStep() {
       )}
 
       {auth.status === "received" && auth.code && (
-        <ResultPanel auth={auth} onCopy={onCopyCode} copied={copied} />
+        <ResultPanel
+          auth={auth}
+          onCopy={onCopyCode}
+          copied={copied}
+          autoExchange={state.autoExchange}
+          tokenStatus={state.token.status}
+          onInspectTokens={() => setActiveStep("token")}
+        />
       )}
 
       {auth.status === "error" && <ErrorPanel auth={auth} />}
@@ -348,10 +376,16 @@ function ResultPanel({
   auth,
   onCopy,
   copied,
+  autoExchange,
+  tokenStatus,
+  onInspectTokens,
 }: {
   auth: ReturnType<typeof usePlayground>["state"]["authorize"];
   onCopy: () => void;
   copied: boolean;
+  autoExchange: boolean;
+  tokenStatus: ReturnType<typeof usePlayground>["state"]["token"]["status"];
+  onInspectTokens: () => void;
 }) {
   return (
     <Banner tone="success" className="mt-4 p-4">
@@ -414,12 +448,82 @@ function ResultPanel({
           </KV>
         )}
       </KVList>
-      <p className="mt-3 text-[12px] text-muted-foreground">
-        Next: Token exchange trades this code for tokens at{" "}
-        <code className="font-mono">/token</code>.
-      </p>
+      <TokenOutcome
+        autoExchange={autoExchange}
+        tokenStatus={tokenStatus}
+        onInspectTokens={onInspectTokens}
+      />
     </Banner>
   );
+}
+
+// What became of the code — kept deliberately quiet so it doesn't pull focus
+// from the authorization result above, which is the part worth reading.
+function TokenOutcome({
+  autoExchange,
+  tokenStatus,
+  onInspectTokens,
+}: {
+  autoExchange: boolean;
+  tokenStatus: ReturnType<typeof usePlayground>["state"]["token"]["status"];
+  onInspectTokens: () => void;
+}) {
+  if (!autoExchange) {
+    return (
+      <p className="mt-3 flex items-center gap-1 text-[12px] text-muted-foreground">
+        Token exchange trades this code for tokens.
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onInspectTokens}
+          className="text-[var(--playground-accent)]"
+        >
+          Go to Token exchange →
+        </Button>
+      </p>
+    );
+  }
+  if (tokenStatus === "loading") {
+    return (
+      <p className="mt-3 flex items-center gap-1.5 text-[12px] text-muted-foreground">
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        Exchanging the code for tokens…
+      </p>
+    );
+  }
+  if (tokenStatus === "success") {
+    return (
+      <p className="mt-3 flex items-center gap-1 text-[12px] text-muted-foreground">
+        <Check className="h-3.5 w-3.5 text-[var(--status-success)]" />
+        Tokens received.
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onInspectTokens}
+          className="text-[var(--playground-accent)]"
+        >
+          Inspect tokens →
+        </Button>
+      </p>
+    );
+  }
+  if (tokenStatus === "error") {
+    return (
+      <p className="mt-3 flex items-center gap-1 text-[12px] text-muted-foreground">
+        <CircleAlert className="h-3.5 w-3.5 text-[var(--status-error)]" />
+        Token exchange failed.
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onInspectTokens}
+          className="text-[var(--playground-accent)]"
+        >
+          See why →
+        </Button>
+      </p>
+    );
+  }
+  return null;
 }
 
 function ErrorPanel({

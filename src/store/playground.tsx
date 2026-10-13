@@ -5,9 +5,11 @@ import {
   useEffect,
   useMemo,
   useReducer,
+  useRef,
   type ReactNode,
 } from "react";
 import { computeStepStatuses } from "../lib/stepCascade";
+import { exchangeCode, tokenStatePatchFromResult } from "../lib/tokenExchange";
 import { DEFAULT_AUTH_SERVER } from "../lib/authServers";
 import { buildAuthorizeParams } from "../lib/authorizeUrl";
 import { signRequestObject } from "../lib/requestObject";
@@ -68,6 +70,10 @@ interface State {
   network: NetworkEntry[];
   /** Right-pane visibility. Starts collapsed; auto-expands on first request. */
   networkCollapsed: boolean;
+  /** When on, a received authorization code is traded for tokens in the
+   * background — without stealing focus from the authorization result, which
+   * is the part worth studying. Off = inspect the code, exchange by hand. */
+  autoExchange: boolean;
   discovery: DiscoveryState;
   /** RFC 9728 context when the flow started at a protected resource. */
   resource: ResourceContextState;
@@ -97,6 +103,7 @@ type Action =
   | { type: "network-update"; id: string; patch: Partial<NetworkEntry> }
   | { type: "network-clear" }
   | { type: "network-set-collapsed"; collapsed: boolean }
+  | { type: "set-auto-exchange"; value: boolean }
   | { type: "discovery-update"; patch: Partial<DiscoveryState> }
   | { type: "discovery-reset" }
   | { type: "resource-update"; patch: Partial<ResourceContextState> }
@@ -283,6 +290,7 @@ const initialState: State = {
   },
   network: [],
   networkCollapsed: true,
+  autoExchange: true,
   discovery: {
     status: "idle",
     issuer: DEFAULT_AUTH_SERVER,
@@ -358,6 +366,8 @@ function reducer(state: State, action: Action): State {
       return { ...state, network: [] };
     case "network-set-collapsed":
       return { ...state, networkCollapsed: action.collapsed };
+    case "set-auto-exchange":
+      return { ...state, autoExchange: action.value };
     case "discovery-update":
       return { ...state, discovery: { ...state.discovery, ...action.patch } };
     case "resource-update":
@@ -438,6 +448,7 @@ interface PlaygroundContextValue {
   networkUpdate: (id: string, patch: Partial<NetworkEntry>) => void;
   networkClear: () => void;
   networkSetCollapsed: (collapsed: boolean) => void;
+  setAutoExchange: (value: boolean) => void;
   discoveryUpdate: (patch: Partial<DiscoveryState>) => void;
   discoveryReset: () => void;
   resourceUpdate: (patch: Partial<ResourceContextState>) => void;
@@ -587,6 +598,64 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.token.accessToken]);
+
+  // Auto-exchange is a mode switch, not just a background action: turning it on
+  // means "finish the flow and show me the tokens", so we trade the code and
+  // move to Token exchange. Off keeps the user on the authorization result to
+  // study it and exchange by hand. Ref-guards one exchange per code so
+  // re-renders are no-ops and a re-run (new code) exchanges again.
+  const autoExchangedCodeRef = useRef<string | null>(null);
+  useEffect(() => {
+    const { authorize, discovery, client, authRequest, token, autoExchange } =
+      state;
+    if (
+      !autoExchange ||
+      authorize.status !== "received" ||
+      !authorize.code ||
+      !discovery.metadata?.token_endpoint ||
+      token.status === "loading" ||
+      autoExchangedCodeRef.current === authorize.code
+    ) {
+      return;
+    }
+    const code = authorize.code;
+    const metadata = discovery.metadata;
+    autoExchangedCodeRef.current = code;
+    void (async () => {
+      dispatch({
+        type: "token-update",
+        patch: {
+          status: "loading",
+          error: undefined,
+          errorDescription: undefined,
+          errorBody: undefined,
+          errorStatus: undefined,
+        },
+      });
+      dispatch({ type: "set-active-step", step: "token" });
+      const result = await exchangeCode({
+        metadata,
+        client,
+        authRequest,
+        code,
+        onStart: (entry) => dispatch({ type: "network-add", entry }),
+        onFinish: (id, patch) =>
+          dispatch({ type: "network-update", id, patch }),
+      });
+      dispatch({
+        type: "token-update",
+        patch: tokenStatePatchFromResult(result, Date.now()),
+      });
+    })();
+  }, [
+    state.autoExchange,
+    state.authorize.status,
+    state.authorize.code,
+    state.discovery.metadata,
+    state.client,
+    state.authRequest,
+    state.token.status,
+  ]);
 
   // Derive the RFC 8707 resource indicator from the resource context: set
   // when a PRM was loaded and the toggle is on, cleared otherwise. Downstream
@@ -819,6 +888,10 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
       dispatch({ type: "network-set-collapsed", collapsed }),
     [],
   );
+  const setAutoExchange = useCallback(
+    (value: boolean) => dispatch({ type: "set-auto-exchange", value }),
+    [],
+  );
   const discoveryUpdate = useCallback(
     (patch: Partial<DiscoveryState>) =>
       dispatch({ type: "discovery-update", patch }),
@@ -922,6 +995,7 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
       networkUpdate,
       networkClear,
       networkSetCollapsed,
+      setAutoExchange,
       discoveryUpdate,
       discoveryReset,
       resourceUpdate,
@@ -954,6 +1028,7 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
       networkUpdate,
       networkClear,
       networkSetCollapsed,
+      setAutoExchange,
       discoveryUpdate,
       discoveryReset,
       resourceUpdate,

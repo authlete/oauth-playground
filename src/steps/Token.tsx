@@ -23,7 +23,7 @@ import {
 import { formatDuration, shorten } from "../lib/format";
 import { looksLikeJwt } from "../lib/jwt";
 import { parseAuthorizationDetails } from "../lib/authorizationDetails";
-import { exchangeCode } from "../lib/tokenExchange";
+import { exchangeCode, tokenStatePatchFromResult } from "../lib/tokenExchange";
 import { GRANT_MANAGEMENT_ACTIONS } from "../types";
 
 export function TokenStep() {
@@ -78,33 +78,7 @@ export function TokenStep() {
       onStart: networkAdd,
       onFinish: networkUpdate,
     });
-    if (result.ok) {
-      const expiresAt =
-        typeof result.expiresIn === "number"
-          ? Date.now() + result.expiresIn * 1000
-          : undefined;
-      tokenUpdate({
-        status: "success",
-        accessToken: result.accessToken,
-        tokenType: result.tokenType,
-        expiresIn: result.expiresIn,
-        expiresAt,
-        refreshToken: result.refreshToken,
-        idToken: result.idToken,
-        scope: result.scope,
-        authorizationDetails: result.authorizationDetails,
-        grantId: result.grantId,
-        exchangedAt: Date.now(),
-      });
-    } else {
-      tokenUpdate({
-        status: "error",
-        error: result.error,
-        errorDescription: result.errorDescription,
-        errorStatus: result.status,
-        errorBody: result.body,
-      });
-    }
+    tokenUpdate(tokenStatePatchFromResult(result, Date.now()));
   };
 
   const copy = async (kind: "access" | "id" | "refresh", value: string) => {

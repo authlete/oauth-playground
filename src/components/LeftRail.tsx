@@ -1,7 +1,13 @@
 import { useEffect, useState } from "react";
 import { Check, Copy, Link2, Lock, RotateCw } from "lucide-react";
 import { usePlayground } from "../store/playground";
-import { STEPS, type StepDef, type StepId, type StepStatus } from "../types";
+import {
+  STEPS,
+  STEP_PHASES,
+  type StepDef,
+  type StepId,
+  type StepStatus,
+} from "../types";
 import { cn } from "../lib/cn";
 import { buildPayloadFromState, buildShareUrl } from "../lib/shareConfig";
 
@@ -61,22 +67,35 @@ export function LeftRail() {
       aria-label="Steps"
       className="flex h-full w-60 shrink-0 flex-col border-r border-border bg-card"
     >
-      <ul className="flex-1 overflow-y-auto py-2">
-        {visibleSteps.map((step) => (
-          <StepRow
-            key={step.id}
-            step={step}
-            status={state.stepStatus[step.id]}
-            active={state.activeStep === step.id}
-            summary={summaries[step.id]}
-            onClick={() => {
-              if (state.stepStatus[step.id] !== "locked") {
-                setActiveStep(step.id);
-              }
-            }}
-          />
-        ))}
-      </ul>
+      <div className="flex-1 overflow-y-auto py-2">
+        {STEP_PHASES.map((phase) => {
+          const steps = visibleSteps.filter((s) => s.phase === phase.id);
+          if (steps.length === 0) return null;
+          return (
+            <section key={phase.id} className="pb-1">
+              <h2 className="px-3 pb-1 pt-3 text-[10.5px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                {phase.label}
+              </h2>
+              <ul>
+                {steps.map((step) => (
+                  <StepRow
+                    key={step.id}
+                    step={step}
+                    status={state.stepStatus[step.id]}
+                    active={state.activeStep === step.id}
+                    summary={summaries[step.id]}
+                    onClick={() => {
+                      if (state.stepStatus[step.id] !== "locked") {
+                        setActiveStep(step.id);
+                      }
+                    }}
+                  />
+                ))}
+              </ul>
+            </section>
+          );
+        })}
+      </div>
       <div className="flex flex-col gap-px border-t border-border p-2">
         {confirmingReset ? (
           <ResetConfirmRow

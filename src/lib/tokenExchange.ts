@@ -9,6 +9,7 @@ import type {
   ClientConfigState,
   NetworkEntry,
   OidcMetadata,
+  TokenState,
 } from "../types";
 
 export interface TokenSuccess {
@@ -58,6 +59,39 @@ export function parseTokenSuccessBody(
       : undefined,
     grantId: typeof parsed.grant_id === "string" ? parsed.grant_id : undefined,
     raw: parsed,
+  };
+}
+
+/** Exchange result → TokenState patch. Shared by the manual Exchange button
+ * and the auto-pilot so both land identical state. */
+export function tokenStatePatchFromResult(
+  result: TokenExchangeResult,
+  now: number,
+): Partial<TokenState> {
+  if (!result.ok) {
+    return {
+      status: "error",
+      error: result.error,
+      errorDescription: result.errorDescription,
+      errorStatus: result.status,
+      errorBody: result.body,
+    };
+  }
+  return {
+    status: "success",
+    accessToken: result.accessToken,
+    tokenType: result.tokenType,
+    expiresIn: result.expiresIn,
+    expiresAt:
+      typeof result.expiresIn === "number"
+        ? now + result.expiresIn * 1000
+        : undefined,
+    refreshToken: result.refreshToken,
+    idToken: result.idToken,
+    scope: result.scope,
+    authorizationDetails: result.authorizationDetails,
+    grantId: result.grantId,
+    exchangedAt: now,
   };
 }
 

@@ -3,6 +3,7 @@ export { ErrorPanel, type ErrorPanelProps } from "./ErrorPanel";
 export { InfoCard, type InfoCardProps } from "./InfoCard";
 export { KV, KVList, KVGrid, KVRow } from "./KV";
 export { Section, type SectionProps } from "./Section";
+export { Disclosure, type DisclosureProps } from "./Disclosure";
 export {
   StatusPill,
   type StatusTone,

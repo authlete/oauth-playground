@@ -15,6 +15,7 @@ import { Select } from "../components/ui/Select";
 import { Textarea } from "../components/ui/Textarea";
 import {
   AuthorizationDetailChips,
+  Disclosure,
   JwtPanel,
   Section,
   StatusPill,
@@ -293,22 +294,6 @@ export function AuthRequestStep() {
           </div>
         </Section>
 
-        <AuthorizationDetailsSection
-          req={req}
-          update={authRequestUpdate}
-          supportedTypes={adTypes}
-        />
-
-        {gmActions.length > 0 && (
-          <GrantManagementSection
-            req={req}
-            update={authRequestUpdate}
-            actions={gmActions}
-            required={gmRequired}
-            onToggleScope={toggleScope}
-          />
-        )}
-
         <Section
           title="Extensions"
           description={
@@ -394,6 +379,22 @@ export function AuthRequestStep() {
           </div>
         </Section>
 
+        <AuthorizationDetailsSection
+          req={req}
+          update={authRequestUpdate}
+          supportedTypes={adTypes}
+        />
+
+        {gmActions.length > 0 && (
+          <GrantManagementSection
+            req={req}
+            update={authRequestUpdate}
+            actions={gmActions}
+            required={gmRequired}
+            onToggleScope={toggleScope}
+          />
+        )}
+
         <AdvancedExpander req={req} update={authRequestUpdate} />
 
         <LivePreview
@@ -469,10 +470,19 @@ function AuthorizationDetailsSection({
   const enabled = req.authorizationDetailsEnabled;
   const trimmed = req.authorizationDetails.trim();
   const parsed = enabled && trimmed ? parseAuthorizationDetails(trimmed) : null;
+  // Signal active state in the collapsed summary so it isn't forgotten.
+  const summaryRight = !enabled
+    ? "off"
+    : parsed?.ok
+      ? `${parsed.details.length} ${parsed.details.length === 1 ? "entry" : "entries"}`
+      : "on";
   return (
-    <Section
+    <Disclosure
       title="Authorization details"
+      hint="(RFC 9396)"
       description="Fine-grained access as a typed JSON array — an alternative or complement to scopes."
+      summaryRight={summaryRight}
+      defaultOpen={enabled}
     >
       <div className="space-y-3">
         <Checkbox
@@ -541,7 +551,7 @@ function AuthorizationDetailsSection({
           </>
         )}
       </div>
-    </Section>
+    </Disclosure>
   );
 }
 
@@ -575,9 +585,11 @@ function GrantManagementSection({
   }, [required, action, actions, update]);
 
   return (
-    <Section
+    <Disclosure
       title="Grant management"
       description="Create or modify the grant this authorization establishes. The grant records the consent — scopes, claims, and any authorization_details."
+      summaryRight={action || "none"}
+      defaultOpen={!!action || required}
     >
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
@@ -645,7 +657,7 @@ function GrantManagementSection({
           </div>
         )}
       </div>
-    </Section>
+    </Disclosure>
   );
 }
 
@@ -706,73 +718,63 @@ function AdvancedExpander({
     () => validateTrustChain(req.trustChain),
     [req.trustChain],
   );
-  // A disclosure, not a Section — optional params shouldn't carry permanent
-  // visual weight. Once open, though, the body follows the same two-level
-  // grammar as the Sections around it (description left, controls right).
   return (
-    <details className="rounded-lg border border-border bg-muted/20 p-4 text-[13px] @4xl:px-5">
-      <summary className="cursor-pointer select-none text-[13px] font-semibold leading-5">
-        Advanced{" "}
-        <span className="font-normal text-muted-foreground">
-          (prompt, max_age, login_hint, trust_chain)
-        </span>
-      </summary>
-      <div className="mt-4 @4xl:grid @4xl:grid-cols-[220px_1fr] @4xl:gap-8">
-        <p className="mb-4 text-[12px] leading-relaxed text-muted-foreground @4xl:mb-0">
-          Rarely-needed request parameters — sent only when non-empty.
-        </p>
-        <div className="min-w-0 space-y-4">
-          <div className="grid grid-cols-3 gap-3">
-            <Field label="prompt" hint="none, login, consent, select_account">
-              <Input
-                mono
-                value={req.prompt}
-                onChange={(e) => update({ prompt: e.target.value })}
-                placeholder=""
-                className="h-8"
-              />
-            </Field>
-            <Field label="max_age" hint="Seconds since user authentication.">
-              <Input
-                mono
-                inputMode="numeric"
-                value={req.maxAge}
-                onChange={(e) => update({ maxAge: e.target.value })}
-                placeholder=""
-                className="h-8"
-              />
-            </Field>
-            <Field label="login_hint" hint="Hint about the user account.">
-              <Input
-                mono
-                value={req.loginHint}
-                onChange={(e) => update({ loginHint: e.target.value })}
-                placeholder=""
-                className="h-8"
-              />
-            </Field>
-          </div>
-          <Field
-            label="trust_chain"
-            hint="OpenID Federation: JSON array of entity statement JWTs — [RP, intermediates…, Trust Anchor]."
-          >
-            <Textarea
-              rows={4}
-              spellCheck={false}
-              className="font-mono text-[11.5px]"
-              value={req.trustChain}
-              onChange={(e) => update({ trustChain: e.target.value })}
-              placeholder='[ "eyJhbGciOi...", "eyJhbGciOi..." ]'
+    <Disclosure
+      title="Advanced"
+      hint="(prompt, max_age, login_hint, trust_chain)"
+      description="Rarely-needed request parameters — sent only when non-empty."
+    >
+      <div className="space-y-4">
+        <div className="grid grid-cols-3 gap-3">
+          <Field label="prompt" hint="none, login, consent, select_account">
+            <Input
+              mono
+              value={req.prompt}
+              onChange={(e) => update({ prompt: e.target.value })}
+              placeholder=""
+              className="h-8"
             />
-            {trustChainWarning && (
-              <p className="mt-1 text-[11.5px] text-[var(--status-warn)]">
-                {trustChainWarning}
-              </p>
-            )}
+          </Field>
+          <Field label="max_age" hint="Seconds since user authentication.">
+            <Input
+              mono
+              inputMode="numeric"
+              value={req.maxAge}
+              onChange={(e) => update({ maxAge: e.target.value })}
+              placeholder=""
+              className="h-8"
+            />
+          </Field>
+          <Field label="login_hint" hint="Hint about the user account.">
+            <Input
+              mono
+              value={req.loginHint}
+              onChange={(e) => update({ loginHint: e.target.value })}
+              placeholder=""
+              className="h-8"
+            />
           </Field>
         </div>
+        <Field
+          label="trust_chain"
+          hint="OpenID Federation: JSON array of entity statement JWTs — [RP, intermediates…, Trust Anchor]."
+        >
+          <Textarea
+            rows={4}
+            spellCheck={false}
+            className="font-mono text-[11.5px]"
+            value={req.trustChain}
+            onChange={(e) => update({ trustChain: e.target.value })}
+            placeholder='[ "eyJhbGciOi...", "eyJhbGciOi..." ]'
+          />
+          {trustChainWarning && (
+            <p className="mt-1 text-[11.5px] text-[var(--status-warn)]">
+              {trustChainWarning}
+            </p>
+          )}
+        </Field>
       </div>
-    </details>
+    </Disclosure>
   );
 }
 
@@ -797,38 +799,29 @@ function RequestObjectPanel({
         }`
       : "signing…";
   return (
-    <details className="rounded-lg border border-border bg-muted/20 p-4 text-[13px] @4xl:px-5">
-      <summary className="flex cursor-pointer select-none items-baseline justify-between gap-3">
-        <span className="text-[13px] font-semibold leading-5">
-          Decoded request object{" "}
-          <span className="font-normal text-muted-foreground">(JAR)</span>
-        </span>
-        <span className="font-mono text-[11px] text-muted-foreground">
-          {summary}
-        </span>
-      </summary>
-      <div className="mt-4 @4xl:grid @4xl:grid-cols-[220px_1fr] @4xl:gap-8">
-        <p className="mb-4 text-[12px] leading-relaxed text-muted-foreground @4xl:mb-0">
-          The signed JWT the request carries — re-signed on every relevant edit.
-        </p>
-        <div className="min-w-0">
-          {req.requestObjectError ? (
-            <div className="rounded-md border border-[var(--status-error)]/40 bg-[color-mix(in_oklch,var(--status-error)_8%,transparent)] p-3 text-[12.5px]">
-              {req.requestObjectError}
-            </div>
-          ) : signed ? (
-            <JwtPanel
-              jwt={signed}
-              payloadSubtitle={issuer ? `aud=${issuer}` : undefined}
-            />
-          ) : (
-            <div className="rounded-md border border-border bg-muted/40 p-3 text-[12.5px] text-muted-foreground">
-              Signing…
-            </div>
-          )}
-        </div>
+    <Disclosure
+      title="Decoded request object"
+      hint="(JAR)"
+      description="The signed JWT the request carries — re-signed on every relevant edit."
+      summaryRight={summary}
+    >
+      <div className="min-w-0">
+        {req.requestObjectError ? (
+          <div className="rounded-md border border-[var(--status-error)]/40 bg-[color-mix(in_oklch,var(--status-error)_8%,transparent)] p-3 text-[12.5px]">
+            {req.requestObjectError}
+          </div>
+        ) : signed ? (
+          <JwtPanel
+            jwt={signed}
+            payloadSubtitle={issuer ? `aud=${issuer}` : undefined}
+          />
+        ) : (
+          <div className="rounded-md border border-border bg-muted/40 p-3 text-[12.5px] text-muted-foreground">
+            Signing…
+          </div>
+        )}
       </div>
-    </details>
+    </Disclosure>
   );
 }
 

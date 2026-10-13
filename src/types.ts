@@ -25,51 +25,87 @@ export type StepId =
 export type StepStatus =
   "locked" | "ready" | "active" | "valid" | "done" | "stale" | "hidden";
 
+/** The rail groups steps into four phases that mirror the OAuth lifecycle:
+ * configure the AS/client, obtain a token, use it, then manage its lifetime.
+ * Grouping gives the flat 1→10 list a legible structure and reframes the
+ * alternative token paths (CIBA, Device) as peers under "Get a token" rather
+ * than as sub-steps of Token exchange. */
+export type StepPhase = "setup" | "get-token" | "use-token" | "manage";
+
+export interface PhaseDef {
+  id: StepPhase;
+  label: string;
+}
+
+export const STEP_PHASES: PhaseDef[] = [
+  { id: "setup", label: "Setup" },
+  { id: "get-token", label: "Get a token" },
+  { id: "use-token", label: "Use the token" },
+  { id: "manage", label: "Manage" },
+];
+
 export interface StepDef {
   id: StepId;
   /** Sequential number. Omitted for auxiliary / nested steps that aren't on
    * the main 1→10 path. */
   number?: number;
   name: string;
+  /** Lifecycle phase this step belongs to — drives the rail's grouping. */
+  phase: StepPhase;
   /** Nested under the previous step in the rail (renders indented, no
    * number, with an icon). Used for optional / out-of-sequence paths. */
   nested?: boolean;
 }
 
 export const STEPS: StepDef[] = [
-  { id: "discovery", number: 1, name: "Discovery" },
-  { id: "client", number: 2, name: "Client config" },
+  { id: "discovery", number: 1, name: "Discovery", phase: "setup" },
+  { id: "client", number: 2, name: "Client config", phase: "setup" },
   // Auxiliary paths under Client, each visible only when the AS advertises the
   // matching endpoint. Nested + numberless so they read as optional branches
   // off Client config rather than inline steps. Both produce a client_id.
-  { id: "dcr-register", name: "Register client (DCR)", nested: true },
-  { id: "federation-register", name: "Federation register", nested: true },
-  { id: "auth-request", number: 3, name: "Auth request" },
+  {
+    id: "dcr-register",
+    name: "Register client (DCR)",
+    phase: "setup",
+    nested: true,
+  },
+  {
+    id: "federation-register",
+    name: "Federation register",
+    phase: "setup",
+    nested: true,
+  },
+  { id: "auth-request", number: 3, name: "Auth request", phase: "get-token" },
   // PAR only appears when the user enables it in Auth request's Extensions.
-  { id: "par", name: "PAR push", nested: true },
-  { id: "authorize", number: 4, name: "Authorize" },
-  { id: "token", number: 5, name: "Token exchange" },
+  { id: "par", name: "PAR push", phase: "get-token", nested: true },
+  { id: "authorize", number: 4, name: "Authorize", phase: "get-token" },
+  { id: "token", number: 5, name: "Token exchange", phase: "get-token" },
   // Alternative to the redirect backbone (steps 3-5); shown only when the AS
   // advertises a backchannel endpoint. Mints into the same token.
-  { id: "ciba", name: "Backchannel (CIBA)", nested: true },
+  { id: "ciba", name: "Backchannel (CIBA)", phase: "get-token", nested: true },
   // Device Authorization Grant (RFC 8628) — the other non-redirect path into a
   // token. Shown only when the AS advertises a device endpoint. Like CIBA it
   // polls /token and mints into the same token.
-  { id: "device", name: "Device flow", nested: true },
+  { id: "device", name: "Device flow", phase: "get-token", nested: true },
   // Passive JWT viewer hanging off Token exchange; usable with any pasted JWT.
-  { id: "inspect", name: "Token inspector", nested: true },
+  { id: "inspect", name: "Token inspector", phase: "get-token", nested: true },
   // The payoff comes right after the mint: the token was issued to call the
   // resource. UserInfo is the OIDC-flavored resource; Introspection follows
   // as "what the RS saw when it validated your token".
-  { id: "resource", number: 6, name: "Resource call" },
-  { id: "userinfo", number: 7, name: "UserInfo" },
-  { id: "introspect", number: 8, name: "Introspection" },
+  { id: "resource", number: 6, name: "Resource call", phase: "use-token" },
+  { id: "userinfo", number: 7, name: "UserInfo", phase: "use-token" },
+  { id: "introspect", number: 8, name: "Introspection", phase: "use-token" },
   // Grant Management API (query / revoke a grant). Appears only when the AS
   // advertises a grant_management_endpoint. Nested + numberless so it reads as
   // an optional branch and leaves no numbering gap when absent.
-  { id: "grant-management", name: "Grant management", nested: true },
-  { id: "refresh", number: 9, name: "Refresh" },
-  { id: "revoke", number: 10, name: "Revoke" },
+  {
+    id: "grant-management",
+    name: "Grant management",
+    phase: "use-token",
+    nested: true,
+  },
+  { id: "refresh", number: 9, name: "Refresh", phase: "manage" },
+  { id: "revoke", number: 10, name: "Revoke", phase: "manage" },
 ];
 
 const STEP_BY_ID = new Map(STEPS.map((s) => [s.id, s]));
