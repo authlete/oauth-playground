@@ -18,6 +18,7 @@ interface CascadeState {
   authorize: { status: string; stateMatches?: boolean };
   token: { status: string; accessToken?: string };
   ciba: { status: string };
+  device: { status: string };
   userInfo: { status: string };
   introspect: { status: string };
   grantManagement: { status: string };
@@ -63,6 +64,9 @@ export function computeStepStatuses(
   const cibaEndpoint =
     typeof state.discoveryMetadata?.backchannel_authentication_endpoint ===
     "string";
+  // Device flow appears only when the AS advertises a device endpoint.
+  const deviceEndpoint =
+    typeof state.discoveryMetadata?.device_authorization_endpoint === "string";
 
   // Steps unlock strictly in order — each gate includes every earlier gate, so
   // a later step is never open while an earlier one is locked. Config steps
@@ -108,6 +112,13 @@ export function computeStepStatuses(
       : !(discoveryDone && clientValid)
         ? "locked"
         : state.ciba.status === "success"
+          ? "done"
+          : "ready",
+    device: !deviceEndpoint
+      ? "hidden"
+      : !(discoveryDone && clientValid)
+        ? "locked"
+        : state.device.status === "success"
           ? "done"
           : "ready",
     // Inspector is passive — unlock as soon as JWKS is available (i.e.

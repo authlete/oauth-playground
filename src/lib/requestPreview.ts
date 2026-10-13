@@ -6,6 +6,7 @@
 
 import { buildAuthorizeParams, buildJarParams } from "./authorizeUrl";
 import { buildBackchannelParams } from "./cibaAuth";
+import { buildDeviceParams } from "./deviceAuth";
 import type { AuthRequestState, CibaState, ClientConfigState } from "../types";
 
 // Shown only before a valid signing key exists; normally the real signed JWT
@@ -102,6 +103,27 @@ export function previewCiba(
   ciba: CibaState,
 ): PreviewBlock {
   const body = buildBackchannelParams(authRequest, ciba);
+  const headers: Array<[string, string]> = [
+    ["Content-Type", "application/x-www-form-urlencoded"],
+    ["Accept", "application/json"],
+  ];
+  const notes: string[] = [];
+  applyClientAuthPreview(client, headers, body, notes);
+  return {
+    method: "POST",
+    url: endpoint,
+    headers,
+    body: body.toString(),
+    notes: notes.length ? notes : undefined,
+  };
+}
+
+export function previewDevice(
+  endpoint: string,
+  client: ClientConfigState,
+  authRequest: AuthRequestState,
+): PreviewBlock {
+  const body = buildDeviceParams(authRequest);
   const headers: Array<[string, string]> = [
     ["Content-Type", "application/x-www-form-urlencoded"],
     ["Accept", "application/json"],

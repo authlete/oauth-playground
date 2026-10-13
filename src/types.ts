@@ -8,6 +8,7 @@ export type StepId =
   | "authorize"
   | "token"
   | "ciba"
+  | "device"
   | "inspect"
   | "userinfo"
   | "introspect"
@@ -51,6 +52,10 @@ export const STEPS: StepDef[] = [
   // Alternative to the redirect backbone (steps 3-5); shown only when the AS
   // advertises a backchannel endpoint. Mints into the same token.
   { id: "ciba", name: "Backchannel (CIBA)", nested: true },
+  // Device Authorization Grant (RFC 8628) — the other non-redirect path into a
+  // token. Shown only when the AS advertises a device endpoint. Like CIBA it
+  // polls /token and mints into the same token.
+  { id: "device", name: "Device flow", nested: true },
   // Passive JWT viewer hanging off Token exchange; usable with any pasted JWT.
   { id: "inspect", name: "Token inspector", nested: true },
   // The payoff comes right after the mint: the token was issued to call the
@@ -123,6 +128,9 @@ export interface OidcMetadata {
   backchannel_authentication_endpoint?: string;
   backchannel_token_delivery_modes_supported?: string[];
   backchannel_user_code_parameter_supported?: boolean;
+  // Device Authorization Grant (RFC 8628) — where the consumption device POSTs
+  // to obtain a device_code / user_code pair.
+  device_authorization_endpoint?: string;
   [key: string]: unknown;
 }
 
@@ -436,6 +444,41 @@ export const DEFAULT_CIBA: CibaState = {
   bindingMessage: "",
   requestedExpiry: "",
 };
+
+// Device Authorization Grant (RFC 8628), the consumption-device side. scopes /
+// resource / authorization_details come from AuthRequestState; only the device
+// transaction state lives here. Minted tokens are written into TokenState for
+// downstream steps, exactly like CIBA.
+export type DeviceStatus =
+  | "idle"
+  | "starting" // POSTing the device authorization request
+  | "pending" // polling; awaiting approval at the verification URI
+  | "success"
+  | "expired" // device_code expired before approval
+  | "denied" // user rejected on the verification device
+  | "error";
+
+export interface DeviceState {
+  status: DeviceStatus;
+  // From the device authorization response (RFC 8628 §3.2).
+  deviceCode?: string;
+  userCode?: string;
+  verificationUri?: string;
+  // verification_uri_complete embeds the user_code so the second device can
+  // skip typing it; optional — the AS may omit it.
+  verificationUriComplete?: string;
+  expiresIn?: number;
+  // Poll interval; `slow_down` bumps it by 5.
+  interval?: number;
+  startedAt?: number;
+  pollCount?: number;
+  lastResult?: "authorization_pending" | "slow_down";
+  errorMessage?: string;
+  errorStatus?: number;
+  errorBody?: string;
+}
+
+export const DEFAULT_DEVICE: DeviceState = { status: "idle" };
 
 export type InspectorSource = "access" | "id" | "refresh" | "paste";
 

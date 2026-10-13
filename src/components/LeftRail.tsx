@@ -43,6 +43,7 @@ export function LeftRail() {
     authorize: authorizeSummary(state),
     token: tokenSummary(state),
     ciba: cibaSummary(state),
+    device: deviceSummary(state),
     userinfo: userInfoSummary(state),
     introspect: introspectSummary(state),
     "grant-management": grantManagementSummary(state),
@@ -402,6 +403,20 @@ function cibaSummary(
   if (c.status === "success") return "tokens issued";
   if (c.status === "expired") return "expired";
   if (c.status === "denied") return "denied";
+  return undefined;
+}
+
+function deviceSummary(
+  state: ReturnType<typeof usePlayground>["state"],
+): string | undefined {
+  const d = state.device;
+  if (d.status === "pending")
+    return d.userCode
+      ? `code ${d.userCode} · ${d.pollCount ?? 0} ${(d.pollCount ?? 0) === 1 ? "poll" : "polls"}`
+      : "polling";
+  if (d.status === "success") return "tokens issued";
+  if (d.status === "expired") return "expired";
+  if (d.status === "denied") return "denied";
   return undefined;
 }
 

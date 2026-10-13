@@ -22,6 +22,7 @@ import {
   DEFAULT_AUTHORIZE,
   DEFAULT_AUTH_REQUEST,
   DEFAULT_CIBA,
+  DEFAULT_DEVICE,
   DEFAULT_CLIENT_CONFIG,
   DEFAULT_DCR_REGISTER,
   DEFAULT_FEDERATION_REGISTER,
@@ -39,6 +40,7 @@ import {
   type AuthRequestState,
   type AuthorizeState,
   type CibaState,
+  type DeviceState,
   type ClientConfigState,
   type DcrRegisterState,
   type DiscoveryState,
@@ -77,6 +79,7 @@ interface State {
   authorize: AuthorizeState;
   token: TokenState;
   ciba: CibaState;
+  device: DeviceState;
   inspector: InspectorState;
   userInfo: UserInfoState;
   introspect: IntrospectState;
@@ -109,6 +112,8 @@ type Action =
   | { type: "token-update"; patch: Partial<TokenState> }
   | { type: "ciba-update"; patch: Partial<CibaState> }
   | { type: "ciba-reset" }
+  | { type: "device-update"; patch: Partial<DeviceState> }
+  | { type: "device-reset" }
   | { type: "inspector-update"; patch: Partial<InspectorState> }
   | { type: "userinfo-update"; patch: Partial<UserInfoState> }
   | { type: "introspect-update"; patch: Partial<IntrospectState> }
@@ -267,6 +272,7 @@ const initialState: State = {
     authorize: "locked",
     token: "locked",
     ciba: "hidden",
+    device: "hidden",
     inspect: "locked",
     userinfo: "locked",
     introspect: "locked",
@@ -292,6 +298,7 @@ const initialState: State = {
   authorize: DEFAULT_AUTHORIZE,
   token: DEFAULT_TOKEN,
   ciba: DEFAULT_CIBA,
+  device: DEFAULT_DEVICE,
   inspector: DEFAULT_INSPECTOR,
   userInfo: DEFAULT_USERINFO,
   introspect: DEFAULT_INTROSPECT,
@@ -392,6 +399,10 @@ function reducer(state: State, action: Action): State {
       return { ...state, ciba: { ...state.ciba, ...action.patch } };
     case "ciba-reset":
       return { ...state, ciba: DEFAULT_CIBA };
+    case "device-update":
+      return { ...state, device: { ...state.device, ...action.patch } };
+    case "device-reset":
+      return { ...state, device: DEFAULT_DEVICE };
     case "inspector-update":
       return { ...state, inspector: { ...state.inspector, ...action.patch } };
     case "userinfo-update":
@@ -439,6 +450,8 @@ interface PlaygroundContextValue {
   tokenUpdate: (patch: Partial<TokenState>) => void;
   cibaUpdate: (patch: Partial<CibaState>) => void;
   cibaReset: () => void;
+  deviceUpdate: (patch: Partial<DeviceState>) => void;
+  deviceReset: () => void;
   inspectorUpdate: (patch: Partial<InspectorState>) => void;
   userInfoUpdate: (patch: Partial<UserInfoState>) => void;
   introspectUpdate: (patch: Partial<IntrospectState>) => void;
@@ -722,6 +735,7 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
       authorize: state.authorize,
       token: state.token,
       ciba: state.ciba,
+      device: state.device,
       userInfo: state.userInfo,
       introspect: state.introspect,
       grantManagement: state.grantManagement,
@@ -744,6 +758,7 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
     state.authorize,
     state.token,
     state.ciba,
+    state.device,
     state.userInfo,
     state.introspect,
     state.grantManagement,
@@ -856,6 +871,11 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
     [],
   );
   const cibaReset = useCallback(() => dispatch({ type: "ciba-reset" }), []);
+  const deviceUpdate = useCallback(
+    (patch: Partial<DeviceState>) => dispatch({ type: "device-update", patch }),
+    [],
+  );
+  const deviceReset = useCallback(() => dispatch({ type: "device-reset" }), []);
   const inspectorUpdate = useCallback(
     (patch: Partial<InspectorState>) =>
       dispatch({ type: "inspector-update", patch }),
@@ -914,6 +934,8 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
       tokenUpdate,
       cibaUpdate,
       cibaReset,
+      deviceUpdate,
+      deviceReset,
       inspectorUpdate,
       userInfoUpdate,
       introspectUpdate,
@@ -944,6 +966,8 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
       tokenUpdate,
       cibaUpdate,
       cibaReset,
+      deviceUpdate,
+      deviceReset,
       inspectorUpdate,
       userInfoUpdate,
       introspectUpdate,
