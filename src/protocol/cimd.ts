@@ -23,7 +23,11 @@ export function buildClientMetadata(origin: string): Record<string, unknown> {
     client_uri: o,
     redirect_uris: [`${o}/callback`],
     token_endpoint_auth_method: "none",
-    grant_types: ["authorization_code", "refresh_token"],
+    grant_types: [
+      "authorization_code",
+      "refresh_token",
+      "urn:ietf:params:oauth:grant-type:device_code",
+    ],
     response_types: ["code"],
     scope: "openid profile email",
   };
