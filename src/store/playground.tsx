@@ -166,7 +166,10 @@ function loadPersistedClient(): PersistedClient | null {
     if (
       typeof parsed.clientId === "string" &&
       typeof parsed.authMethod === "string" &&
-      typeof parsed.redirectUri === "string"
+      typeof parsed.redirectUri === "string" &&
+      // The signing key is never persisted, so a restored private_key_jwt client
+      // would be dead — ignore it and fall back to the default identity.
+      parsed.authMethod !== "private_key_jwt"
     ) {
       return parsed;
     }
@@ -178,6 +181,9 @@ function loadPersistedClient(): PersistedClient | null {
 
 function persistClient(state: ClientConfigState) {
   if (typeof window === "undefined") return;
+  // private_key_jwt is session-only: its key isn't persisted, so don't persist
+  // a key-less identity (keeps the last usable one in storage instead).
+  if (state.authMethod === "private_key_jwt") return;
   try {
     const payload: PersistedClient = {
       clientId: state.clientId,

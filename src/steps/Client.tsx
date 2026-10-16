@@ -32,6 +32,10 @@ import { shorten } from "../protocol/format";
 import { validateClientConfig } from "../protocol/clientConfig";
 import { buildClientMetadata, clientMetadataUrl } from "../protocol/cimd";
 import { generateDpopKey } from "../protocol/dpop";
+import {
+  createConfidentialClient,
+  MAKECLIENT_URL,
+} from "../services/makeclient";
 import { validateAndImportJwk } from "../protocol/jwk";
 import { DcrRegisterStep } from "./DcrRegister";
 import { FederationRegisterStep } from "./FederationRegister";
@@ -144,6 +148,36 @@ export function ClientStep() {
       redirectUri: `${window.location.origin}/callback`,
     });
 
+  // Confidential CIMD via makeclient: its minted key drops into private_key_jwt.
+  const usingMakeclient = cfg.clientId.startsWith(`${MAKECLIENT_URL}/`);
+  const cimdInUse = usingCimd || usingMakeclient;
+  const [creatingCimd, setCreatingCimd] = useState(false);
+  const [cimdError, setCimdError] = useState<string | undefined>();
+  const createConfidentialCimd = async () => {
+    setCreatingCimd(true);
+    setCimdError(undefined);
+    const redirectUri = `${window.location.origin}/callback`;
+    try {
+      const { clientId, privateJwk } =
+        await createConfidentialClient(redirectUri);
+      clientUpdate({
+        clientId,
+        authMethod: "private_key_jwt",
+        redirectUri,
+        privateKey: {
+          jwkText: JSON.stringify(privateJwk, null, 2),
+          status: "valid",
+        },
+      });
+    } catch (err) {
+      setCimdError(
+        err instanceof Error ? err.message : "Could not reach makeclient.",
+      );
+    } finally {
+      setCreatingCimd(false);
+    }
+  };
+
   // Auto-adopt CIMD when the server supports it and the client is still the
   // stock placeholder: the registration-free default the spec makes possible.
   // A real pasted client_id is left untouched.
@@ -223,15 +257,20 @@ export function ClientStep() {
         {cimdSupported && (
           <CimdHero
             metadataUrl={metadataUrl}
-            inUse={usingCimd}
+            activeClientId={cimdInUse ? cfg.clientId : metadataUrl}
+            inUse={cimdInUse}
+            confidential={usingMakeclient}
+            creating={creatingCimd}
+            error={cimdError}
             onUse={adoptCimdIdentity}
+            onCreateConfidential={createConfidentialCimd}
             onContinue={() => setActiveStep("auth-request")}
           />
         )}
 
         <ClassicConfig
           fold={cimdSupported}
-          activeId={usingCimd ? undefined : cfg.clientId}
+          activeId={cimdInUse ? undefined : cfg.clientId}
         >
           <Section
             title="Identity"
@@ -524,13 +563,25 @@ function ClassicConfig({
 // and the client_id is simply that URL.
 function CimdHero({
   metadataUrl,
+  activeClientId,
   inUse,
+  confidential,
+  creating,
+  error,
   onUse,
+  onCreateConfidential,
   onContinue,
 }: {
   metadataUrl: string;
+  /** The client_id currently shown — the self-hosted URL, or a makeclient URL. */
+  activeClientId: string;
   inUse: boolean;
+  /** Active identity is a makeclient-hosted private_key_jwt client. */
+  confidential: boolean;
+  creating: boolean;
+  error?: string;
   onUse: () => void;
+  onCreateConfidential: () => void;
   onContinue: () => void;
 }) {
   const doc = useMemo(
@@ -547,8 +598,8 @@ function CimdHero({
               Client ID Metadata Document
             </h2>
             <p className="mt-0.5 text-[12px] leading-relaxed text-muted-foreground">
-              Instead of registering, the client is identified by a URL that
-              serves its metadata. The playground hosts its own.
+              Identify the client by a URL that serves its metadata — public
+              (self-hosted) or confidential with a key.
             </p>
           </div>
         </div>
@@ -564,36 +615,80 @@ function CimdHero({
       </div>
 
       <div className="mt-3 rounded-md border border-border bg-background/60 p-2.5">
-        <div className="text-[10.5px] uppercase tracking-wide text-muted-foreground">
-          client_id
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[10.5px] uppercase tracking-wide text-muted-foreground">
+            client_id
+          </span>
+          {confidential && (
+            <span className="font-mono text-[10.5px] text-[var(--playground-accent)]">
+              private_key_jwt
+            </span>
+          )}
         </div>
         <code className="mt-0.5 block break-all font-mono text-[12px]">
-          {metadataUrl}
+          {activeClientId}
         </code>
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        {inUse ? (
-          <Button size="sm" onClick={onContinue} className="ml-auto">
-            Continue to Auth request
-            <ArrowRight className="h-4 w-4" />
-          </Button>
-        ) : (
+        {!inUse && (
           <Button onClick={onUse}>
             <Fingerprint className="h-4 w-4" />
             Use this identity
           </Button>
         )}
+        {!confidential && (
+          <Button
+            variant="secondary"
+            onClick={onCreateConfidential}
+            disabled={creating}
+          >
+            {creating ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <KeyRound className="h-4 w-4" />
+            )}
+            {creating ? "Creating…" : "Create with a key"}
+          </Button>
+        )}
+        {inUse && (
+          <Button size="sm" onClick={onContinue} className="ml-auto">
+            Continue to Auth request
+            <ArrowRight className="h-4 w-4" />
+          </Button>
+        )}
       </div>
 
-      <Disclosure
-        title="View the document"
-        description="The JSON the server fetches from the client_id URL."
-      >
-        <pre className="overflow-x-auto rounded-md border border-border bg-background/60 p-3 font-mono text-[11.5px] leading-relaxed">
-          {JSON.stringify(doc, null, 2)}
-        </pre>
-      </Disclosure>
+      {!confidential && (
+        <p className="mt-2 text-[11.5px] text-muted-foreground">
+          Hosted on{" "}
+          <span className="font-mono">{new URL(MAKECLIENT_URL).host}</span> —
+          reachable by your AS.
+        </p>
+      )}
+      {error && (
+        <p className="mt-2 text-[11.5px] text-[var(--status-error)]">{error}</p>
+      )}
+
+      {confidential ? (
+        <a
+          href={activeClientId}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-3 inline-block text-[12px] text-[var(--playground-accent)]"
+        >
+          Open hosted document ↗
+        </a>
+      ) : (
+        <Disclosure
+          title="View the document"
+          description="The JSON the server fetches from the client_id URL."
+        >
+          <pre className="overflow-x-auto rounded-md border border-border bg-background/60 p-3 font-mono text-[11.5px] leading-relaxed">
+            {JSON.stringify(doc, null, 2)}
+          </pre>
+        </Disclosure>
+      )}
     </section>
   );
 }
