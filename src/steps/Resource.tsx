@@ -17,6 +17,7 @@ import {
 import { shorten } from "../protocol/format";
 import { cn } from "../protocol/cn";
 import { resourceCall } from "../protocol/resourceCall";
+import { dpopContextFrom } from "../protocol/dpop";
 import { parseBearerChallenge } from "../protocol/bearerChallenge";
 import type { HttpMethod } from "../types";
 
@@ -31,6 +32,7 @@ export function ResourceStep() {
     networkAdd,
     networkUpdate,
     setStepStatus,
+    dpopUpdate,
   } = usePlayground();
   const rc = state.resourceCall;
   const [copied, setCopied] = useState(false);
@@ -73,6 +75,8 @@ export function ResourceStep() {
       bodyText: rc.bodyText,
       attachBearer: rc.attachBearer,
       accessToken: state.token.accessToken,
+      dpop: dpopContextFrom(state.dpop),
+      onDpopNonce: (nonce) => dpopUpdate({ nonce }),
       onStart: networkAdd,
       onFinish: networkUpdate,
     });

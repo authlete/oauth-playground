@@ -191,8 +191,66 @@ export const REQUIREMENTS: Requirement[] = [
     capability: "device",
     text: "The device authorization request carries client_id in the body, even for a confidential client.",
   },
+
+  // ── DPoP (RFC 9449) ──────────────────────────────────────────────────────
+  {
+    id: "dpop.proof-typ",
+    level: "MUST",
+    spec: "RFC 9449",
+    section: "4.2",
+    capability: "dpop",
+    text: "The proof JWT header sets typ=dpop+jwt and embeds the public jwk.",
+  },
+  {
+    id: "dpop.proof-claims",
+    level: "MUST",
+    spec: "RFC 9449",
+    section: "4.2",
+    capability: "dpop",
+    text: "The proof payload carries jti, htm (request method) and iat.",
+  },
+  {
+    id: "dpop.htu-canonical",
+    level: "MUST",
+    spec: "RFC 9449",
+    section: "4.2",
+    capability: "dpop",
+    text: "The htu claim is the request URI with query and fragment removed.",
+  },
+  {
+    id: "dpop.thumbprint",
+    level: "MUST",
+    spec: "RFC 7638",
+    section: "3",
+    capability: "dpop",
+    text: "The key thumbprint (cnf.jkt) is BASE64URL(SHA-256) over only the required JWK members in lexicographic order.",
+  },
+  {
+    id: "dpop.token-header",
+    level: "MUST",
+    spec: "RFC 9449",
+    section: "5",
+    capability: "dpop",
+    text: "The token request carries a DPoP header with a proof bound to that request.",
+  },
+  {
+    id: "dpop.resource-ath",
+    level: "MUST",
+    spec: "RFC 9449",
+    section: "7.1",
+    capability: "dpop",
+    text: "A token-bearing request uses the DPoP Authorization scheme and the proof carries ath=BASE64URL(SHA-256(access_token)).",
+  },
+  {
+    id: "dpop.nonce-retry",
+    level: "MUST",
+    spec: "RFC 9449",
+    section: "8",
+    capability: "dpop",
+    text: "On a use_dpop_nonce challenge the client retries once with the server nonce echoed in the proof.",
+  },
 ];
 
 /** Deliberately fixed so a dropped or silently-added requirement fails the
  * meta-test. Update it only when you mean to change the index. */
-export const EXPECTED_REQUIREMENT_COUNT = 21;
+export const EXPECTED_REQUIREMENT_COUNT = 28;

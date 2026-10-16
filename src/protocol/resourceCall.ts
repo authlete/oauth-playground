@@ -1,7 +1,10 @@
 // A tiny generic HTTP client for hitting a user-owned resource server.
-// Out of scope: any AS interaction. The only OAuth-y bit is the optional
-// "Attach Bearer" toggle that adds the access_token from Token exchange.
+// Out of scope: any AS interaction. The OAuth-y bit is the optional "Attach
+// token" toggle that presents the access_token — as DPoP (RFC 9449 §7.1, with
+// a token-bound proof) when DPoP is on, otherwise Bearer.
 
+import { send } from "./dpopHttp";
+import type { DpopContext } from "./dpop";
 import type { HttpMethod, NetworkEntry } from "../types";
 
 export interface ResourceCallInput {
@@ -11,6 +14,8 @@ export interface ResourceCallInput {
   bodyText: string;
   attachBearer: boolean;
   accessToken?: string;
+  dpop?: DpopContext;
+  onDpopNonce?: (nonce: string) => void;
   onStart: (entry: NetworkEntry) => void;
   onFinish: (id: string, patch: Partial<NetworkEntry>) => void;
 }
@@ -74,14 +79,9 @@ export async function resourceCall(
     headers.set("Authorization", `Bearer ${input.accessToken}`);
   }
 
-  const init: RequestInit = {
-    method: input.method,
-    mode: "cors",
-    credentials: "omit",
-    headers,
-  };
+  let bodyText: string | undefined;
   if (input.method !== "GET" && input.method !== "HEAD" && input.bodyText) {
-    init.body = input.bodyText;
+    bodyText = input.bodyText;
     if (!headers.has("Content-Type")) {
       // Best-effort content-type detection.
       const trimmed = input.bodyText.trim();
@@ -93,49 +93,36 @@ export async function resourceCall(
     }
   }
 
-  const id = crypto.randomUUID();
+  // DPoP only applies when we're presenting the token: the proof binds to it.
+  const useDpop = input.dpop && input.attachBearer && input.accessToken;
   const startedAt = performance.now();
-  input.onStart({
-    id,
-    startedAt,
+  const sent = await send({
     method: input.method,
     url: trimmedUrl,
-    requestHeaders: Object.fromEntries(headers.entries()),
-    requestBody: typeof init.body === "string" ? init.body : undefined,
-  });
-
-  let response: Response;
-  try {
-    response = await fetch(trimmedUrl, init);
-  } catch (err) {
-    const finishedAt = performance.now();
-    const message =
+    headers,
+    body: bodyText,
+    dpop: useDpop
+      ? {
+          ctx: input.dpop!,
+          accessToken: input.accessToken,
+          onNonce: input.onDpopNonce,
+        }
+      : undefined,
+    onStart: input.onStart,
+    onFinish: input.onFinish,
+    networkErrorMessage: (err) =>
       err instanceof TypeError
         ? "CORS / network error reaching the resource."
         : err instanceof Error
           ? err.message
-          : String(err);
-    input.onFinish(id, {
-      finishedAt,
-      durationMs: Math.round(finishedAt - startedAt),
-      errorMessage: message,
-    });
-    return { ok: false, message };
-  }
-  const body = await response.text();
-  const finishedAt = performance.now();
+          : String(err),
+  });
+  if (!sent.ok) return { ok: false, message: sent.message };
+  const { response, bodyText: body } = sent;
+  const durationMs = Math.round(performance.now() - startedAt);
   const respHeaders: Record<string, string> = {};
   response.headers.forEach((v, k) => {
     respHeaders[k] = v;
-  });
-  const durationMs = Math.round(finishedAt - startedAt);
-  input.onFinish(id, {
-    finishedAt,
-    durationMs,
-    status: response.status,
-    statusText: response.statusText,
-    responseHeaders: respHeaders,
-    responseBody: body,
   });
   return {
     ok: true,

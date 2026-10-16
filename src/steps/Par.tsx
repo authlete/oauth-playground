@@ -21,11 +21,18 @@ import {
 } from "../components/step";
 import { previewPar } from "../protocol/requestPreview";
 import { pushPar } from "../protocol/parClient";
+import { dpopContextFrom } from "../protocol/dpop";
 import { jarReadiness } from "../protocol/requestObject";
 
 export function ParStep() {
-  const { state, parUpdate, networkAdd, networkUpdate, setActiveStep } =
-    usePlayground();
+  const {
+    state,
+    parUpdate,
+    networkAdd,
+    networkUpdate,
+    setActiveStep,
+    dpopUpdate,
+  } = usePlayground();
   const par = state.par;
   const [remaining, setRemaining] = useState<number | null>(null);
 
@@ -73,6 +80,8 @@ export function ParStep() {
       client: state.client,
       authRequest: state.authRequest,
       requestObjectJwt: state.authRequest.requestObjectJwt,
+      dpop: dpopContextFrom(state.dpop),
+      onDpopNonce: (nonce) => dpopUpdate({ nonce }),
       onStart: networkAdd,
       onFinish: networkUpdate,
     });

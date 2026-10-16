@@ -219,6 +219,9 @@ export interface OidcMetadata {
   // Device Authorization Grant (RFC 8628) — where the consumption device POSTs
   // to obtain a device_code / user_code pair.
   device_authorization_endpoint?: string;
+  // DPoP (RFC 9449) — the proof-JWT signing algs the AS accepts. Present ⇒
+  // sender-constrained tokens are available.
+  dpop_signing_alg_values_supported?: string[];
   [key: string]: unknown;
 }
 
@@ -348,6 +351,24 @@ export const DEFAULT_CLIENT_CONFIG: ClientConfigState = {
   clientSecret: "",
   redirectUri: "",
   privateKey: { jwkText: "", status: "empty" },
+};
+
+// DPoP (RFC 9449): sender-constrained tokens. When enabled, the client signs a
+// proof per request and the AS binds the token to the key (cnf.jkt).
+export interface DpopState {
+  enabled: boolean;
+  privateJwk: string;
+  publicJwk?: JsonWebKey;
+  thumbprint?: string;
+  alg: string;
+  /** Last DPoP-Nonce the AS supplied (§8). */
+  nonce?: string;
+}
+
+export const DEFAULT_DPOP: DpopState = {
+  enabled: false,
+  privateJwk: "",
+  alg: "ES256",
 };
 
 export type ResponseMode = "query" | "fragment" | "form_post";

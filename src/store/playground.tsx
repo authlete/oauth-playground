@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { computeStepStatuses } from "../protocol/stepCascade";
+import { dpopContextFrom } from "../protocol/dpop";
 import {
   exchangeCode,
   tokenStatePatchFromResult,
@@ -29,6 +30,7 @@ import {
   DEFAULT_CIBA,
   DEFAULT_DEVICE,
   DEFAULT_CLIENT_CONFIG,
+  DEFAULT_DPOP,
   DEFAULT_DCR_REGISTER,
   DEFAULT_FEDERATION_REGISTER,
   DEFAULT_GRANT_MANAGEMENT,
@@ -50,6 +52,7 @@ import {
   type DeviceState,
   type ClientConfigState,
   type DcrRegisterState,
+  type DpopState,
   type DiscoveryState,
   type FederationRegisterState,
   type GrantManagementState,
@@ -85,6 +88,7 @@ interface State {
   /** RFC 9728 context when the flow started at a protected resource. */
   resource: ResourceContextState;
   client: ClientConfigState;
+  dpop: DpopState;
   dcrRegister: DcrRegisterState;
   federationRegister: FederationRegisterState;
   authRequest: AuthRequestState;
@@ -116,6 +120,7 @@ type Action =
   | { type: "discovery-reset" }
   | { type: "resource-update"; patch: Partial<ResourceContextState> }
   | { type: "client-update"; patch: Partial<ClientConfigState> }
+  | { type: "dpop-update"; patch: Partial<DpopState> }
   | { type: "dcr-register-update"; patch: Partial<DcrRegisterState> }
   | {
       type: "federation-register-update";
@@ -308,6 +313,7 @@ const initialState: State = {
   },
   resource: DEFAULT_RESOURCE_CONTEXT,
   client: DEFAULT_CLIENT_CONFIG,
+  dpop: DEFAULT_DPOP,
   dcrRegister: DEFAULT_DCR_REGISTER,
   federationRegister: DEFAULT_FEDERATION_REGISTER,
   authRequest: DEFAULT_AUTH_REQUEST,
@@ -402,6 +408,8 @@ function reducer(state: State, action: Action): State {
       };
     case "client-update":
       return { ...state, client: { ...state.client, ...action.patch } };
+    case "dpop-update":
+      return { ...state, dpop: { ...state.dpop, ...action.patch } };
     case "dcr-register-update":
       return {
         ...state,
@@ -472,6 +480,7 @@ interface PlaygroundContextValue {
   discoveryReset: () => void;
   resourceUpdate: (patch: Partial<ResourceContextState>) => void;
   clientUpdate: (patch: Partial<ClientConfigState>) => void;
+  dpopUpdate: (patch: Partial<DpopState>) => void;
   dcrRegisterUpdate: (patch: Partial<DcrRegisterState>) => void;
   federationRegisterUpdate: (patch: Partial<FederationRegisterState>) => void;
   authRequestUpdate: (patch: Partial<AuthRequestState>) => void;
@@ -625,8 +634,15 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
   // re-renders are no-ops and a re-run (new code) exchanges again.
   const autoExchangedCodeRef = useRef<string | null>(null);
   useEffect(() => {
-    const { authorize, discovery, client, authRequest, token, autoExchange } =
-      state;
+    const {
+      authorize,
+      discovery,
+      client,
+      authRequest,
+      token,
+      autoExchange,
+      dpop,
+    } = state;
     if (
       !autoExchange ||
       authorize.status !== "received" ||
@@ -657,6 +673,9 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
         client,
         authRequest,
         code,
+        dpop: dpopContextFrom(dpop),
+        onDpopNonce: (nonce) =>
+          dispatch({ type: "dpop-update", patch: { nonce } }),
         onStart: (entry) => dispatch({ type: "network-add", entry }),
         onFinish: (id, patch) =>
           dispatch({ type: "network-update", id, patch }),
@@ -674,6 +693,7 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
     state.client,
     state.authRequest,
     state.token.status,
+    state.dpop,
   ]);
 
   // Derive the RFC 8707 resource indicator from the resource context: set
@@ -936,6 +956,10 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
       dispatch({ type: "client-update", patch }),
     [],
   );
+  const dpopUpdate = useCallback(
+    (patch: Partial<DpopState>) => dispatch({ type: "dpop-update", patch }),
+    [],
+  );
   const dcrRegisterUpdate = useCallback(
     (patch: Partial<DcrRegisterState>) =>
       dispatch({ type: "dcr-register-update", patch }),
@@ -1026,6 +1050,7 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
       discoveryReset,
       resourceUpdate,
       clientUpdate,
+      dpopUpdate,
       dcrRegisterUpdate,
       federationRegisterUpdate,
       authRequestUpdate,
@@ -1060,6 +1085,7 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
       discoveryReset,
       resourceUpdate,
       clientUpdate,
+      dpopUpdate,
       dcrRegisterUpdate,
       federationRegisterUpdate,
       authRequestUpdate,

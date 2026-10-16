@@ -2,9 +2,9 @@
 
 A client-side, developer-focused OAuth 2.1 / OIDC / FAPI 2.0 playground and
 debugger — inspired by [Google's OAuth 2.0 Playground][google-pg] but built
-for the modern protocol surface (PKCE, PAR, JAR, RAR, CIMD, `private_key_jwt`,
-RFC 9207 issuer identification, Grant Management, CIBA, Device, JWT
-introspection of access tokens, and more).
+for the modern protocol surface (PKCE, PAR, JAR, RAR, CIMD, DPoP,
+`private_key_jwt`, RFC 9207 issuer identification, Grant Management, CIBA,
+Device, JWT introspection of access tokens, and more).
 
 It lets you drive the full OAuth lifecycle against a real Authorization
 Server from your browser, with every wire-level detail surfaced: the URLs,
@@ -36,6 +36,9 @@ is a live network log of every HTTP call.
     and adopts it automatically — zero registration. Manual `client_id`,
     client secrets, `private_key_jwt`, **Dynamic Client Registration** (RFC 7591)
     and **OpenID Federation** live under "Other ways to identify the client".
+    When the AS advertises `dpop_signing_alg_values_supported`, a
+    **Sender-constrained tokens (DPoP)** control appears here: enable it once and
+    every relevant request carries a fresh proof (see below).
 
 - **Get a token** — pick one flow; only its steps show.
   - **Authorization Code** — Auth request (scopes, `response_type`/`response_mode`,
@@ -64,6 +67,13 @@ is a live network log of every HTTP call.
 - **CIMD, self-hosted** — the playground serves its own Client ID Metadata
   Document at `/client-metadata.json`, so against a CIMD-capable AS you are a
   client with no registration. You can inspect the document inline.
+- **DPoP, sender-constrained tokens** (RFC 9449) — enable it once in Client
+  config. The playground generates an ES256 key in-memory and sends a fresh
+  proof JWT (`htm`/`htu`/`jti`/`iat`, and `ath` on token-bearing calls) on the
+  token, PAR, refresh, device/CIBA poll, UserInfo and resource requests; it
+  handles the `DPoP-Nonce` challenge (one retry) automatically. The Token
+  exchange panel confirms the binding — `token_type=DPoP` and the access
+  token's `cnf.jkt` matched against your key's thumbprint.
 - **All cryptography happens in the browser** (Web Crypto). Tokens, private
   keys, JWKS, code verifiers, and the network log are held **in memory only** —
   never `localStorage`, `sessionStorage`, or any server.
@@ -160,8 +170,6 @@ back to `http://localhost:5173`.
 
 ## Roadmap
 
-- **DPoP (RFC 9449)** — sender-constrained tokens across PAR / token / userinfo /
-  resource (configured once, applied everywhere it's relevant).
 - **JARM** (`response_mode=jwt`) — signed authorization responses.
 - **Saved configs** — named presets in `localStorage` (no secrets).
 - **Cascading staleness** — editing an earlier step flags later ones as stale.

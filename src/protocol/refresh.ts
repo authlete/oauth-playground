@@ -3,6 +3,8 @@
 // (one-time-use refresh tokens are common in FAPI / OAuth 2.1).
 
 import { applyClientAuth } from "./clientAuth";
+import { send } from "./dpopHttp";
+import type { DpopContext } from "./dpop";
 import type { ClientConfigState, NetworkEntry, OidcMetadata } from "../types";
 
 export interface RefreshSuccess {
@@ -32,6 +34,8 @@ export interface RefreshInput {
   client: ClientConfigState;
   refreshToken: string;
   downscope?: string;
+  dpop?: DpopContext;
+  onDpopNonce?: (nonce: string) => void;
   onStart: (entry: NetworkEntry) => void;
   onFinish: (id: string, patch: Partial<NetworkEntry>) => void;
 }
@@ -60,55 +64,25 @@ export async function refreshTokens(
   });
   if (!auth.ok) return { ok: false, message: auth.message };
 
-  const id = crypto.randomUUID();
-  const startedAt = performance.now();
-  input.onStart({
-    id,
-    startedAt,
+  const sent = await send({
     method: "POST",
     url: endpoint,
-    requestHeaders: Object.fromEntries(headers.entries()),
-    requestBody: body.toString(),
-  });
-
-  let response: Response;
-  try {
-    response = await fetch(endpoint, {
-      method: "POST",
-      mode: "cors",
-      credentials: "omit",
-      headers,
-      body: body.toString(),
-    });
-  } catch (err) {
-    const finishedAt = performance.now();
-    const message =
+    headers,
+    body: body.toString(),
+    dpop: input.dpop
+      ? { ctx: input.dpop, onNonce: input.onDpopNonce }
+      : undefined,
+    onStart: input.onStart,
+    onFinish: input.onFinish,
+    networkErrorMessage: (err) =>
       err instanceof TypeError
         ? "CORS / network error reaching /token (refresh)."
         : err instanceof Error
           ? err.message
-          : String(err);
-    input.onFinish(id, {
-      finishedAt,
-      durationMs: Math.round(finishedAt - startedAt),
-      errorMessage: message,
-    });
-    return { ok: false, message };
-  }
-  const responseBody = await response.text();
-  const finishedAt = performance.now();
-  const respHeaders: Record<string, string> = {};
-  response.headers.forEach((v, k) => {
-    respHeaders[k] = v;
+          : String(err),
   });
-  input.onFinish(id, {
-    finishedAt,
-    durationMs: Math.round(finishedAt - startedAt),
-    status: response.status,
-    statusText: response.statusText,
-    responseHeaders: respHeaders,
-    responseBody,
-  });
+  if (!sent.ok) return { ok: false, message: sent.message };
+  const { response, bodyText: responseBody } = sent;
 
   let parsed: Record<string, unknown>;
   try {

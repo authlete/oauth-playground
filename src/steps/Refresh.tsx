@@ -17,6 +17,7 @@ import {
 } from "../components/step";
 import { shorten } from "../protocol/format";
 import { refreshTokens } from "../protocol/refresh";
+import { dpopContextFrom } from "../protocol/dpop";
 
 export function RefreshStep() {
   const {
@@ -27,6 +28,7 @@ export function RefreshStep() {
     setActiveStep,
     networkAdd,
     networkUpdate,
+    dpopUpdate,
   } = usePlayground();
   const ref = state.refresh;
   const refreshToken = state.token.refreshToken;
@@ -50,6 +52,8 @@ export function RefreshStep() {
       client: state.client,
       refreshToken,
       downscope: ref.downscope,
+      dpop: dpopContextFrom(state.dpop),
+      onDpopNonce: (nonce) => dpopUpdate({ nonce }),
       onStart: networkAdd,
       onFinish: networkUpdate,
     });

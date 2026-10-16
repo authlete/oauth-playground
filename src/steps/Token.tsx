@@ -6,6 +6,8 @@ import {
   KeyRound,
   Loader2,
   RotateCw,
+  ShieldCheck,
+  ShieldAlert,
 } from "lucide-react";
 import { usePlayground } from "../store/playground";
 import { Button } from "../components/ui/Button";
@@ -27,6 +29,7 @@ import {
   exchangeCode,
   tokenStatePatchFromResult,
 } from "../protocol/tokenExchange";
+import { dpopContextFrom, accessTokenJkt } from "../protocol/dpop";
 import { GRANT_MANAGEMENT_ACTIONS } from "../types";
 
 export function TokenStep() {
@@ -38,6 +41,7 @@ export function TokenStep() {
     setActiveStep,
     networkAdd,
     networkUpdate,
+    dpopUpdate,
   } = usePlayground();
   const tok = state.token;
   const [copied, setCopied] = useState<"access" | "id" | "refresh" | null>(
@@ -78,6 +82,8 @@ export function TokenStep() {
       client: state.client,
       authRequest: state.authRequest,
       code,
+      dpop: dpopContextFrom(state.dpop),
+      onDpopNonce: (nonce) => dpopUpdate({ nonce }),
       onStart: networkAdd,
       onFinish: networkUpdate,
     });
@@ -205,6 +211,13 @@ export function TokenStep() {
         />
       )}
 
+      {tok.status === "success" && tok.tokenType === "DPoP" && (
+        <DpopBindingCard
+          accessToken={tok.accessToken}
+          thumbprint={state.dpop.thumbprint}
+        />
+      )}
+
       {tok.status === "success" && (
         <AuthorizationDetailsPanel
           requestedText={
@@ -236,6 +249,54 @@ export function TokenStep() {
           status={tok.errorStatus}
           body={tok.errorBody}
         />
+      )}
+    </div>
+  );
+}
+
+// token_type=DPoP means the AS sender-constrained the token to the client's
+// key (RFC 9449 §6). For JWT access tokens we can show the binding directly:
+// cnf.jkt should equal the key's thumbprint. Opaque tokens hide cnf, but the
+// binding is enforced server-side all the same.
+function DpopBindingCard({
+  accessToken,
+  thumbprint,
+}: {
+  accessToken?: string;
+  thumbprint?: string;
+}) {
+  const jkt = accessToken ? accessTokenJkt(accessToken) : undefined;
+  const matches = !!jkt && !!thumbprint && jkt === thumbprint;
+  const mismatch = !!jkt && !!thumbprint && jkt !== thumbprint;
+
+  return (
+    <div
+      className={`mt-3 rounded-md border p-3 text-[12.5px] ${
+        mismatch
+          ? "border-amber-500/40 bg-amber-500/5"
+          : "border-emerald-500/30 bg-emerald-500/5"
+      }`}
+    >
+      <div className="flex items-center gap-2 font-medium">
+        {mismatch ? (
+          <ShieldAlert className="h-4 w-4 text-amber-500" />
+        ) : (
+          <ShieldCheck className="h-4 w-4 text-emerald-500" />
+        )}
+        Sender-constrained · token_type=DPoP
+      </div>
+      <p className="mt-1.5 text-muted-foreground">
+        {matches
+          ? "The access token's cnf.jkt matches your DPoP key — it can't be replayed without the private key."
+          : mismatch
+            ? "The token's cnf.jkt does not match your DPoP key. The binding won't verify on protected calls."
+            : "The token is bound to your DPoP key server-side (opaque token — cnf isn't visible here)."}
+      </p>
+      {jkt && (
+        <KVGrid className="mt-2">
+          <KVRow label="cnf.jkt">{jkt}</KVRow>
+          {thumbprint && <KVRow label="your key (jkt)">{thumbprint}</KVRow>}
+        </KVGrid>
       )}
     </div>
   );

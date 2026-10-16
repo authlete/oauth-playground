@@ -60,6 +60,48 @@ const MUTANTS = [
     find: 'body.set("client_id", input.client.clientId);',
     replace: "",
   },
+  {
+    req: "dpop.proof-typ",
+    file: "src/protocol/dpop.ts",
+    find: 'typ: "dpop+jwt"',
+    replace: 'typ: "jwt"',
+  },
+  {
+    req: "dpop.proof-claims",
+    file: "src/protocol/dpop.ts",
+    find: "htm: input.htm,",
+    replace: "htm: undefined,",
+  },
+  {
+    req: "dpop.htu-canonical",
+    file: "src/protocol/dpop.ts",
+    find: "return `${u.origin}${u.pathname}`;",
+    replace: "return url;",
+  },
+  {
+    req: "dpop.thumbprint",
+    file: "src/protocol/dpop.ts",
+    find: "{ crv: jwk.crv, kty: jwk.kty, x: jwk.x, y: jwk.y }",
+    replace: "{ kty: jwk.kty, crv: jwk.crv, x: jwk.x, y: jwk.y }",
+  },
+  {
+    req: "dpop.token-header",
+    file: "src/protocol/dpop.ts",
+    find: '"DPoP",',
+    replace: '"DPoPx",',
+  },
+  {
+    req: "dpop.resource-ath",
+    file: "src/protocol/dpop.ts",
+    find: "`DPoP ${req.accessToken}`",
+    replace: "`Bearer ${req.accessToken}`",
+  },
+  {
+    req: "dpop.nonce-retry",
+    file: "src/protocol/dpopHttp.ts",
+    find: "if (challenged) result = await attempt(nonce);",
+    replace: "",
+  },
 ];
 
 // Each mutant's original content is captured in memory and restored in a

@@ -30,6 +30,7 @@ import { parseAuthorizationDetails } from "../protocol/authorizationDetails";
 import { previewDevice } from "../protocol/requestPreview";
 import { startDeviceAuthorization } from "../protocol/deviceAuth";
 import { pollDeviceToken } from "../protocol/devicePoll";
+import { dpopContextFrom } from "../protocol/dpop";
 
 export function DeviceStep() {
   const {
@@ -41,6 +42,7 @@ export function DeviceStep() {
     setActiveStep,
     networkAdd,
     networkUpdate,
+    dpopUpdate,
   } = usePlayground();
   const device = state.device;
   const metadata = state.discovery.metadata;
@@ -94,6 +96,8 @@ export function DeviceStep() {
         metadata,
         client,
         deviceCode: device.deviceCode!,
+        dpop: dpopContextFrom(state.dpop),
+        onDpopNonce: (nonce) => dpopUpdate({ nonce }),
         onStart: networkAdd,
         onFinish: networkUpdate,
       });

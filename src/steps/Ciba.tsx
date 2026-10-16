@@ -30,6 +30,7 @@ import { parseAuthorizationDetails } from "../protocol/authorizationDetails";
 import { previewCiba } from "../protocol/requestPreview";
 import { startBackchannelAuth } from "../protocol/cibaAuth";
 import { pollCibaToken } from "../protocol/cibaPoll";
+import { dpopContextFrom } from "../protocol/dpop";
 
 export function CibaStep() {
   const {
@@ -42,6 +43,7 @@ export function CibaStep() {
     setActiveStep,
     networkAdd,
     networkUpdate,
+    dpopUpdate,
   } = usePlayground();
   const ciba = state.ciba;
   const metadata = state.discovery.metadata;
@@ -95,6 +97,8 @@ export function CibaStep() {
         metadata,
         client,
         authReqId: ciba.authReqId!,
+        dpop: dpopContextFrom(state.dpop),
+        onDpopNonce: (nonce) => dpopUpdate({ nonce }),
         onStart: networkAdd,
         onFinish: networkUpdate,
       });

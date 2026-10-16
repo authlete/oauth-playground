@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { usePlayground } from "../store/playground";
 import { Button } from "../components/ui/Button";
+import { Checkbox } from "../components/ui/Checkbox";
 import { Input } from "../components/ui/Input";
 import { Select } from "../components/ui/Select";
 import { Textarea } from "../components/ui/Textarea";
@@ -30,10 +31,15 @@ import { cn } from "../protocol/cn";
 import { shorten } from "../protocol/format";
 import { validateClientConfig } from "../protocol/clientConfig";
 import { buildClientMetadata, clientMetadataUrl } from "../protocol/cimd";
+import { generateDpopKey } from "../protocol/dpop";
 import { validateAndImportJwk } from "../protocol/jwk";
 import { DcrRegisterStep } from "./DcrRegister";
 import { FederationRegisterStep } from "./FederationRegister";
-import { DEFAULT_CLIENT_CONFIG, type ClientAuthMethod } from "../types";
+import {
+  DEFAULT_CLIENT_CONFIG,
+  type ClientAuthMethod,
+  type DpopState,
+} from "../types";
 
 // Mask the sensitive JWK text when hidden (Chromium/WebKit -webkit-text-security).
 const MASK_STYLE = { WebkitTextSecurity: "disc" } as CSSProperties;
@@ -65,8 +71,23 @@ const AUTH_METHODS: Array<{
   },
 ];
 
+// A glanceable label for the active client_id. URLs (CIMD, Federation) show
+// their last path segment or host — mid-truncating a URL (`http://loc…ata.json`)
+// is unreadable; plain ids are short enough to shorten normally.
+function clientIdLabel(id: string): string {
+  try {
+    const u = new URL(id);
+    if (u.protocol === "http:" || u.protocol === "https:") {
+      return u.pathname.split("/").filter(Boolean).pop() ?? u.host;
+    }
+  } catch {
+    // not a URL — fall through
+  }
+  return shorten(id, 10, 8);
+}
+
 export function ClientStep() {
-  const { state, clientUpdate, setActiveStep } = usePlayground();
+  const { state, clientUpdate, dpopUpdate, setActiveStep } = usePlayground();
   const cfg = state.client;
   const [jwkValidating, setJwkValidating] = useState(false);
   const [showKey, setShowKey] = useState(false);
@@ -88,6 +109,34 @@ export function ClientStep() {
       ? state.dcrRegister.result?.clientId
       : undefined;
   const fedRegistered = state.federationRegister.status === "success";
+  const dpopSupported = Array.isArray(
+    state.discovery.metadata?.dpop_signing_alg_values_supported,
+  );
+  // Toggle DPoP; generate a key the first time it's turned on.
+  const toggleDpop = async (enabled: boolean) => {
+    if (enabled && !state.dpop.privateJwk) {
+      const key = await generateDpopKey();
+      dpopUpdate({
+        enabled,
+        privateJwk: key.privateJwk,
+        publicJwk: key.publicJwk,
+        thumbprint: key.thumbprint,
+        alg: key.alg,
+      });
+    } else {
+      dpopUpdate({ enabled });
+    }
+  };
+  const regenerateDpopKey = async () => {
+    const key = await generateDpopKey();
+    dpopUpdate({
+      privateJwk: key.privateJwk,
+      publicJwk: key.publicJwk,
+      thumbprint: key.thumbprint,
+      alg: key.alg,
+      nonce: undefined,
+    });
+  };
   const adoptCimdIdentity = () =>
     clientUpdate({
       clientId: metadataUrl,
@@ -188,7 +237,7 @@ export function ClientStep() {
             title="Identity"
             description="Who this client is, and where the AS sends the authorization response."
             summaryRight={
-              cfg.clientId ? shorten(cfg.clientId, 10, 8) : undefined
+              cfg.clientId ? clientIdLabel(cfg.clientId) : undefined
             }
           >
             <div className="space-y-5">
@@ -369,8 +418,68 @@ export function ClientStep() {
             </Disclosure>
           )}
         </ClassicConfig>
+
+        {dpopSupported && (
+          <DpopSection
+            dpop={state.dpop}
+            onToggle={toggleDpop}
+            onRegenerate={regenerateDpopKey}
+          />
+        )}
       </div>
     </div>
+  );
+}
+
+// DPoP (RFC 9449): a client-level token-binding mechanism — orthogonal to who
+// the client is, so it sits beside identity rather than inside it.
+function DpopSection({
+  dpop,
+  onToggle,
+  onRegenerate,
+}: {
+  dpop: DpopState;
+  onToggle: (enabled: boolean) => void;
+  onRegenerate: () => void;
+}) {
+  return (
+    <Disclosure
+      title="Sender-constrained tokens (DPoP)"
+      hint="RFC 9449"
+      description="Bind the token to a key the client holds. Each request carries a fresh proof; the token's cnf.jkt matches the key below."
+      summaryRight={dpop.enabled ? `on · ${dpop.alg}` : "off"}
+      defaultOpen={dpop.enabled}
+    >
+      <div className="space-y-4">
+        <Checkbox
+          label="Request DPoP-bound tokens and send a proof on every request"
+          checked={dpop.enabled}
+          onChange={(e) => onToggle(e.target.checked)}
+        />
+        {dpop.enabled && dpop.thumbprint && (
+          <div className="rounded-md border border-border bg-background/60 p-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-[10.5px] uppercase tracking-wide text-muted-foreground">
+                  key thumbprint (cnf.jkt) · {dpop.alg}
+                </div>
+                <code className="mt-0.5 block break-all font-mono text-[12px]">
+                  {dpop.thumbprint}
+                </code>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onRegenerate}
+                className="shrink-0"
+              >
+                Regenerate
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+    </Disclosure>
   );
 }
 
@@ -393,7 +502,17 @@ function ClassicConfig({
     <Disclosure
       title="Other ways to identify the client"
       description="A manual client_id, a client secret, private_key_jwt, Dynamic Client Registration, or OpenID Federation."
-      defaultOpen={!!activeId}
+      // When a non-CIMD identity is active it lives in here; the collapsed
+      // summary carries its id + an "in use" tag so the active choice is never
+      // ambiguous — no need to force the section open.
+      summaryRight={
+        activeId ? (
+          <span className="flex items-center gap-2">
+            {clientIdLabel(activeId)}
+            <StatusPill tone="success">in use</StatusPill>
+          </span>
+        ) : undefined
+      }
     >
       <div className="space-y-4">{children}</div>
     </Disclosure>
@@ -433,7 +552,15 @@ function CimdHero({
             </p>
           </div>
         </div>
-        <StatusPill tone="success">supported</StatusPill>
+        {inUse ? (
+          <StatusPill tone="success" className="shrink-0 whitespace-nowrap">
+            in use
+          </StatusPill>
+        ) : (
+          <StatusPill tone="muted" icon={Check} className="shrink-0">
+            supported
+          </StatusPill>
+        )}
       </div>
 
       <div className="mt-3 rounded-md border border-border bg-background/60 p-2.5">
@@ -447,17 +574,10 @@ function CimdHero({
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
         {inUse ? (
-          <>
-            <span className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-[var(--status-success)]">
-              <Check className="h-4 w-4" />
-              In use
-            </span>
-            <span className="flex-1" />
-            <Button size="sm" onClick={onContinue}>
-              Continue to Auth request
-              <ArrowRight className="h-4 w-4" />
-            </Button>
-          </>
+          <Button size="sm" onClick={onContinue} className="ml-auto">
+            Continue to Auth request
+            <ArrowRight className="h-4 w-4" />
+          </Button>
         ) : (
           <Button onClick={onUse}>
             <Fingerprint className="h-4 w-4" />

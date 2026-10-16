@@ -1,6 +1,9 @@
-// GET userinfo_endpoint with Bearer access_token (OIDC Core §5.3).
-// JSON response is a flat object of claims about the end-user.
+// GET userinfo_endpoint with the access_token (OIDC Core §5.3). With DPoP the
+// token is presented under the DPoP scheme (RFC 9449 §7.1) with a proof bound
+// to the token (`ath`); otherwise Bearer. JSON response is a flat claims object.
 
+import { send } from "./dpopHttp";
+import type { DpopContext } from "./dpop";
 import type { NetworkEntry, OidcMetadata } from "../types";
 
 export type UserInfoResult =
@@ -15,6 +18,8 @@ export type UserInfoResult =
 export interface FetchUserInfoInput {
   metadata: OidcMetadata;
   accessToken: string;
+  dpop?: DpopContext;
+  onDpopNonce?: (nonce: string) => void;
   onStart: (entry: NetworkEntry) => void;
   onFinish: (id: string, patch: Partial<NetworkEntry>) => void;
 }
@@ -30,58 +35,35 @@ export async function fetchUserInfo(
         "Discovery metadata has no userinfo_endpoint. The AS may not be an OIDC provider.",
     };
   }
+  // Bearer by default; `send` rewrites Authorization to the DPoP scheme when a
+  // DPoP context is present (and adds the token-bound `ath` proof claim).
   const headers = new Headers({
     Authorization: `Bearer ${input.accessToken}`,
     Accept: "application/json",
   });
-  const id = crypto.randomUUID();
-  const startedAt = performance.now();
-  input.onStart({
-    id,
-    startedAt,
+
+  const sent = await send({
     method: "GET",
     url: endpoint,
-    requestHeaders: Object.fromEntries(headers.entries()),
-  });
-
-  let response: Response;
-  try {
-    response = await fetch(endpoint, {
-      method: "GET",
-      mode: "cors",
-      credentials: "omit",
-      headers,
-    });
-  } catch (err) {
-    const finishedAt = performance.now();
-    const message =
+    headers,
+    dpop: input.dpop
+      ? {
+          ctx: input.dpop,
+          accessToken: input.accessToken,
+          onNonce: input.onDpopNonce,
+        }
+      : undefined,
+    onStart: input.onStart,
+    onFinish: input.onFinish,
+    networkErrorMessage: (err) =>
       err instanceof TypeError
         ? "CORS / network error reaching /userinfo."
         : err instanceof Error
           ? err.message
-          : String(err);
-    input.onFinish(id, {
-      finishedAt,
-      durationMs: Math.round(finishedAt - startedAt),
-      errorMessage: message,
-    });
-    return { ok: false, message };
-  }
-
-  const body = await response.text();
-  const finishedAt = performance.now();
-  const respHeaders: Record<string, string> = {};
-  response.headers.forEach((v, k) => {
-    respHeaders[k] = v;
+          : String(err),
   });
-  input.onFinish(id, {
-    finishedAt,
-    durationMs: Math.round(finishedAt - startedAt),
-    status: response.status,
-    statusText: response.statusText,
-    responseHeaders: respHeaders,
-    responseBody: body,
-  });
+  if (!sent.ok) return { ok: false, message: sent.message };
+  const { response, bodyText: body } = sent;
 
   if (!response.ok) {
     return {

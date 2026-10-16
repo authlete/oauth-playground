@@ -2,6 +2,8 @@
 // lives in steps/Ciba.tsx.
 
 import { applyClientAuth } from "./clientAuth";
+import { send } from "./dpopHttp";
+import type { DpopContext } from "./dpop";
 import { parseTokenSuccessBody, type TokenSuccess } from "./tokenExchange";
 import type { ClientConfigState, NetworkEntry, OidcMetadata } from "../types";
 
@@ -24,6 +26,8 @@ export interface CibaPollInput {
   metadata: OidcMetadata;
   client: ClientConfigState;
   authReqId: string;
+  dpop?: DpopContext;
+  onDpopNonce?: (nonce: string) => void;
   onStart: (entry: NetworkEntry) => void;
   onFinish: (id: string, patch: Partial<NetworkEntry>) => void;
 }
@@ -55,56 +59,25 @@ export async function pollCibaToken(
   });
   if (!auth.ok) return { kind: "error", message: auth.message };
 
-  const id = crypto.randomUUID();
-  const startedAt = performance.now();
-  input.onStart({
-    id,
-    startedAt,
+  const sent = await send({
     method: "POST",
     url: endpoint,
-    requestHeaders: Object.fromEntries(headers.entries()),
-    requestBody: body.toString(),
-  });
-
-  let response: Response;
-  try {
-    response = await fetch(endpoint, {
-      method: "POST",
-      mode: "cors",
-      credentials: "omit",
-      headers,
-      body: body.toString(),
-    });
-  } catch (err) {
-    const finishedAt = performance.now();
-    const message =
+    headers,
+    body: body.toString(),
+    dpop: input.dpop
+      ? { ctx: input.dpop, onNonce: input.onDpopNonce }
+      : undefined,
+    onStart: input.onStart,
+    onFinish: input.onFinish,
+    networkErrorMessage: (err) =>
       err instanceof TypeError
         ? "CORS / network error reaching /token. Enable CORS on the AS for this origin."
         : err instanceof Error
           ? err.message
-          : String(err);
-    input.onFinish(id, {
-      finishedAt,
-      durationMs: Math.round(finishedAt - startedAt),
-      errorMessage: message,
-    });
-    return { kind: "error", message };
-  }
-
-  const responseBody = await response.text();
-  const finishedAt = performance.now();
-  const respHeaders: Record<string, string> = {};
-  response.headers.forEach((v, k) => {
-    respHeaders[k] = v;
+          : String(err),
   });
-  input.onFinish(id, {
-    finishedAt,
-    durationMs: Math.round(finishedAt - startedAt),
-    status: response.status,
-    statusText: response.statusText,
-    responseHeaders: respHeaders,
-    responseBody,
-  });
+  if (!sent.ok) return { kind: "error", message: sent.message };
+  const { response, bodyText: responseBody } = sent;
 
   let parsed: Record<string, unknown>;
   try {

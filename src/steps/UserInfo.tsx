@@ -12,6 +12,7 @@ import {
 } from "../components/step";
 import { formatBytes, formatValue } from "../protocol/format";
 import { fetchUserInfo } from "../protocol/userInfo";
+import { dpopContextFrom } from "../protocol/dpop";
 
 export function UserInfoStep() {
   const {
@@ -21,6 +22,7 @@ export function UserInfoStep() {
     setActiveStep,
     networkAdd,
     networkUpdate,
+    dpopUpdate,
   } = usePlayground();
   const info = state.userInfo;
   const endpoint = state.discovery.metadata?.userinfo_endpoint;
@@ -40,6 +42,8 @@ export function UserInfoStep() {
     const result = await fetchUserInfo({
       metadata: state.discovery.metadata,
       accessToken,
+      dpop: dpopContextFrom(state.dpop),
+      onDpopNonce: (nonce) => dpopUpdate({ nonce }),
       onStart: networkAdd,
       onFinish: networkUpdate,
     });

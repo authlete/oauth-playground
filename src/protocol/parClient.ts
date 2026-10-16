@@ -6,6 +6,8 @@
 // the full URL.
 
 import { applyClientAuth } from "./clientAuth";
+import { send } from "./dpopHttp";
+import type { DpopContext } from "./dpop";
 import { buildAuthorizeParams, buildJarParams } from "./authorizeUrl";
 import type {
   AuthRequestState,
@@ -30,6 +32,10 @@ export interface PushParInput {
   /** The signed request object, when JAR is enabled. Signed by the caller (the
    *  store is the single signer) so the pushed object matches what Auth request shows. */
   requestObjectJwt?: string;
+  /** When set, a DPoP proof binds the eventual token's key to this request
+   *  (the AS records dpop_jkt). FAPI 2.0 pushes the binding to PAR time. */
+  dpop?: DpopContext;
+  onDpopNonce?: (nonce: string) => void;
   onStart: (entry: NetworkEntry) => void;
   onFinish: (id: string, patch: Partial<NetworkEntry>) => void;
 }
@@ -76,56 +82,25 @@ export async function pushPar(input: PushParInput): Promise<PushParResult> {
     return { ok: false, message: auth.message };
   }
 
-  const id = crypto.randomUUID();
-  const startedAt = performance.now();
-  input.onStart({
-    id,
-    startedAt,
+  const sent = await send({
     method: "POST",
     url: parEndpoint,
-    requestHeaders: Object.fromEntries(headers.entries()),
-    requestBody: body.toString(),
-  });
-
-  let response: Response;
-  try {
-    response = await fetch(parEndpoint, {
-      method: "POST",
-      mode: "cors",
-      credentials: "omit",
-      headers,
-      body: body.toString(),
-    });
-  } catch (err) {
-    const finishedAt = performance.now();
-    const message =
+    headers,
+    body: body.toString(),
+    dpop: input.dpop
+      ? { ctx: input.dpop, onNonce: input.onDpopNonce }
+      : undefined,
+    onStart: input.onStart,
+    onFinish: input.onFinish,
+    networkErrorMessage: (err) =>
       err instanceof TypeError
         ? "CORS / network error reaching /par. Enable CORS on the AS for this origin."
         : err instanceof Error
           ? err.message
-          : String(err);
-    input.onFinish(id, {
-      finishedAt,
-      durationMs: Math.round(finishedAt - startedAt),
-      errorMessage: message,
-    });
-    return { ok: false, message };
-  }
-
-  const responseBody = await response.text();
-  const finishedAt = performance.now();
-  const respHeaders: Record<string, string> = {};
-  response.headers.forEach((v, k) => {
-    respHeaders[k] = v;
+          : String(err),
   });
-  input.onFinish(id, {
-    finishedAt,
-    durationMs: Math.round(finishedAt - startedAt),
-    status: response.status,
-    statusText: response.statusText,
-    responseHeaders: respHeaders,
-    responseBody,
-  });
+  if (!sent.ok) return { ok: false, message: sent.message };
+  const { response, bodyText: responseBody } = sent;
 
   if (!response.ok) {
     return {
