@@ -2,9 +2,9 @@
 
 A client-side, developer-focused OAuth 2.1 / OIDC / FAPI 2.0 playground and
 debugger — inspired by [Google's OAuth 2.0 Playground][google-pg] but built
-for the modern protocol surface (PKCE, PAR, DPoP, JAR, JARM, `private_key_jwt`,
-RFC 9207 issuer identification, JWT introspection of access tokens, and
-more).
+for the modern protocol surface (PKCE, PAR, JAR, RAR, CIMD, `private_key_jwt`,
+RFC 9207 issuer identification, Grant Management, CIBA, Device, JWT
+introspection of access tokens, and more).
 
 It lets you drive the full OAuth lifecycle against a real Authorization
 Server from your browser, with every wire-level detail surfaced: the URLs,
@@ -22,76 +22,105 @@ below.
 [java-as]: https://github.com/authlete/java-oauth-server
 [ts-as]: https://github.com/authlete/typescript-oauth-server
 
-## Features
+## How it's organised
 
-**12 steps, each a focused OAuth surface:**
+The app is structured around what each thing _is_, not a flat step list. The
+left rail has four zones; the center drives the selected item; the right pane
+is a live network log of every HTTP call.
 
-| #   | Step                     | What it does                                                                                                            |
-| --- | ------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
-| 1   | Discovery                | `GET /.well-known/openid-configuration` + JWKS; or paste endpoints manually                                             |
-| 2   | Client config            | `none` / `client_secret_basic` / `client_secret_post` / `private_key_jwt` with JWK paste-and-validate                   |
-| 3   | Authorization request    | URL builder; scopes / response_type / response_mode; PKCE catalog; PAR / JAR / JARM toggles                             |
-| 4   | PAR push (optional)      | `POST /par` with selected client auth; `request_uri` + expiry countdown                                                 |
-| 5   | Authorize → Callback     | New-tab redirect to `/authorize`; captures `code` via postMessage + storage events; state / `iss` (RFC 9207) validation |
-| 6   | Token exchange           | `POST /token` with PKCE verifier + client auth                                                                          |
-| 7   | Token inspector          | JWT header + payload decode; signature verify against the loaded JWKS for ES/RS/PS 256–512; expiry countdown            |
-| 8   | UserInfo                 | `GET /userinfo` with Bearer                                                                                             |
-| 9   | Introspection (RFC 7662) | `POST /introspect` with client auth; pick which token                                                                   |
-| 10  | Resource call            | Generic HTTP client for hitting a user-owned RS with the access token attached                                          |
-| 11  | Refresh                  | `grant_type=refresh_token`, optional downscope; rotated refresh detection                                               |
-| 12  | Revoke (RFC 7009)        | `POST /revoke`; pick which token                                                                                        |
+- **Connection** — establish who you're talking to and as whom.
+  - **Discovery** — `GET /.well-known/openid-configuration` + JWKS; from an
+    issuer, from a protected resource (RFC 9728 PRM), or paste endpoints by hand.
+  - **Client** — identify the client. When the AS advertises **CIMD**
+    (Client ID Metadata Document) the playground hosts its own metadata document
+    and adopts it automatically — zero registration. Manual `client_id`,
+    client secrets, `private_key_jwt`, **Dynamic Client Registration** (RFC 7591)
+    and **OpenID Federation** live under "Other ways to identify the client".
 
-**Beyond the steps:**
+- **Get a token** — pick one flow; only its steps show.
+  - **Authorization Code** — Auth request (scopes, `response_type`/`response_mode`,
+    PKCE, PAR, JAR, RAR/`authorization_details`, Grant Management, RFC 8707 resource
+    indicator) → optional **PAR** push → **Authorize** (new-tab redirect, `code`
+    captured via postMessage + storage events, `state`/`iss` validation) →
+    **Token exchange**. Auto-exchange is configurable.
+  - **Device** (RFC 8628) — request a user code, show it, poll `/token` while the
+    user approves at the verification URL on a second device.
+  - **Backchannel (CIBA)** — poll-mode backchannel authentication with `login_hint`.
 
-- **Live request preview** — when configuring step 3, the wire-level
-  request that will be sent next is shown in real time. Toggle PAR on, the
-  preview swaps to the `POST /par` body. Toggle off, it shows the
-  `/authorize` URL. The previews include the actual headers and body that
-  will go on the wire.
-- **All cryptography happens in the browser.** Web Crypto + `jose`-shape
-  primitives. Tokens, private keys, JWKS, code verifiers, and the network
-  log are held **in memory only** — they never touch `localStorage`,
-  `sessionStorage`, or any server.
-- **Share via URL** — produces a `?cfg=` link that restores the issuer,
-  client config, scopes, and toggles. **Secrets are never included.**
-- **Discovery → Manual override** — discovered endpoints pre-fill the
-  Manual form so you can edit individual values when the AS advertises
-  something wrong, or run the playground against an AS that has no
-  `.well-known` endpoint at all.
-- **Three-pane UI** — step list on the left, active step in the center,
-  every HTTP call visible in the right-pane network log. Light and dark
-  themes; brand identity flips with the theme.
-- **Keyboard shortcuts** — `⌘D` toggle theme, `⌘L` clear network log, `?`
-  open help.
-- **No analytics, no telemetry.** The playground sees secrets; we see
-  nothing.
+- **Use the token** — a menu, any order, once you hold a token.
+  - **Resource call** — a generic HTTP client that attaches the access token.
+  - **UserInfo** · **Introspection** (RFC 7662) · **Grant Management**.
+
+- **Manage** — **Refresh** (`grant_type=refresh_token`, optional downscope,
+  rotated-refresh detection) · **Revoke** (RFC 7009).
+
+- **Tools** — **Token inspector**: decode any JWT, verify the signature against
+  the loaded JWKS (ES/RS/PS 256–512), expiry countdown.
+
+### Beyond the flows
+
+- **Live request preview** — the exact wire request that will be sent next is
+  shown in real time and updates as you toggle options (PAR, JAR, …).
+- **CIMD, self-hosted** — the playground serves its own Client ID Metadata
+  Document at `/client-metadata.json`, so against a CIMD-capable AS you are a
+  client with no registration. You can inspect the document inline.
+- **All cryptography happens in the browser** (Web Crypto). Tokens, private
+  keys, JWKS, code verifiers, and the network log are held **in memory only** —
+  never `localStorage`, `sessionStorage`, or any server.
+- **Share via URL** — a `?cfg=` link restores the issuer, client config, scopes,
+  and toggles. **Secrets are never included.**
+- **Consistent, collapsible sections** — each section shows its active state and
+  opens or stays collapsed by what it is (essentials open, advanced/auto-generated
+  collapsed).
+- **Light and dark themes**, keyboard shortcuts (`⌘D` theme, `⌘L` clear log,
+  `⌘J` toggle log, `?` help), and **no analytics, no telemetry**.
 
 ## CORS and which AS you can target
 
 The playground is a pure browser SPA. Every call to `/token`, `/par`,
 `/introspect`, `/revoke`, `/userinfo` etc. goes directly from your browser
-to the target Authorization Server. That means the AS **must send
-`Access-Control-Allow-Origin`** for the playground's origin on those
-endpoints.
+to the target Authorization Server, so the AS **must send
+`Access-Control-Allow-Origin`** for the playground's origin on those endpoints.
 
-In practice:
+- **Authlete-hosted services and Authlete sample/demo ASes** allow CORS for the
+  playground origin and work out of the box.
+- **Public consumer ASes** (Google, Auth0, Okta, …) generally do not allow CORS
+  on the token endpoint, so the token exchange and downstream calls hit a CORS error.
+- **Your own AS** — enable CORS for the playground origin on `/token`, `/par`,
+  `/introspect`, `/revoke`, `/userinfo` and it will work.
 
-- **Authlete-hosted services and Authlete sample/demo Authorization
-  Servers** are configured to allow CORS for the playground origin. The
-  playground works against them out of the box.
-- **Public consumer ASes** (Google, Auth0, Okta, ...) generally do **not**
-  allow CORS on token endpoints, so step 6 (`/token`) and downstream steps
-  will hit a CORS error from those.
-- **Your own AS**: enable CORS for the playground origin on
-  `/token`, `/par`, `/introspect`, `/revoke`, `/userinfo` and it will work.
+CIMD note: the AS fetches the `client_id` URL server-side (no CORS needed), but
+the URL must be reachable by the AS and, per the draft, HTTPS (loopback is
+allowed for local development).
 
-## Architecture (one paragraph)
+## Architecture
 
 [Vite 6][vite] + [React 19][react] + [TypeScript][ts] + [Tailwind CSS 4][tw].
-Single-page SPA. State lives in a React Context-backed reducer; step
-statuses are derived from data in a single `computeStepStatuses` cascade,
-so the UI never lies about progress. Cryptography is all `SubtleCrypto`.
-No backend; deploy as static files anywhere.
+Single-page SPA, no backend.
+
+There is a deliberate seam between the protocol and the UI:
+
+- **`src/protocol/`** — the UI-agnostic core: pure wire logic (build requests,
+  parse responses, crypto, CIMD) plus the conformance harness. It never imports
+  React or any UI code, so it runs identically in the browser and in Node tests.
+- **`src/` (React)** — the UI head. State lives in a Context-backed reducer
+  (`src/store/playground.tsx`); step statuses derive from data in a single
+  `computeStepStatuses` cascade, so the rail never lies about progress.
+
+### Conformance harness
+
+The client-side MUSTs the playground implements are tracked as spec-traced
+requirements and proven by tests:
+
+- `src/protocol/conformance/requirements.ts` — one entry per requirement (id,
+  spec, section, text), the index the tests are measured against.
+- `test/conformance/*` — each test is named by the requirement id it proves. A
+  meta-test refuses a requirement with no test, or a test naming an unknown id.
+- `npm run mutants` — breaks each rule on purpose and asserts the matching test
+  fails, so the tests can't be vacuous.
+
+Adding a capability means adding its requirement, a test, and a mutant (see
+`src/protocol/README.md`).
 
 [vite]: https://vitejs.dev/
 [react]: https://react.dev/
@@ -103,48 +132,41 @@ No backend; deploy as static files anywhere.
 Prerequisites: Node ≥ 20, npm ≥ 10.
 
 ```bash
-git clone <repo-url>
-cd oauth-playground
-
-# install deps
 npm install
 
-# dev server with HMR — serves at http://localhost:5173/
+# dev server with HMR — http://localhost:5173/
 npm run dev
 
-# typecheck
-npm run typecheck
+# type-check + run the conformance tests (the real gate)
+npm run verify
+
+# conformance tests only / mutation testing / lint
+npm run test
+npm run mutants
+npm run lint
 
 # production build — outputs to dist/
 npm run build
-
-# preview the production build locally
-npm run preview
 ```
 
-Deploy the contents of `dist/` to any static host (S3, GitHub Pages,
-Cloudflare Pages, the AS itself at `/playground/*`, etc.). No server-side
-runtime is needed.
+> `npm run typecheck` (`tsc --noEmit`) is a no-op against the solution-style
+> root tsconfig — use **`npm run verify`** (or `npm run build`) to type-check.
+
+Deploy `dist/` to any static host. The build also emits a static
+`dist/client-metadata.json` for CIMD; set **`VITE_PUBLIC_ORIGIN`** to the deploy
+origin (e.g. `https://oauth-playground.example`) so the document's `client_id`
+and `redirect_uris` match the URL it's served from. Without it, the file falls
+back to `http://localhost:5173`.
 
 ## Roadmap
 
-Planned (in roughly priority order):
-
-- **DPoP (RFC 9449)** across steps 6, 8, 9, 11
-- **JAR (RFC 9101)** — signed authorization request objects on step 3
-- **JARM (response_mode=jwt)** on step 5
-- **Saved configs** — named presets in `localStorage` (no secrets)
-- **Cascading staleness** — editing step N flags N+1…end as stale
-- **CIBA, RAR (RFC 9396)** as the underlying AS support is added
-- **Conformance-suite preset bundles**
-
-## Project status
-
-This is **v0.1**. Steps 1–12 are functionally complete against the design
-spec. PRs and issues are welcome.
+- **DPoP (RFC 9449)** — sender-constrained tokens across PAR / token / userinfo /
+  resource (configured once, applied everywhere it's relevant).
+- **JARM** (`response_mode=jwt`) — signed authorization responses.
+- **Saved configs** — named presets in `localStorage` (no secrets).
+- **Cascading staleness** — editing an earlier step flags later ones as stale.
 
 ## License
 
-Apache License 2.0 — same as
-[`authlete/java-oauth-server`][java-as] and the other Authlete OSS
-projects. See `LICENSE` for the full text.
+Apache License 2.0 — same as [`authlete/java-oauth-server`][java-as] and the
+other Authlete OSS projects. See `LICENSE` for the full text.
