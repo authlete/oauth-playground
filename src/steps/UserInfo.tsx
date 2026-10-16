@@ -27,6 +27,7 @@ export function UserInfoStep() {
   const info = state.userInfo;
   const endpoint = state.discovery.metadata?.userinfo_endpoint;
   const accessToken = state.token.accessToken;
+  const dpopActive = state.dpop.enabled;
   const canFetch = !!endpoint && !!accessToken;
   const [copied, setCopied] = useState(false);
 
@@ -110,10 +111,19 @@ export function UserInfoStep() {
           description="Fetches the user's claims with the access token."
           method="GET"
           url={endpoint}
+          summaryRight={
+            dpopActive ? (
+              <StatusPill tone="success">DPoP</StatusPill>
+            ) : undefined
+          }
           className="mt-5"
         >
           <p className="text-muted-foreground">
-            With <code className="font-mono">Authorization: Bearer ...</code>
+            With{" "}
+            <code className="font-mono">
+              Authorization: {dpopActive ? "DPoP" : "Bearer"} ...
+            </code>
+            {dpopActive && " plus a DPoP proof bound to the token (ath)."}
           </p>
         </InfoCard>
       )}

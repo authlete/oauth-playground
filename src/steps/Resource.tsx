@@ -112,6 +112,8 @@ export function ResourceStep() {
   };
 
   const hasBearer = rc.attachBearer && !!state.token.accessToken;
+  // DPoP only kicks in when the token is actually presented (resourceCall.ts).
+  const scheme = state.dpop.enabled ? "DPoP" : "Bearer";
 
   return (
     <div className="mx-auto max-w-3xl @4xl:max-w-5xl">
@@ -201,7 +203,12 @@ export function ResourceStep() {
 
         <Section
           title="Request"
-          description="Hits your own resource server; the playground only adds the Bearer header."
+          description={`Hits your own resource server; the playground only adds the ${scheme} authorization header.`}
+          summaryRight={
+            state.dpop.enabled && hasBearer ? (
+              <StatusPill tone="success">DPoP</StatusPill>
+            ) : undefined
+          }
           action={
             typeof prm?.resource_documentation === "string" ? (
               <a
@@ -274,8 +281,8 @@ export function ResourceStep() {
             <Checkbox
               label={
                 state.token.accessToken
-                  ? `Attach Bearer ${shorten(state.token.accessToken, 10, 6)}`
-                  : "Attach Bearer (no access token available)"
+                  ? `Attach ${scheme} ${shorten(state.token.accessToken, 10, 6)}`
+                  : `Attach ${scheme} (no access token available)`
               }
               checked={rc.attachBearer}
               disabled={!state.token.accessToken}
@@ -312,8 +319,8 @@ export function ResourceStep() {
 
       {!hasBearer && rc.attachBearer === false && state.token.accessToken && (
         <p className="mt-3 text-[11.5px] text-muted-foreground">
-          Bearer not attached — the resource server will likely return 401
-          unless it accepts unauthenticated calls.
+          Token not attached — the resource server will likely return 401 unless
+          it accepts unauthenticated calls.
         </p>
       )}
 

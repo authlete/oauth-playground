@@ -10,6 +10,8 @@ export interface InfoCardProps {
   method?: string;
   /** Endpoint URL shown as the first content line, full-width and breakable. */
   url?: string;
+  /** Right-side header slot (e.g. a state tag) — passed to the Section. */
+  summaryRight?: ReactNode;
   children?: ReactNode;
   className?: string;
 }
@@ -21,11 +23,17 @@ export function InfoCard({
   description,
   method,
   url,
+  summaryRight,
   children,
   className,
 }: InfoCardProps) {
   return (
-    <Section title={label} description={description} className={className}>
+    <Section
+      title={label}
+      description={description}
+      summaryRight={summaryRight}
+      className={className}
+    >
       <div className="space-y-3 text-[12.5px]">
         {url && (
           <p className="break-all font-mono text-[12px]">
