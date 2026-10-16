@@ -6,9 +6,12 @@
 import { buildAuthorizeUrl } from "./authorizeUrl";
 import { validateClientConfig } from "./clientConfig";
 import { jarReadiness } from "./requestObject";
-import type { StepId, StepStatus } from "../types";
+import type { Flow, StepId, StepStatus } from "../types";
 
 interface CascadeState {
+  /** The selected token-acquisition flow; a flow's get-token steps are hidden
+   * unless it is the one in play. */
+  flow: Flow;
   discovery: { status: string };
   client: Parameters<typeof validateClientConfig>[0];
   dcrRegister: { status: string };
@@ -68,6 +71,10 @@ export function computeStepStatuses(
   const deviceEndpoint =
     typeof state.discoveryMetadata?.device_authorization_endpoint === "string";
 
+  // A get-token step shows only when its flow is the selected one — the flows
+  // are alternatives, so the rail shows one at a time rather than all at once.
+  const authCode = state.flow === "authorization-code";
+
   // Steps unlock strictly in order — each gate includes every earlier gate, so
   // a later step is never open while an earlier one is locked. Config steps
   // (client, auth-request) top out at "valid" ("inputs check out", quiet dot);
@@ -85,42 +92,55 @@ export function computeStepStatuses(
       : state.federationRegister.status === "success"
         ? "done"
         : "ready",
-    "auth-request": !(discoveryDone && clientValid)
-      ? "locked"
-      : authUrlBuilt
-        ? "valid"
-        : "ready",
+    "auth-request": !authCode
+      ? "hidden"
+      : !(discoveryDone && clientValid)
+        ? "locked"
+        : authUrlBuilt
+          ? "valid"
+          : "ready",
     // On the rail only while the user has the extension enabled in Auth request.
-    par: !state.par.enabled
+    par:
+      !authCode || !state.par.enabled
+        ? "hidden"
+        : !authUrlBuilt
+          ? "locked"
+          : state.par.status === "success"
+            ? "done"
+            : "ready",
+    authorize: !authCode
       ? "hidden"
       : !authUrlBuilt
         ? "locked"
-        : state.par.status === "success"
-          ? "done"
-          : "ready",
-    authorize: !authUrlBuilt
-      ? "locked"
-      : !parReady
-        ? "locked"
-        : authorizeReceived
-          ? "done"
-          : "ready",
+        : !parReady
+          ? "locked"
+          : authorizeReceived
+            ? "done"
+            : "ready",
     // "done" keys on the token existing — it can come from authorize or CIBA.
-    token: tokenSucceeded ? "done" : !authorizeReceived ? "locked" : "ready",
-    ciba: !cibaEndpoint
+    token: !authCode
       ? "hidden"
-      : !(discoveryDone && clientValid)
-        ? "locked"
-        : state.ciba.status === "success"
-          ? "done"
+      : tokenSucceeded
+        ? "done"
+        : !authorizeReceived
+          ? "locked"
           : "ready",
-    device: !deviceEndpoint
-      ? "hidden"
-      : !(discoveryDone && clientValid)
-        ? "locked"
-        : state.device.status === "success"
-          ? "done"
-          : "ready",
+    ciba:
+      !cibaEndpoint || state.flow !== "ciba"
+        ? "hidden"
+        : !(discoveryDone && clientValid)
+          ? "locked"
+          : state.ciba.status === "success"
+            ? "done"
+            : "ready",
+    device:
+      !deviceEndpoint || state.flow !== "device"
+        ? "hidden"
+        : !(discoveryDone && clientValid)
+          ? "locked"
+          : state.device.status === "success"
+            ? "done"
+            : "ready",
     // Inspector is passive — unlock as soon as JWKS is available (i.e.
     // Discovery succeeded). It never reaches "done"; it stays ready.
     inspect: !discoveryDone ? "locked" : "ready",

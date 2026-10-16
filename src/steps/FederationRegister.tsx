@@ -20,8 +20,8 @@ import {
   StepHeader,
   type StatusTone,
 } from "../components/step";
-import { parseJwt, type JwtParsed } from "../lib/jwt";
-import { submitFederationRegistration } from "../lib/federationRegister";
+import { parseJwt, type JwtParsed } from "../protocol/jwt";
+import { submitFederationRegistration } from "../protocol/federationRegister";
 import type { FederationRegisterMode } from "../types";
 
 const MODES: Array<{
@@ -41,7 +41,13 @@ const MODES: Array<{
   },
 ];
 
-export function FederationRegisterStep() {
+// `embedded` renders inside the Client step's "Other ways" area, without the
+// page header/width wrapper — identity methods live there, not in the rail.
+export function FederationRegisterStep({
+  embedded = false,
+}: {
+  embedded?: boolean;
+}) {
   const {
     state,
     federationRegisterUpdate,
@@ -101,8 +107,10 @@ export function FederationRegisterStep() {
   }, [reg.status, reg.responseJwt]);
 
   return (
-    <div className="mx-auto max-w-3xl @4xl:max-w-5xl">
-      <StepHeader step="federation-register" right={renderPill(reg.status)} />
+    <div className={embedded ? "" : "mx-auto max-w-3xl @4xl:max-w-5xl"}>
+      {!embedded && (
+        <StepHeader step="federation-register" right={renderPill(reg.status)} />
+      )}
 
       {!endpoint && (
         <Banner tone="warn" className="mt-5">

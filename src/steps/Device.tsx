@@ -23,13 +23,13 @@ import {
   StepHeader,
   type StatusTone,
 } from "../components/step";
-import { formatDuration } from "../lib/format";
-import { looksLikeJwt } from "../lib/jwt";
-import { validateClientConfig } from "../lib/clientConfig";
-import { parseAuthorizationDetails } from "../lib/authorizationDetails";
-import { previewDevice } from "../lib/requestPreview";
-import { startDeviceAuthorization } from "../lib/deviceAuth";
-import { pollDeviceToken } from "../lib/devicePoll";
+import { formatDuration } from "../protocol/format";
+import { looksLikeJwt } from "../protocol/jwt";
+import { validateClientConfig } from "../protocol/clientConfig";
+import { parseAuthorizationDetails } from "../protocol/authorizationDetails";
+import { previewDevice } from "../protocol/requestPreview";
+import { startDeviceAuthorization } from "../protocol/deviceAuth";
+import { pollDeviceToken } from "../protocol/devicePoll";
 
 export function DeviceStep() {
   const {
@@ -225,9 +225,10 @@ export function DeviceStep() {
       <StepHeader step="device" right={renderPill(device.status, remaining)} />
 
       <p className="mt-4 max-w-2xl text-[12.5px] leading-relaxed text-muted-foreground">
-        The playground (the device with no browser) asks the AS for a short user
-        code, shows it to you, and polls the token endpoint while you approve on
-        a second device — a phone or laptop — at the verification URL.
+        The playground stands in for a device with no browser. It asks the AS
+        for a short user code, shows it to you, then polls the token endpoint
+        while you enter that code and approve on a second device (a phone or
+        laptop) at the verification URL below.
       </p>
 
       {!endpoint && (
@@ -241,7 +242,7 @@ export function DeviceStep() {
         <>
           <Section
             title="Device authorization request"
-            description="What to grant. No redirect URI and no login_hint — the user is identified when they sign in at the verification URL."
+            description="What to grant. There's no redirect URI and no login_hint; the user is identified when they sign in at the verification URL."
             className="mt-4"
           >
             <GrantSummary

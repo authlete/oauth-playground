@@ -21,18 +21,18 @@ import {
   StepHeader,
   type StatusTone,
 } from "../components/step";
-import { shorten } from "../lib/format";
-import { cn } from "../lib/cn";
-import { buildAuthorizeUrl } from "../lib/authorizeUrl";
-import { jarReadiness } from "../lib/requestObject";
-import { previewAuthorize } from "../lib/requestPreview";
-import { computeCodeChallenge, generateCodeVerifier } from "../lib/pkce";
-import { randomBase64Url } from "../lib/random";
+import { shorten } from "../protocol/format";
+import { cn } from "../protocol/cn";
+import { buildAuthorizeUrl } from "../protocol/authorizeUrl";
+import { jarReadiness } from "../protocol/requestObject";
+import { previewAuthorize } from "../protocol/requestPreview";
+import { computeCodeChallenge, generateCodeVerifier } from "../protocol/pkce";
+import { randomBase64Url } from "../protocol/random";
 import {
   listenForCallback,
   openAuthorizeTab,
   type AuthorizeCallbackEvent,
-} from "../lib/authorizeFlow";
+} from "../protocol/authorizeFlow";
 
 export function AuthorizeStep() {
   const {
@@ -290,46 +290,56 @@ export function AuthorizeStep() {
         />
       )}
 
-      <div className="mt-5 flex flex-wrap gap-2">
-        {auth.status === "waiting" ? (
-          <>
-            <Button disabled>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Waiting for callback…
-            </Button>
-            <Button variant="secondary" onClick={cancel}>
-              <X className="h-4 w-4" />
-              Cancel
-            </Button>
-          </>
-        ) : auth.status === "received" || auth.status === "error" ? (
-          <Button variant="secondary" onClick={start} disabled={!canAuthorize}>
-            <RotateCw className="h-4 w-4" />
-            Re-run
-          </Button>
-        ) : (
-          <Button onClick={start} disabled={!canAuthorize}>
-            <ExternalLink className="h-4 w-4" />
-            Authorize ↗
-          </Button>
+      <div className="mt-5 space-y-3">
+        {/* The option goes above the action it affects, not after it. Only
+            shown when the Authorize button is actionable. */}
+        {(auth.status === "idle" || auth.status === "error") && (
+          <label className="flex cursor-pointer items-start gap-2 text-[12.5px]">
+            <input
+              type="checkbox"
+              checked={state.autoExchange}
+              onChange={(e) => setAutoExchange(e.target.checked)}
+              className="mt-0.5 h-3.5 w-3.5 accent-[var(--playground-accent)]"
+            />
+            <span className="text-muted-foreground">
+              <span className="font-medium text-foreground">
+                Exchange the code for tokens automatically
+              </span>{" "}
+              and open Token exchange. Turn off to stay here and inspect the
+              authorization result, then exchange by hand.
+            </span>
+          </label>
         )}
-      </div>
 
-      <label className="mt-3 flex cursor-pointer items-start gap-2 text-[12.5px]">
-        <input
-          type="checkbox"
-          checked={state.autoExchange}
-          onChange={(e) => setAutoExchange(e.target.checked)}
-          className="mt-0.5 h-3.5 w-3.5 accent-[var(--playground-accent)]"
-        />
-        <span className="text-muted-foreground">
-          <span className="font-medium text-foreground">
-            Exchange the code for tokens automatically
-          </span>{" "}
-          and open Token exchange. Turn off to stay here and inspect the
-          authorization result, then exchange by hand.
-        </span>
-      </label>
+        <div className="flex flex-wrap gap-2">
+          {auth.status === "waiting" ? (
+            <>
+              <Button disabled>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Waiting for callback…
+              </Button>
+              <Button variant="secondary" onClick={cancel}>
+                <X className="h-4 w-4" />
+                Cancel
+              </Button>
+            </>
+          ) : auth.status === "received" || auth.status === "error" ? (
+            <Button
+              variant="secondary"
+              onClick={start}
+              disabled={!canAuthorize}
+            >
+              <RotateCw className="h-4 w-4" />
+              Re-run
+            </Button>
+          ) : (
+            <Button onClick={start} disabled={!canAuthorize}>
+              <ExternalLink className="h-4 w-4" />
+              Authorize ↗
+            </Button>
+          )}
+        </div>
+      </div>
 
       {auth.status === "waiting" && (
         <p className="mt-3 text-[12.5px] text-muted-foreground">

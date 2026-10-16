@@ -6,7 +6,7 @@ import { NetworkLog } from "./components/NetworkLog";
 import { CenterPane } from "./components/CenterPane";
 import { MinWidthGate } from "./components/MinWidthGate";
 import { CallbackPage } from "./components/CallbackPage";
-import { hasCallbackParams } from "./lib/callback";
+import { hasCallbackParams } from "./protocol/callback";
 
 export default function App() {
   // The AS redirects to /callback?code=...&state=... — render a tiny receiver

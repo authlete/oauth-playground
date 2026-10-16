@@ -10,8 +10,8 @@ import {
   StepHeader,
   type StatusTone,
 } from "../components/step";
-import { formatBytes, formatValue } from "../lib/format";
-import { fetchUserInfo } from "../lib/userInfo";
+import { formatBytes, formatValue } from "../protocol/format";
+import { fetchUserInfo } from "../protocol/userInfo";
 
 export function UserInfoStep() {
   const {

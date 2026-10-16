@@ -20,10 +20,13 @@ import {
   StepHeader,
   type StatusTone,
 } from "../components/step";
-import { formatDuration, shorten } from "../lib/format";
-import { looksLikeJwt } from "../lib/jwt";
-import { parseAuthorizationDetails } from "../lib/authorizationDetails";
-import { exchangeCode, tokenStatePatchFromResult } from "../lib/tokenExchange";
+import { formatDuration, shorten } from "../protocol/format";
+import { looksLikeJwt } from "../protocol/jwt";
+import { parseAuthorizationDetails } from "../protocol/authorizationDetails";
+import {
+  exchangeCode,
+  tokenStatePatchFromResult,
+} from "../protocol/tokenExchange";
 import { GRANT_MANAGEMENT_ACTIONS } from "../types";
 
 export function TokenStep() {

@@ -19,9 +19,9 @@ import {
   StepHeader,
   type StatusTone,
 } from "../components/step";
-import { previewPar } from "../lib/requestPreview";
-import { pushPar } from "../lib/parClient";
-import { jarReadiness } from "../lib/requestObject";
+import { previewPar } from "../protocol/requestPreview";
+import { pushPar } from "../protocol/parClient";
+import { jarReadiness } from "../protocol/requestObject";
 
 export function ParStep() {
   const { state, parUpdate, networkAdd, networkUpdate, setActiveStep } =

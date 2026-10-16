@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Activity, PanelRightClose, Trash2 } from "lucide-react";
 import { usePlayground } from "../store/playground";
 import { Button } from "./ui/Button";
-import { cn } from "../lib/cn";
+import { cn } from "../protocol/cn";
 import type { HttpMethod, NetworkEntry } from "../types";
 
 const METHOD_COLOR: Record<HttpMethod, string> = {

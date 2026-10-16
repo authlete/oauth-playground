@@ -3,8 +3,8 @@ import { AlertTriangle, Check, CircleAlert, KeyRound } from "lucide-react";
 import { usePlayground } from "../store/playground";
 import { Textarea } from "../components/ui/Textarea";
 import { Banner, JwtPanel, Section, StepHeader } from "../components/step";
-import { cn } from "../lib/cn";
-import { formatDuration, formatLocalTime, shorten } from "../lib/format";
+import { cn } from "../protocol/cn";
+import { formatDuration, formatLocalTime, shorten } from "../protocol/format";
 import {
   computeJwtTimings,
   looksLikeJwt,
@@ -12,7 +12,7 @@ import {
   verifyJwt,
   type JwtParsed,
   type JwtVerifyResult,
-} from "../lib/jwt";
+} from "../protocol/jwt";
 import type { InspectorSource } from "../types";
 
 interface Source {
@@ -158,7 +158,6 @@ function Header() {
   return (
     <StepHeader
       step="inspect"
-      stepLabel="Utility"
       right={
         <span className="text-[11.5px] text-muted-foreground">passive</span>
       }

@@ -10,16 +10,16 @@ import {
   StatusPill,
   StepHeader as SharedStepHeader,
 } from "../components/step";
-import { cn } from "../lib/cn";
-import { AUTH_SERVERS } from "../lib/authServers";
+import { cn } from "../protocol/cn";
+import { AUTH_SERVERS } from "../protocol/authServers";
 import {
   RESOURCE_SERVERS,
   DEFAULT_RESOURCE_SERVER,
-} from "../lib/resourceServers";
-import { fetchDiscovery, type DiscoveryError } from "../lib/discovery";
-import { fetchOpenApiOperations } from "../lib/openapi";
-import { fetchPrm } from "../lib/prm";
-import { applyManual } from "../lib/manualDiscovery";
+} from "../protocol/resourceServers";
+import { fetchDiscovery, type DiscoveryError } from "../protocol/discovery";
+import { fetchOpenApiOperations } from "../protocol/openapi";
+import { fetchPrm } from "../protocol/prm";
+import { applyManual } from "../protocol/manualDiscovery";
 import type { ManualEndpoints, OidcMetadata, PrmDocument } from "../types";
 
 type Tab = "endpoints" | "jwks";
@@ -693,6 +693,7 @@ function ManualForm({
       <Section
         title="Optional endpoints"
         description="Leave an endpoint blank and the matching step stays unavailable."
+        defaultOpen={false}
       >
         <div className="space-y-3">
           <ManualField

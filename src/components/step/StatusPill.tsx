@@ -6,7 +6,7 @@ import {
   Loader2,
   type LucideIcon,
 } from "lucide-react";
-import { cn } from "../../lib/cn";
+import { cn } from "../../protocol/cn";
 
 export type StatusTone = "muted" | "success" | "warn" | "error";
 

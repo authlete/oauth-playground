@@ -1,5 +1,5 @@
 import { type ReactNode } from "react";
-import { cn } from "../../lib/cn";
+import { cn } from "../../protocol/cn";
 
 /**
  * Flex-style key/value row — useful in lists where the value can grow.

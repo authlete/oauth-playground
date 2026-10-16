@@ -3,7 +3,7 @@
 // pretty-printed JSON block. Shared by the Auth request editor (summary of
 // what you're about to send) and the Token step (requested vs. granted).
 
-import { summarizeDetail } from "../../lib/authorizationDetails";
+import { summarizeDetail } from "../../protocol/authorizationDetails";
 
 type Detail = Record<string, unknown>;
 

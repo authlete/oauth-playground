@@ -8,18 +8,21 @@ import {
   useRef,
   type ReactNode,
 } from "react";
-import { computeStepStatuses } from "../lib/stepCascade";
-import { exchangeCode, tokenStatePatchFromResult } from "../lib/tokenExchange";
-import { DEFAULT_AUTH_SERVER } from "../lib/authServers";
-import { buildAuthorizeParams } from "../lib/authorizeUrl";
-import { signRequestObject } from "../lib/requestObject";
-import { computeCodeChallenge, generateCodeVerifier } from "../lib/pkce";
-import { randomBase64Url } from "../lib/random";
+import { computeStepStatuses } from "../protocol/stepCascade";
+import {
+  exchangeCode,
+  tokenStatePatchFromResult,
+} from "../protocol/tokenExchange";
+import { DEFAULT_AUTH_SERVER } from "../protocol/authServers";
+import { buildAuthorizeParams } from "../protocol/authorizeUrl";
+import { signRequestObject } from "../protocol/requestObject";
+import { computeCodeChallenge, generateCodeVerifier } from "../protocol/pkce";
+import { randomBase64Url } from "../protocol/random";
 import {
   clearShareFromUrl,
   readShareFromUrl,
   type SharePayload,
-} from "../lib/shareConfig";
+} from "../protocol/shareConfig";
 import {
   DEFAULT_AUTHORIZE,
   DEFAULT_AUTH_REQUEST,
@@ -39,6 +42,8 @@ import {
   DEFAULT_TOKEN,
   DEFAULT_USERINFO,
   EMPTY_MANUAL_ENDPOINTS,
+  FLOWS,
+  type Flow,
   type AuthRequestState,
   type AuthorizeState,
   type CibaState,
@@ -74,6 +79,8 @@ interface State {
    * background — without stealing focus from the authorization result, which
    * is the part worth studying. Off = inspect the code, exchange by hand. */
   autoExchange: boolean;
+  /** The selected token-acquisition flow. Drives which get-token steps show. */
+  flow: Flow;
   discovery: DiscoveryState;
   /** RFC 9728 context when the flow started at a protected resource. */
   resource: ResourceContextState;
@@ -104,6 +111,7 @@ type Action =
   | { type: "network-clear" }
   | { type: "network-set-collapsed"; collapsed: boolean }
   | { type: "set-auto-exchange"; value: boolean }
+  | { type: "set-flow"; flow: Flow }
   | { type: "discovery-update"; patch: Partial<DiscoveryState> }
   | { type: "discovery-reset" }
   | { type: "resource-update"; patch: Partial<ResourceContextState> }
@@ -291,6 +299,7 @@ const initialState: State = {
   network: [],
   networkCollapsed: true,
   autoExchange: true,
+  flow: "authorization-code",
   discovery: {
     status: "idle",
     issuer: DEFAULT_AUTH_SERVER,
@@ -368,6 +377,15 @@ function reducer(state: State, action: Action): State {
       return { ...state, networkCollapsed: action.collapsed };
     case "set-auto-exchange":
       return { ...state, autoExchange: action.value };
+    case "set-flow": {
+      // Switching flow lands on that flow's entry step so focus follows intent.
+      const entry = FLOWS.find((f) => f.id === action.flow)?.entryStep;
+      return {
+        ...state,
+        flow: action.flow,
+        activeStep: entry ?? state.activeStep,
+      };
+    }
     case "discovery-update":
       return { ...state, discovery: { ...state.discovery, ...action.patch } };
     case "resource-update":
@@ -449,6 +467,7 @@ interface PlaygroundContextValue {
   networkClear: () => void;
   networkSetCollapsed: (collapsed: boolean) => void;
   setAutoExchange: (value: boolean) => void;
+  setFlow: (flow: Flow) => void;
   discoveryUpdate: (patch: Partial<DiscoveryState>) => void;
   discoveryReset: () => void;
   resourceUpdate: (patch: Partial<ResourceContextState>) => void;
@@ -794,6 +813,7 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
   // the user has visited.
   useEffect(() => {
     const next = computeStepStatuses({
+      flow: state.flow,
       discovery: state.discovery,
       discoveryMetadata: state.discovery.metadata,
       client: state.client,
@@ -812,12 +832,13 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
       refresh: state.refresh,
       revoke: state.revoke,
     });
-    for (const id of Object.keys(next) as Array<keyof typeof next>) {
+    for (const id of Object.keys(next) as StepId[]) {
       if (state.stepStatus[id] !== next[id]) {
         dispatch({ type: "set-step-status", step: id, status: next[id] });
       }
     }
   }, [
+    state.flow,
     state.discovery,
     state.client,
     state.dcrRegister,
@@ -890,6 +911,10 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
   );
   const setAutoExchange = useCallback(
     (value: boolean) => dispatch({ type: "set-auto-exchange", value }),
+    [],
+  );
+  const setFlow = useCallback(
+    (flow: Flow) => dispatch({ type: "set-flow", flow }),
     [],
   );
   const discoveryUpdate = useCallback(
@@ -996,6 +1021,7 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
       networkClear,
       networkSetCollapsed,
       setAutoExchange,
+      setFlow,
       discoveryUpdate,
       discoveryReset,
       resourceUpdate,
@@ -1029,6 +1055,7 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
       networkClear,
       networkSetCollapsed,
       setAutoExchange,
+      setFlow,
       discoveryUpdate,
       discoveryReset,
       resourceUpdate,

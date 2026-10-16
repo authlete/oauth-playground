@@ -15,7 +15,7 @@ import {
   StepHeader,
   type StatusTone,
 } from "../components/step";
-import { queryGrant, revokeGrant } from "../lib/grantManagement";
+import { queryGrant, revokeGrant } from "../protocol/grantManagement";
 
 export function GrantManagementStep() {
   const {

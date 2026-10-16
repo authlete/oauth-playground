@@ -11,7 +11,7 @@ import {
   StepHeader,
   type StatusTone,
 } from "../components/step";
-import { revoke } from "../lib/revoke";
+import { revoke } from "../protocol/revoke";
 import type { RevokeState } from "../types";
 
 export function RevokeStep() {

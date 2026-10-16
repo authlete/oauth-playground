@@ -68,13 +68,15 @@ export async function startDeviceAuthorization(
   }
 
   const body = buildDeviceParams(input.authRequest);
+  // RFC 8628 §3.1: the device authorization request carries client_id in the
+  // body — even for a confidential client whose secret goes in the auth header.
+  body.set("client_id", input.client.clientId);
   const headers = new Headers({
     "Content-Type": "application/x-www-form-urlencoded",
     Accept: "application/json",
   });
 
-  // Device flow works for public and confidential clients alike — applyClientAuth
-  // sets client_id for the public ("none") case and real auth otherwise.
+  // Confidential clients add real auth on top (Basic / post / private_key_jwt).
   const auth = await applyClientAuth({
     client: input.client,
     audience: endpoint,

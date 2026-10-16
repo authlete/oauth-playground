@@ -15,8 +15,8 @@ import {
   StepHeader,
   type StatusTone,
 } from "../components/step";
-import { shorten } from "../lib/format";
-import { refreshTokens } from "../lib/refresh";
+import { shorten } from "../protocol/format";
+import { refreshTokens } from "../protocol/refresh";
 
 export function RefreshStep() {
   const {

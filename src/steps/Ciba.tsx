@@ -23,13 +23,13 @@ import {
   StepHeader,
   type StatusTone,
 } from "../components/step";
-import { formatDuration } from "../lib/format";
-import { looksLikeJwt } from "../lib/jwt";
-import { validateClientConfig } from "../lib/clientConfig";
-import { parseAuthorizationDetails } from "../lib/authorizationDetails";
-import { previewCiba } from "../lib/requestPreview";
-import { startBackchannelAuth } from "../lib/cibaAuth";
-import { pollCibaToken } from "../lib/cibaPoll";
+import { formatDuration } from "../protocol/format";
+import { looksLikeJwt } from "../protocol/jwt";
+import { validateClientConfig } from "../protocol/clientConfig";
+import { parseAuthorizationDetails } from "../protocol/authorizationDetails";
+import { previewCiba } from "../protocol/requestPreview";
+import { startBackchannelAuth } from "../protocol/cibaAuth";
+import { pollCibaToken } from "../protocol/cibaPoll";
 
 export function CibaStep() {
   const {
@@ -225,9 +225,9 @@ export function CibaStep() {
       <StepHeader step="ciba" right={renderPill(ciba.status, remaining)} />
 
       <p className="mt-4 max-w-2xl text-[12.5px] leading-relaxed text-muted-foreground">
-        The playground (consumption device) requests authentication out-of-band;
-        the user approves on their own device, and the playground polls the
-        token endpoint for the result. Poll mode only.
+        The playground starts authentication over a back channel. It names the
+        user with a login_hint, the user approves on their own device, and the
+        playground polls the token endpoint for the result. Poll mode only.
       </p>
 
       {!endpoint && (

@@ -2,17 +2,19 @@ import { useEffect, useState } from "react";
 import { Check, Copy, Link2, Lock, RotateCw } from "lucide-react";
 import { usePlayground } from "../store/playground";
 import {
+  FLOWS,
   STEPS,
   STEP_PHASES,
+  type Flow,
   type StepDef,
   type StepId,
   type StepStatus,
 } from "../types";
-import { cn } from "../lib/cn";
-import { buildPayloadFromState, buildShareUrl } from "../lib/shareConfig";
+import { cn } from "../protocol/cn";
+import { buildPayloadFromState, buildShareUrl } from "../protocol/shareConfig";
 
 export function LeftRail() {
-  const { state, setActiveStep } = usePlayground();
+  const { state, setActiveStep, setFlow } = usePlayground();
   const [shared, setShared] = useState(false);
   const [confirmingReset, setConfirmingReset] = useState(false);
 
@@ -58,9 +60,34 @@ export function LeftRail() {
     revoke: revokeSummary(state),
   };
 
+  // DCR and Federation are not rail steps — they're client-identity methods
+  // shown inside the Client step's "Other ways", alongside CIMD and manual.
   const visibleSteps = STEPS.filter(
-    (step) => state.stepStatus[step.id] !== "hidden",
+    (step) =>
+      state.stepStatus[step.id] !== "hidden" &&
+      step.id !== "dcr-register" &&
+      step.id !== "federation-register",
   );
+
+  // The flows the AS actually supports (authorization-code is always offered
+  // once discovery runs). The picker only appears when there's a choice.
+  const metadata = state.discovery.metadata;
+  const availableFlows = FLOWS.filter(
+    (f) => typeof metadata?.[f.endpoint] === "string",
+  );
+
+  // Number only the path TO a token (Connection + Get a token). Use/Manage/
+  // Tools are menus and utilities — no sequence to imply, so no numbers.
+  const stepNumber = new Map<StepId, number>();
+  let n = 0;
+  for (const step of visibleSteps) {
+    if (
+      !step.nested &&
+      (step.phase === "setup" || step.phase === "get-token")
+    ) {
+      stepNumber.set(step.id, ++n);
+    }
+  }
 
   return (
     <nav
@@ -76,11 +103,19 @@ export function LeftRail() {
               <h2 className="px-3 pb-1 pt-3 text-[10.5px] font-semibold uppercase tracking-wider text-muted-foreground/70">
                 {phase.label}
               </h2>
+              {phase.id === "get-token" && availableFlows.length > 1 && (
+                <FlowPicker
+                  flows={availableFlows}
+                  value={state.flow}
+                  onChange={setFlow}
+                />
+              )}
               <ul>
                 {steps.map((step) => (
                   <StepRow
                     key={step.id}
                     step={step}
+                    number={stepNumber.get(step.id)}
                     status={state.stepStatus[step.id]}
                     active={state.activeStep === step.id}
                     summary={summaries[step.id]}
@@ -159,14 +194,46 @@ function ResetConfirmRow({
   );
 }
 
+// The flow choice for "Get a token". Flows are alternatives, so this is a
+// pick-one control; only the chosen flow's steps follow below it.
+function FlowPicker({
+  flows,
+  value,
+  onChange,
+}: {
+  flows: typeof FLOWS;
+  value: Flow;
+  onChange: (flow: Flow) => void;
+}) {
+  return (
+    <div className="px-3 pb-1 pt-0.5">
+      <select
+        aria-label="Token flow"
+        value={value}
+        onChange={(e) => onChange(e.target.value as Flow)}
+        className="w-full rounded-md border border-border bg-background px-2 py-1 text-[12.5px] text-foreground hover:bg-accent/40"
+      >
+        {flows.map((f) => (
+          <option key={f.id} value={f.id}>
+            {f.label}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
 function StepRow({
   step,
+  number,
   status,
   active,
   summary,
   onClick,
 }: {
   step: StepDef;
+  /** Sequence number for the path to a token; absent for menu/utility rows. */
+  number?: number;
   status: StepStatus;
   active: boolean;
   summary?: string;
@@ -213,14 +280,22 @@ function StepRow({
           >
             <Link2 className="h-3 w-3" />
           </span>
-        ) : (
+        ) : number !== undefined ? (
           <span
             className={cn(
               "mt-0.5 inline-block w-5 shrink-0 text-center font-mono text-[11px]",
               active ? "text-foreground" : "text-muted-foreground",
             )}
           >
-            {step.number}
+            {number}
+          </span>
+        ) : (
+          // Menu / utility rows carry no sequence — a quiet dot, not a number.
+          <span
+            className="mt-[9px] inline-flex w-5 shrink-0 justify-center"
+            aria-hidden
+          >
+            <span className="h-1 w-1 rounded-full bg-muted-foreground/50" />
           </span>
         )}
         <span className="flex min-w-0 flex-1 flex-col">

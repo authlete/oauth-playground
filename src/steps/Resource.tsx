@@ -14,10 +14,10 @@ import {
   StepHeader,
   type StatusTone,
 } from "../components/step";
-import { shorten } from "../lib/format";
-import { cn } from "../lib/cn";
-import { resourceCall } from "../lib/resourceCall";
-import { parseBearerChallenge } from "../lib/bearerChallenge";
+import { shorten } from "../protocol/format";
+import { cn } from "../protocol/cn";
+import { resourceCall } from "../protocol/resourceCall";
+import { parseBearerChallenge } from "../protocol/bearerChallenge";
 import type { HttpMethod } from "../types";
 
 const METHODS: HttpMethod[] = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD"];

@@ -7,7 +7,7 @@ import {
   CALLBACK_STORAGE_KEY,
   parseCallbackUrl,
   type CallbackParams,
-} from "../lib/callback";
+} from "../protocol/callback";
 
 export function CallbackPage() {
   const [result, setResult] = useState<CallbackParams | null>(null);

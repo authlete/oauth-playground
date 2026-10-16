@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { AlertTriangle, Moon, Sun, HelpCircle, X } from "lucide-react";
 import { usePlayground } from "../store/playground";
 import { Button } from "./ui/Button";
-import { cn } from "../lib/cn";
+import { cn } from "../protocol/cn";
 
 export function TopBar() {
   const { state, toggleTheme, setActiveStep } = usePlayground();

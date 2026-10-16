@@ -25,12 +25,15 @@ export type StepId =
 export type StepStatus =
   "locked" | "ready" | "active" | "valid" | "done" | "stale" | "hidden";
 
-/** The rail groups steps into four phases that mirror the OAuth lifecycle:
- * configure the AS/client, obtain a token, use it, then manage its lifetime.
- * Grouping gives the flat 1→10 list a legible structure and reframes the
- * alternative token paths (CIBA, Device) as peers under "Get a token" rather
- * than as sub-steps of Token exchange. */
-export type StepPhase = "setup" | "get-token" | "use-token" | "manage";
+/** The rail is organised by what each thing actually is, not a flat 1→N list:
+ *  - setup: establish the connection (which AS, which client)
+ *  - get-token: obtain a token via the CHOSEN flow (one flow's steps at a time)
+ *  - use-token / manage: things you do once you hold a token (a menu, any order)
+ *  - tools: utilities with no prerequisites (the token inspector)
+ * This matches the four different interaction patterns instead of pretending
+ * alternatives and menus are sequential steps. */
+export type StepPhase =
+  "setup" | "get-token" | "use-token" | "manage" | "tools";
 
 export interface PhaseDef {
   id: StepPhase;
@@ -38,74 +41,120 @@ export interface PhaseDef {
 }
 
 export const STEP_PHASES: PhaseDef[] = [
-  { id: "setup", label: "Setup" },
+  { id: "setup", label: "Connection" },
   { id: "get-token", label: "Get a token" },
   { id: "use-token", label: "Use the token" },
   { id: "manage", label: "Manage" },
+  { id: "tools", label: "Tools" },
+];
+
+/** A token-acquisition flow. These are alternatives — you pick ONE — so they
+ * are a choice in the rail's "Get a token" zone, not a stack of steps. Each is
+ * offered only when the AS advertises its endpoint. */
+export type Flow = "authorization-code" | "device" | "ciba";
+
+export interface FlowDef {
+  id: Flow;
+  label: string;
+  /** Discovery metadata field that must be present for this flow to be offered.
+   * authorization-code uses the always-present authorization_endpoint. */
+  endpoint: keyof OidcMetadata;
+  /** Where the rail lands when this flow is selected. */
+  entryStep: StepId;
+}
+
+export const FLOWS: FlowDef[] = [
+  {
+    id: "authorization-code",
+    label: "Authorization Code",
+    endpoint: "authorization_endpoint",
+    entryStep: "auth-request",
+  },
+  {
+    id: "device",
+    label: "Device",
+    endpoint: "device_authorization_endpoint",
+    entryStep: "device",
+  },
+  {
+    id: "ciba",
+    label: "Backchannel (CIBA)",
+    endpoint: "backchannel_authentication_endpoint",
+    entryStep: "ciba",
+  },
 ];
 
 export interface StepDef {
   id: StepId;
-  /** Sequential number. Omitted for auxiliary / nested steps that aren't on
-   * the main 1→10 path. */
-  number?: number;
   name: string;
   /** Lifecycle phase this step belongs to — drives the rail's grouping. */
   phase: StepPhase;
-  /** Nested under the previous step in the rail (renders indented, no
-   * number, with an icon). Used for optional / out-of-sequence paths. */
+  /** For a get-token step, the flow it belongs to. Shown only when that flow
+   * is the selected one. */
+  flow?: Flow;
+  /** Nested under the previous step in the rail (renders indented, with an
+   * icon). Used for a true sub-step, e.g. PAR under Auth request. */
   nested?: boolean;
 }
 
 export const STEPS: StepDef[] = [
-  { id: "discovery", number: 1, name: "Discovery", phase: "setup" },
-  { id: "client", number: 2, name: "Client config", phase: "setup" },
-  // Auxiliary paths under Client, each visible only when the AS advertises the
-  // matching endpoint. Nested + numberless so they read as optional branches
-  // off Client config rather than inline steps. Both produce a client_id.
+  { id: "discovery", name: "Discovery", phase: "setup" },
+  { id: "client", name: "Client config", phase: "setup" },
+  // DCR and Federation are client-identity methods shown inside the Client
+  // step's "Other ways", not rail steps — kept here only so getStep/cascade
+  // still resolve them; LeftRail filters them out of the rail.
+  { id: "dcr-register", name: "Register client (DCR)", phase: "setup" },
+  { id: "federation-register", name: "Federation register", phase: "setup" },
+
+  // Get a token — one flow at a time. Authorization Code is a short sequence;
+  // Device and CIBA are each a single step. All mint into the same token.
   {
-    id: "dcr-register",
-    name: "Register client (DCR)",
-    phase: "setup",
-    nested: true,
+    id: "auth-request",
+    name: "Auth request",
+    phase: "get-token",
+    flow: "authorization-code",
   },
-  {
-    id: "federation-register",
-    name: "Federation register",
-    phase: "setup",
-    nested: true,
-  },
-  { id: "auth-request", number: 3, name: "Auth request", phase: "get-token" },
   // PAR only appears when the user enables it in Auth request's Extensions.
-  { id: "par", name: "PAR push", phase: "get-token", nested: true },
-  { id: "authorize", number: 4, name: "Authorize", phase: "get-token" },
-  { id: "token", number: 5, name: "Token exchange", phase: "get-token" },
-  // Alternative to the redirect backbone (steps 3-5); shown only when the AS
-  // advertises a backchannel endpoint. Mints into the same token.
-  { id: "ciba", name: "Backchannel (CIBA)", phase: "get-token", nested: true },
-  // Device Authorization Grant (RFC 8628) — the other non-redirect path into a
-  // token. Shown only when the AS advertises a device endpoint. Like CIBA it
-  // polls /token and mints into the same token.
-  { id: "device", name: "Device flow", phase: "get-token", nested: true },
-  // Passive JWT viewer hanging off Token exchange; usable with any pasted JWT.
-  { id: "inspect", name: "Token inspector", phase: "get-token", nested: true },
-  // The payoff comes right after the mint: the token was issued to call the
-  // resource. UserInfo is the OIDC-flavored resource; Introspection follows
-  // as "what the RS saw when it validated your token".
-  { id: "resource", number: 6, name: "Resource call", phase: "use-token" },
-  { id: "userinfo", number: 7, name: "UserInfo", phase: "use-token" },
-  { id: "introspect", number: 8, name: "Introspection", phase: "use-token" },
-  // Grant Management API (query / revoke a grant). Appears only when the AS
-  // advertises a grant_management_endpoint. Nested + numberless so it reads as
-  // an optional branch and leaves no numbering gap when absent.
   {
-    id: "grant-management",
-    name: "Grant management",
-    phase: "use-token",
+    id: "par",
+    name: "PAR push",
+    phase: "get-token",
+    flow: "authorization-code",
     nested: true,
   },
-  { id: "refresh", number: 9, name: "Refresh", phase: "manage" },
-  { id: "revoke", number: 10, name: "Revoke", phase: "manage" },
+  {
+    id: "authorize",
+    name: "Authorize",
+    phase: "get-token",
+    flow: "authorization-code",
+  },
+  {
+    id: "token",
+    name: "Token exchange",
+    phase: "get-token",
+    flow: "authorization-code",
+  },
+  {
+    id: "ciba",
+    name: "Backchannel (CIBA)",
+    phase: "get-token",
+    flow: "ciba",
+  },
+  { id: "device", name: "Device flow", phase: "get-token", flow: "device" },
+
+  // Use the token — a menu, any order, once a token exists.
+  { id: "resource", name: "Resource call", phase: "use-token" },
+  { id: "userinfo", name: "UserInfo", phase: "use-token" },
+  { id: "introspect", name: "Introspection", phase: "use-token" },
+  // Grant Management API — appears only when the AS advertises the endpoint.
+  { id: "grant-management", name: "Grant management", phase: "use-token" },
+
+  // Manage — refresh / revoke the token.
+  { id: "refresh", name: "Refresh", phase: "manage" },
+  { id: "revoke", name: "Revoke", phase: "manage" },
+
+  // Tools — a utility with no prerequisites; decode any JWT, anytime.
+  { id: "inspect", name: "Token inspector", phase: "tools" },
 ];
 
 const STEP_BY_ID = new Map(STEPS.map((s) => [s.id, s]));
@@ -153,6 +202,9 @@ export interface OidcMetadata {
   registration_endpoint?: string;
   pushed_authorization_request_endpoint?: string;
   federation_registration_endpoint?: string;
+  // CIMD (draft-ietf-oauth-client-id-metadata-document): the AS fetches a URL
+  // client_id to resolve the client's metadata — registration-free identity.
+  client_id_metadata_document_supported?: boolean;
   // RAR: the authorization_details `type`s the AS accepts.
   authorization_details_types_supported?: string[];
   // Grant Management: the API base for reading/revoking grants, the actions the

@@ -22,6 +22,21 @@ export interface AuthorizeCallbackEvent {
   issMatches?: boolean;
 }
 
+/** The two anti-CSRF / mix-up checks on the callback, as pure comparisons:
+ * `state` must echo what we sent (RFC 6749 §10.12), and `iss` must match the
+ * AS issuer when present (RFC 9207). Extracted so both the live listener and
+ * the conformance tests exercise the same logic. */
+export function evaluateCallback(
+  params: CallbackParams,
+  expectedState: string,
+  expectedIssuer?: string,
+): { stateMatches: boolean; issMatches?: boolean } {
+  return {
+    stateMatches: params.state === expectedState,
+    issMatches: expectedIssuer ? params.iss === expectedIssuer : undefined,
+  };
+}
+
 export function listenForCallback(opts: AuthorizeListenerOptions): () => void {
   let fired = false;
 
@@ -31,10 +46,7 @@ export function listenForCallback(opts: AuthorizeListenerOptions): () => void {
     opts.onResult({
       source,
       params,
-      stateMatches: params.state === opts.expectedState,
-      issMatches: opts.expectedIssuer
-        ? params.iss === opts.expectedIssuer
-        : undefined,
+      ...evaluateCallback(params, opts.expectedState, opts.expectedIssuer),
     });
   };
 

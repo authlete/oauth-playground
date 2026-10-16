@@ -24,13 +24,13 @@ import {
 import {
   AUTHORIZATION_DETAILS_TEMPLATES,
   parseAuthorizationDetails,
-} from "../lib/authorizationDetails";
-import { computeCodeChallenge, generateCodeVerifier } from "../lib/pkce";
-import { randomBase64Url } from "../lib/random";
-import { buildAuthorizeUrl } from "../lib/authorizeUrl";
-import { cn } from "../lib/cn";
-import { jarReadiness } from "../lib/requestObject";
-import { parseJwt } from "../lib/jwt";
+} from "../protocol/authorizationDetails";
+import { computeCodeChallenge, generateCodeVerifier } from "../protocol/pkce";
+import { randomBase64Url } from "../protocol/random";
+import { buildAuthorizeUrl } from "../protocol/authorizeUrl";
+import { cn } from "../protocol/cn";
+import { jarReadiness } from "../protocol/requestObject";
+import { parseJwt } from "../protocol/jwt";
 import {
   COMMON_SCOPES,
   GRANT_MANAGEMENT_ACTIONS,
@@ -174,6 +174,7 @@ export function AuthRequestStep() {
         <Section
           title="Request parameters"
           description="What to ask the AS for, and how it should return the response."
+          summaryRight={req.scopes.join(" ") || undefined}
         >
           <div className="space-y-5">
             <Field label="Scopes">
@@ -301,6 +302,15 @@ export function AuthRequestStep() {
               ? "PKCE is on by default — leave it on unless the AS can't handle it. PAR adds a step that pushes the request to the AS first."
               : "PKCE is on by default — leave it on unless the AS can't handle it. PAR is unavailable: this AS doesn't advertise a PAR endpoint."
           }
+          summaryRight={
+            [
+              req.pkceEnabled && "PKCE",
+              parEnabled && "PAR",
+              req.jarEnabled && "JAR",
+            ]
+              .filter(Boolean)
+              .join(" · ") || "none"
+          }
         >
           <div className="flex flex-wrap gap-x-6 gap-y-2">
             <Checkbox
@@ -338,9 +348,15 @@ export function AuthRequestStep() {
           )}
         </Section>
 
+        {/* Auto-generated each run; collapsed so it doesn't bury the request
+            config. The summary shows what's present; open it to see/regenerate. */}
         <Section
           title="Security parameters"
           description="Generated fresh for each run — regenerate any value manually with ↻."
+          summaryRight={
+            req.pkceEnabled ? "state · nonce · PKCE" : "state · nonce"
+          }
+          defaultOpen={false}
         >
           <div className="space-y-4">
             <ParamRow

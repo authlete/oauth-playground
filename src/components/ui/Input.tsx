@@ -1,5 +1,5 @@
 import { forwardRef, type InputHTMLAttributes } from "react";
-import { cn } from "../../lib/cn";
+import { cn } from "../../protocol/cn";
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   mono?: boolean;

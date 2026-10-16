@@ -6,22 +6,34 @@ import {
   type ReactNode,
 } from "react";
 import {
+  ArrowRight,
   Check,
   CircleAlert,
   Eye,
   EyeOff,
+  Fingerprint,
   KeyRound,
   Loader2,
 } from "lucide-react";
 import { usePlayground } from "../store/playground";
+import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 import { Select } from "../components/ui/Select";
 import { Textarea } from "../components/ui/Textarea";
-import { Section, StatusPill, StepHeader } from "../components/step";
-import { cn } from "../lib/cn";
-import { validateClientConfig } from "../lib/clientConfig";
-import { validateAndImportJwk } from "../lib/jwk";
-import type { ClientAuthMethod } from "../types";
+import {
+  Disclosure,
+  Section,
+  StatusPill,
+  StepHeader,
+} from "../components/step";
+import { cn } from "../protocol/cn";
+import { shorten } from "../protocol/format";
+import { validateClientConfig } from "../protocol/clientConfig";
+import { buildClientMetadata, clientMetadataUrl } from "../protocol/cimd";
+import { validateAndImportJwk } from "../protocol/jwk";
+import { DcrRegisterStep } from "./DcrRegister";
+import { FederationRegisterStep } from "./FederationRegister";
+import { DEFAULT_CLIENT_CONFIG, type ClientAuthMethod } from "../types";
 
 // Mask the sensitive JWK text when hidden (Chromium/WebKit -webkit-text-security).
 const MASK_STYLE = { WebkitTextSecurity: "disc" } as CSSProperties;
@@ -54,10 +66,44 @@ const AUTH_METHODS: Array<{
 ];
 
 export function ClientStep() {
-  const { state, clientUpdate } = usePlayground();
+  const { state, clientUpdate, setActiveStep } = usePlayground();
   const cfg = state.client;
   const [jwkValidating, setJwkValidating] = useState(false);
   const [showKey, setShowKey] = useState(false);
+
+  // CIMD lights up only when the AS advertises support. When it does, the
+  // playground's own hosted metadata document becomes the recommended identity
+  // and the manual/registration paths move to an advanced disclosure.
+  const cimdSupported =
+    state.discovery.metadata?.client_id_metadata_document_supported === true;
+  const dcrSupported =
+    typeof state.discovery.metadata?.registration_endpoint === "string";
+  const federationSupported =
+    typeof state.discovery.metadata?.federation_registration_endpoint ===
+    "string";
+  const metadataUrl = clientMetadataUrl(window.location.origin);
+  const usingCimd = cfg.clientId === metadataUrl;
+  const dcrClientId =
+    state.dcrRegister.status === "success"
+      ? state.dcrRegister.result?.clientId
+      : undefined;
+  const fedRegistered = state.federationRegister.status === "success";
+  const adoptCimdIdentity = () =>
+    clientUpdate({
+      clientId: metadataUrl,
+      authMethod: "none",
+      redirectUri: `${window.location.origin}/callback`,
+    });
+
+  // Auto-adopt CIMD when the server supports it and the client is still the
+  // stock placeholder: the registration-free default the spec makes possible.
+  // A real pasted client_id is left untouched.
+  useEffect(() => {
+    if (cimdSupported && cfg.clientId === DEFAULT_CLIENT_CONFIG.clientId) {
+      adoptCimdIdentity();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cimdSupported]);
 
   // A signing key is needed for private_key_jwt client auth AND for JAR
   // (RFC 9101) request objects — a public/PKCE client can enable JAR too.
@@ -125,158 +171,310 @@ export function ClientStep() {
       />
 
       <div className="mt-6 space-y-4">
-        <Section
-          title="Identity"
-          description="Who this client is, and where the AS sends the authorization response."
+        {cimdSupported && (
+          <CimdHero
+            metadataUrl={metadataUrl}
+            inUse={usingCimd}
+            onUse={adoptCimdIdentity}
+            onContinue={() => setActiveStep("auth-request")}
+          />
+        )}
+
+        <ClassicConfig
+          fold={cimdSupported}
+          activeId={usingCimd ? undefined : cfg.clientId}
         >
-          <div className="space-y-5">
-            <Field
-              label="Client ID"
-              hint="Accepts a plain ID or a URL. ASes that support OpenID Federation or Client ID Metadata Document will resolve a URL automatically."
-            >
-              <Input
-                mono
-                value={cfg.clientId}
-                onChange={(e) => clientUpdate({ clientId: e.target.value })}
-                placeholder="2234376661"
-                autoComplete="off"
-                spellCheck={false}
-              />
-              {looksUrlShaped(cfg.clientId) && (
-                <span className="mt-1 inline-block rounded-sm bg-[color-mix(in_oklch,var(--playground-accent)_12%,transparent)] px-1.5 py-0.5 font-mono text-[10.5px] text-[var(--playground-accent)]">
-                  URL identifier
-                </span>
-              )}
-            </Field>
-
-            <Field
-              label="Redirect URI"
-              hint={
-                "Pre-filled to this playground's /callback; override only if your AS expects a different one."
-              }
-            >
-              <Input
-                mono
-                value={cfg.redirectUri}
-                onChange={(e) => clientUpdate({ redirectUri: e.target.value })}
-                placeholder="http://localhost:5173/callback"
-                autoComplete="off"
-                spellCheck={false}
-              />
-            </Field>
-          </div>
-        </Section>
-
-        <Section
-          title="Authentication"
-          description="How the client proves itself to the authorization server."
-        >
-          <div className="space-y-5">
-            <Field
-              label="Method"
-              hint={AUTH_METHODS.find((m) => m.value === cfg.authMethod)?.hint}
-            >
-              <Select
-                value={cfg.authMethod}
-                onChange={(e) =>
-                  clientUpdate({
-                    authMethod: e.target.value as ClientAuthMethod,
-                  })
-                }
-              >
-                {AUTH_METHODS.map((m) => (
-                  <option key={m.value} value={m.value}>
-                    {m.label}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-
-            {(cfg.authMethod === "client_secret_basic" ||
-              cfg.authMethod === "client_secret_post") && (
+          <Section
+            title="Identity"
+            description="Who this client is, and where the AS sends the authorization response."
+            summaryRight={
+              cfg.clientId ? shorten(cfg.clientId, 10, 8) : undefined
+            }
+          >
+            <div className="space-y-5">
               <Field
-                label="Client secret"
-                hint="Held in memory for this session only — never persisted, never shared via URL."
+                label="Client ID"
+                hint="Accepts a plain ID or a URL. ASes that support OpenID Federation or Client ID Metadata Document will resolve a URL automatically."
               >
                 <Input
-                  type="password"
                   mono
-                  value={cfg.clientSecret}
+                  value={cfg.clientId}
+                  onChange={(e) => clientUpdate({ clientId: e.target.value })}
+                  placeholder="2234376661"
+                  autoComplete="off"
+                  spellCheck={false}
+                />
+                {looksUrlShaped(cfg.clientId) && (
+                  <span className="mt-1 inline-block rounded-sm bg-[color-mix(in_oklch,var(--playground-accent)_12%,transparent)] px-1.5 py-0.5 font-mono text-[10.5px] text-[var(--playground-accent)]">
+                    URL identifier
+                  </span>
+                )}
+              </Field>
+
+              <Field
+                label="Redirect URI"
+                hint={
+                  "Pre-filled to this playground's /callback; override only if your AS expects a different one."
+                }
+              >
+                <Input
+                  mono
+                  value={cfg.redirectUri}
                   onChange={(e) =>
-                    clientUpdate({ clientSecret: e.target.value })
+                    clientUpdate({ redirectUri: e.target.value })
                   }
-                  placeholder="paste secret"
+                  placeholder="http://localhost:5173/callback"
                   autoComplete="off"
                   spellCheck={false}
                 />
               </Field>
-            )}
+            </div>
+          </Section>
 
-            {needsSigningKey && (
+          <Disclosure
+            title="Authentication"
+            description="How the client proves itself to the authorization server."
+            summaryRight={cfg.authMethod}
+            // Collapsed for the common public/PKCE client (nothing to enter);
+            // opened when a credential method needs a secret or key.
+            defaultOpen={cfg.authMethod !== "none"}
+          >
+            <div className="space-y-5">
               <Field
-                label="Private key (JWK)"
+                label="Method"
                 hint={
-                  cfg.authMethod === "private_key_jwt"
-                    ? "Signs the client_assertion (private_key_jwt) and, if JAR is on, the request object. Paste a JWK with a private exponent (`d`); never persisted."
-                    : "Signs the JAR request object (RFC 9101). Paste a JWK with a private exponent (`d`); never persisted."
-                }
-                action={
-                  cfg.privateKey.jwkText.trim() ? (
-                    <button
-                      type="button"
-                      onClick={() => setShowKey((v) => !v)}
-                      className="inline-flex items-center gap-1 text-[11.5px] text-muted-foreground hover:text-foreground"
-                    >
-                      {showKey ? (
-                        <>
-                          <EyeOff className="h-3.5 w-3.5" /> Hide
-                        </>
-                      ) : (
-                        <>
-                          <Eye className="h-3.5 w-3.5" /> Show
-                        </>
-                      )}
-                    </button>
-                  ) : undefined
+                  AUTH_METHODS.find((m) => m.value === cfg.authMethod)?.hint
                 }
               >
-                <Textarea
-                  mono
-                  rows={10}
-                  value={cfg.privateKey.jwkText}
+                <Select
+                  value={cfg.authMethod}
                   onChange={(e) =>
                     clientUpdate({
-                      privateKey: {
-                        ...cfg.privateKey,
-                        jwkText: e.target.value,
-                      },
+                      authMethod: e.target.value as ClientAuthMethod,
                     })
                   }
-                  placeholder={
-                    '{\n  "kty": "EC",\n  "crv": "P-256",\n  "kid": "...",\n  "x": "...",\n  "y": "...",\n  "d": "..."\n}'
-                  }
-                  className="min-h-[200px] resize-y"
-                  style={showKey ? undefined : MASK_STYLE}
-                />
-                <JwkStatusLine
-                  validating={jwkValidating}
-                  status={cfg.privateKey.status}
-                  alg={cfg.privateKey.alg}
-                  kid={cfg.privateKey.kid}
-                  errorMessage={cfg.privateKey.errorMessage}
-                />
+                >
+                  {AUTH_METHODS.map((m) => (
+                    <option key={m.value} value={m.value}>
+                      {m.label}
+                    </option>
+                  ))}
+                </Select>
               </Field>
-            )}
-          </div>
-        </Section>
 
-        {!validation.ok && (
-          <div className="rounded-md border border-border bg-muted/40 p-3 text-[12.5px] text-muted-foreground">
-            {validation.message}
-          </div>
-        )}
+              {(cfg.authMethod === "client_secret_basic" ||
+                cfg.authMethod === "client_secret_post") && (
+                <Field
+                  label="Client secret"
+                  hint="Held in memory for this session only — never persisted, never shared via URL."
+                >
+                  <Input
+                    type="password"
+                    mono
+                    value={cfg.clientSecret}
+                    onChange={(e) =>
+                      clientUpdate({ clientSecret: e.target.value })
+                    }
+                    placeholder="paste secret"
+                    autoComplete="off"
+                    spellCheck={false}
+                  />
+                </Field>
+              )}
+
+              {needsSigningKey && (
+                <Field
+                  label="Private key (JWK)"
+                  hint={
+                    cfg.authMethod === "private_key_jwt"
+                      ? "Signs the client_assertion (private_key_jwt) and, if JAR is on, the request object. Paste a JWK with a private exponent (`d`); never persisted."
+                      : "Signs the JAR request object (RFC 9101). Paste a JWK with a private exponent (`d`); never persisted."
+                  }
+                  action={
+                    cfg.privateKey.jwkText.trim() ? (
+                      <button
+                        type="button"
+                        onClick={() => setShowKey((v) => !v)}
+                        className="inline-flex items-center gap-1 text-[11.5px] text-muted-foreground hover:text-foreground"
+                      >
+                        {showKey ? (
+                          <>
+                            <EyeOff className="h-3.5 w-3.5" /> Hide
+                          </>
+                        ) : (
+                          <>
+                            <Eye className="h-3.5 w-3.5" /> Show
+                          </>
+                        )}
+                      </button>
+                    ) : undefined
+                  }
+                >
+                  <Textarea
+                    mono
+                    rows={10}
+                    value={cfg.privateKey.jwkText}
+                    onChange={(e) =>
+                      clientUpdate({
+                        privateKey: {
+                          ...cfg.privateKey,
+                          jwkText: e.target.value,
+                        },
+                      })
+                    }
+                    placeholder={
+                      '{\n  "kty": "EC",\n  "crv": "P-256",\n  "kid": "...",\n  "x": "...",\n  "y": "...",\n  "d": "..."\n}'
+                    }
+                    className="min-h-[200px] resize-y"
+                    style={showKey ? undefined : MASK_STYLE}
+                  />
+                  <JwkStatusLine
+                    validating={jwkValidating}
+                    status={cfg.privateKey.status}
+                    alg={cfg.privateKey.alg}
+                    kid={cfg.privateKey.kid}
+                    errorMessage={cfg.privateKey.errorMessage}
+                  />
+                </Field>
+              )}
+            </div>
+          </Disclosure>
+
+          {!validation.ok && (
+            <div className="rounded-md border border-border bg-muted/40 p-3 text-[12.5px] text-muted-foreground">
+              {validation.message}
+            </div>
+          )}
+
+          {/* Registration methods — only when the AS advertises them. Collapsed
+              by default: they're alternatives you opt into, not the main path. */}
+          {dcrSupported && (
+            <Disclosure
+              title="Dynamic Client Registration"
+              hint="RFC 7591"
+              summaryRight={
+                dcrClientId ? shorten(dcrClientId, 8, 6) : undefined
+              }
+            >
+              <DcrRegisterStep embedded />
+            </Disclosure>
+          )}
+          {federationSupported && (
+            <Disclosure
+              title="OpenID Federation"
+              hint="OpenID Federation 1.0"
+              summaryRight={fedRegistered ? "registered" : undefined}
+            >
+              <FederationRegisterStep embedded />
+            </Disclosure>
+          )}
+        </ClassicConfig>
       </div>
     </div>
+  );
+}
+
+// The classic client-config paths (manual id, secrets, private_key_jwt — DCR
+// and Federation live under this step too). First-class when the AS has no
+// CIMD; demoted to a collapsed "advanced" disclosure when CIMD is the lead.
+function ClassicConfig({
+  fold,
+  activeId,
+  children,
+}: {
+  fold: boolean;
+  /** The manual client_id currently in use, when CIMD is not — shown in the
+   * collapsed summary so the active identity is never hidden. */
+  activeId?: string;
+  children: ReactNode;
+}) {
+  if (!fold) return <div className="space-y-4">{children}</div>;
+  return (
+    <Disclosure
+      title="Other ways to identify the client"
+      description="A manual client_id, a client secret, private_key_jwt, Dynamic Client Registration, or OpenID Federation."
+      defaultOpen={!!activeId}
+    >
+      <div className="space-y-4">{children}</div>
+    </Disclosure>
+  );
+}
+
+// The hero: when the AS advertises CIMD, this is the recommended, zero-config
+// way to identify the client. The playground hosts its own metadata document
+// and the client_id is simply that URL.
+function CimdHero({
+  metadataUrl,
+  inUse,
+  onUse,
+  onContinue,
+}: {
+  metadataUrl: string;
+  inUse: boolean;
+  onUse: () => void;
+  onContinue: () => void;
+}) {
+  const doc = useMemo(
+    () => buildClientMetadata(new URL(metadataUrl).origin),
+    [metadataUrl],
+  );
+  return (
+    <section className="rounded-lg border border-[var(--playground-accent)]/40 bg-[color-mix(in_oklch,var(--playground-accent)_7%,transparent)] p-4 @4xl:p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-2.5">
+          <Fingerprint className="mt-0.5 h-5 w-5 shrink-0 text-[var(--playground-accent)]" />
+          <div>
+            <h2 className="text-[13px] font-semibold leading-5">
+              Client ID Metadata Document
+            </h2>
+            <p className="mt-0.5 text-[12px] leading-relaxed text-muted-foreground">
+              Instead of registering, the client is identified by a URL that
+              serves its metadata. The playground hosts its own.
+            </p>
+          </div>
+        </div>
+        <StatusPill tone="success">supported</StatusPill>
+      </div>
+
+      <div className="mt-3 rounded-md border border-border bg-background/60 p-2.5">
+        <div className="text-[10.5px] uppercase tracking-wide text-muted-foreground">
+          client_id
+        </div>
+        <code className="mt-0.5 block break-all font-mono text-[12px]">
+          {metadataUrl}
+        </code>
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        {inUse ? (
+          <>
+            <span className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-[var(--status-success)]">
+              <Check className="h-4 w-4" />
+              In use
+            </span>
+            <span className="flex-1" />
+            <Button size="sm" onClick={onContinue}>
+              Continue to Auth request
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          </>
+        ) : (
+          <Button onClick={onUse}>
+            <Fingerprint className="h-4 w-4" />
+            Use this identity
+          </Button>
+        )}
+      </div>
+
+      <Disclosure
+        title="View the document"
+        description="The JSON the server fetches from the client_id URL."
+      >
+        <pre className="overflow-x-auto rounded-md border border-border bg-background/60 p-3 font-mono text-[11.5px] leading-relaxed">
+          {JSON.stringify(doc, null, 2)}
+        </pre>
+      </Disclosure>
+    </section>
   );
 }
 

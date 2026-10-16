@@ -5,9 +5,9 @@ import {
   previewAuthorize,
   previewPar,
   prettyUrl,
-} from "../../lib/requestPreview";
-import { cn } from "../../lib/cn";
-import type { AuthorizeUrlResult } from "../../lib/authorizeUrl";
+} from "../../protocol/requestPreview";
+import { cn } from "../../protocol/cn";
+import type { AuthorizeUrlResult } from "../../protocol/authorizeUrl";
 import type {
   AuthRequestState,
   ClientConfigState,

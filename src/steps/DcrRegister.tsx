@@ -36,7 +36,7 @@ import {
   buildRegistrationRequest,
   parseRedirectUris,
   registerClient,
-} from "../lib/dcrClient";
+} from "../protocol/dcrClient";
 import {
   DCR_GRANT_TYPES,
   type ClientAuthMethod,
@@ -53,7 +53,9 @@ const AUTH_METHODS: Array<{ value: ClientAuthMethod; label: string }> = [
 ];
 const SUPPORTED_AUTH_METHODS = AUTH_METHODS.map((m) => m.value as string);
 
-export function DcrRegisterStep() {
+// `embedded` renders the form inside the Client step's "Other ways" area —
+// without the page header/width wrapper — since identity methods live there.
+export function DcrRegisterStep({ embedded = false }: { embedded?: boolean }) {
   const {
     state,
     dcrRegisterUpdate,
@@ -173,8 +175,10 @@ export function DcrRegisterStep() {
   };
 
   return (
-    <div className="mx-auto max-w-3xl @4xl:max-w-5xl">
-      <StepHeader step="dcr-register" right={renderPill(reg.status)} />
+    <div className={embedded ? "" : "mx-auto max-w-3xl @4xl:max-w-5xl"}>
+      {!embedded && (
+        <StepHeader step="dcr-register" right={renderPill(reg.status)} />
+      )}
 
       {!endpoint && (
         <Banner tone="warn" className="mt-5">
@@ -323,6 +327,7 @@ export function DcrRegisterStep() {
             <Section
               title="Request body"
               description="Sent as JSON to the registration endpoint."
+              defaultOpen={false}
             >
               <pre className="max-h-[220px] overflow-auto rounded-md border border-border bg-background/60 p-3 font-mono text-[11.5px] leading-relaxed">
                 {JSON.stringify(request, null, 2)}

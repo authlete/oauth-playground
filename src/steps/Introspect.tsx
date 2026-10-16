@@ -12,8 +12,8 @@ import {
   StepHeader,
   type StatusTone,
 } from "../components/step";
-import { formatValue } from "../lib/format";
-import { introspect } from "../lib/introspect";
+import { formatValue } from "../protocol/format";
+import { introspect } from "../protocol/introspect";
 import type { IntrospectState } from "../types";
 
 export function IntrospectStep() {

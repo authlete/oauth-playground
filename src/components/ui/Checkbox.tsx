@@ -1,6 +1,6 @@
 import { forwardRef, type InputHTMLAttributes } from "react";
 import { Check } from "lucide-react";
-import { cn } from "../../lib/cn";
+import { cn } from "../../protocol/cn";
 
 interface CheckboxProps extends Omit<
   InputHTMLAttributes<HTMLInputElement>,

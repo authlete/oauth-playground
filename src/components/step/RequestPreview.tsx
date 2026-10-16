@@ -6,7 +6,7 @@ import {
   formatFormBody,
   prettyUrl,
   type PreviewBlock,
-} from "../../lib/requestPreview";
+} from "../../protocol/requestPreview";
 
 /** Wire-level request preview.
  *
