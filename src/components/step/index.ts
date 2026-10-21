@@ -13,6 +13,7 @@ export { StepHeader, type StepHeaderProps } from "./StepHeader";
 export { RequestPreview } from "./RequestPreview";
 export { JwtPanel } from "./JwtPanel";
 export { Choice } from "./Choice";
+export { GrantSummary } from "./GrantSummary";
 export {
   AuthorizationDetailChips,
   AuthorizationDetailsBlock,

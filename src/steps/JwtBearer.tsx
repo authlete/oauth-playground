@@ -10,6 +10,7 @@ import {
   Choice,
   Disclosure,
   ErrorPanel,
+  GrantSummary,
   InfoCard,
   JwtPanel,
   KVGrid,
@@ -252,6 +253,17 @@ export function JwtBearerStep() {
                 )}
               </Field>
             </div>
+          </Section>
+
+          <Section title="Requested access" className="mt-3">
+            <GrantSummary
+              scopes={state.authRequest.scopes}
+              rar={{
+                enabled: state.authRequest.authorizationDetailsEnabled,
+                text: state.authRequest.authorizationDetails,
+              }}
+              onEdit={() => setActiveStep("auth-request")}
+            />
           </Section>
 
           <Disclosure title="Advanced" className="mt-3">

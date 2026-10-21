@@ -14,9 +14,9 @@ import { usePlayground } from "../store/playground";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 import {
-  AuthorizationDetailChips,
   Banner,
   ErrorPanel,
+  GrantSummary,
   RequestPreview,
   Section,
   StatusPill,
@@ -26,7 +26,6 @@ import {
 import { formatDuration } from "../protocol/format";
 import { looksLikeJwt } from "../protocol/jwt";
 import { validateClientConfig } from "../protocol/clientConfig";
-import { parseAuthorizationDetails } from "../protocol/authorizationDetails";
 import { previewCiba } from "../protocol/requestPreview";
 import { startBackchannelAuth } from "../protocol/cibaAuth";
 import { pollCibaToken } from "../protocol/cibaPoll";
@@ -303,8 +302,10 @@ export function CibaStep() {
               </div>
               <GrantSummary
                 scopes={authRequest.scopes}
-                rarEnabled={authRequest.authorizationDetailsEnabled}
-                rarText={authRequest.authorizationDetails}
+                rar={{
+                  enabled: authRequest.authorizationDetailsEnabled,
+                  text: authRequest.authorizationDetails,
+                }}
                 onEdit={() => setActiveStep("auth-request")}
               />
             </div>
@@ -433,58 +434,6 @@ function Field({
       </span>
       {children}
     </label>
-  );
-}
-
-// scope + authorization_details both come from Auth request (one source of
-// truth); this shows what CIBA will carry and links back to edit them.
-function GrantSummary({
-  scopes,
-  rarEnabled,
-  rarText,
-  onEdit,
-}: {
-  scopes: string[];
-  rarEnabled: boolean;
-  rarText: string;
-  onEdit: () => void;
-}) {
-  const parsed =
-    rarEnabled && rarText.trim() ? parseAuthorizationDetails(rarText) : null;
-  return (
-    <div className="space-y-2 rounded-md border border-border bg-background/40 p-3">
-      <div>
-        <span className="font-mono text-[11px] text-muted-foreground">
-          scope
-        </span>
-        <p className="font-mono text-[12.5px]">
-          {scopes.length ? scopes.join(" ") : "none selected"}
-        </p>
-      </div>
-      <div>
-        <span className="font-mono text-[11px] text-muted-foreground">
-          authorization_details
-        </span>
-        {parsed?.ok ? (
-          <div className="mt-1">
-            <AuthorizationDetailChips details={parsed.details} />
-          </div>
-        ) : (
-          <p className="text-[12.5px] text-muted-foreground">
-            {rarEnabled
-              ? "enabled — check the JSON in Auth request"
-              : "off (RAR)"}
-          </p>
-        )}
-      </div>
-      <button
-        type="button"
-        onClick={onEdit}
-        className="text-[11.5px] text-[var(--playground-accent)] hover:underline"
-      >
-        edit in Auth request →
-      </button>
-    </div>
   );
 }
 
