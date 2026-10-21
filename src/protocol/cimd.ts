@@ -30,6 +30,12 @@ export function buildClientMetadata(origin: string): Record<string, unknown> {
     ],
     response_types: ["code"],
     scope: "openid profile email",
+    // RAR types this client may request (RFC 9396) — mirrors what DCR registers.
+    authorization_details_types: [
+      "Accounts",
+      "CreditCardAccounts",
+      "SinglePayments",
+    ],
   };
 }
 
