@@ -78,7 +78,7 @@ export function RequestPreview({
   return (
     <Section
       title="Final request"
-      description="The exact request on the wire — method, headers, body."
+      description="The exact request on the wire."
       className={className}
       action={copyButton}
     >

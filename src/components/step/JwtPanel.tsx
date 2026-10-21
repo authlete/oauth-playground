@@ -27,9 +27,7 @@ export function JwtPanel({
     }
   };
 
-  const headerSubtitle = `alg=${jwt.header.alg ?? "?"}${
-    jwt.header.kid ? ` · kid=${jwt.header.kid}` : ""
-  }`;
+  const headerSubtitle = `alg=${jwt.header.alg ?? "?"}`;
 
   return (
     <div className="space-y-3">

@@ -311,7 +311,7 @@ export function JwtBearerStep() {
             <Section
               title="assertion"
               hint="decoded"
-              description="Decoded. This JWT rides in the request below as the assertion parameter — not the client_assertion (client auth)."
+              description="This JWT rides in the request below as the assertion parameter."
               className="mt-4"
             >
               <JwtPanel jwt={parsed.jwt} payloadSubtitle="RFC 7523 grant" />

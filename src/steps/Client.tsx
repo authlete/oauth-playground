@@ -373,11 +373,7 @@ export function ClientStep() {
               {needsSigningKey && (
                 <Field
                   label="Private key (JWK)"
-                  hint={
-                    cfg.authMethod === "private_key_jwt"
-                      ? "Signs the client_assertion (private_key_jwt) and, if JAR is on, the request object. Paste a JWK with a private exponent (`d`); never persisted."
-                      : "Signs the JAR request object (RFC 9101). Paste a JWK with a private exponent (`d`); never persisted."
-                  }
+                  hint="The client's signing key. Paste a JWK with a private exponent (`d`); never persisted."
                   action={
                     cfg.privateKey.jwkText.trim() ? (
                       <button
@@ -642,13 +638,14 @@ function CimdHero({
             variant="secondary"
             onClick={onCreateConfidential}
             disabled={creating}
+            className="bg-card/40 text-muted-foreground hover:bg-accent/40 hover:text-foreground"
           >
             {creating ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <KeyRound className="h-4 w-4" />
             )}
-            {creating ? "Creating…" : "Create with a key"}
+            {creating ? "Creating…" : "Create a confidential client"}
           </Button>
         )}
         {inUse && (

@@ -197,13 +197,6 @@ function applyClientAuthPreview(
         "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
       );
       body.set("client_assertion", "<signed JWT — created at send time>");
-      notes.push(
-        `client_assertion: JWT signed with the imported JWK${
-          client.privateKey.alg ? ` (${client.privateKey.alg})` : ""
-        }${
-          client.privateKey.kid ? `, kid=${client.privateKey.kid}` : ""
-        }; iat/exp/jti regenerated on each send.`,
-      );
       return;
   }
 }
