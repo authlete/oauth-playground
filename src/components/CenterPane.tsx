@@ -11,6 +11,7 @@ import { AuthorizeStep } from "../steps/Authorize";
 import { TokenStep } from "../steps/Token";
 import { CibaStep } from "../steps/Ciba";
 import { DeviceStep } from "../steps/Device";
+import { JwtBearerStep } from "../steps/JwtBearer";
 import { InspectStep } from "../steps/Inspect";
 import { UserInfoStep } from "../steps/UserInfo";
 import { IntrospectStep } from "../steps/Introspect";
@@ -30,6 +31,7 @@ const STEP_COMPONENTS: Record<StepId, ComponentType> = {
   token: TokenStep,
   ciba: CibaStep,
   device: DeviceStep,
+  "jwt-bearer": JwtBearerStep,
   inspect: InspectStep,
   userinfo: UserInfoStep,
   introspect: IntrospectStep,

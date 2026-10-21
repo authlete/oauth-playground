@@ -6,7 +6,12 @@
 import { buildAuthorizeUrl } from "./authorizeUrl";
 import { validateClientConfig } from "./clientConfig";
 import { jarReadiness } from "./requestObject";
-import type { Flow, StepId, StepStatus } from "../types";
+import {
+  JWT_BEARER_GRANT_TYPE,
+  type Flow,
+  type StepId,
+  type StepStatus,
+} from "../types";
 
 interface CascadeState {
   /** The selected token-acquisition flow; a flow's get-token steps are hidden
@@ -22,6 +27,7 @@ interface CascadeState {
   token: { status: string; accessToken?: string };
   ciba: { status: string };
   device: { status: string };
+  jwtBearer: { status: string };
   userInfo: { status: string };
   introspect: { status: string };
   grantManagement: { status: string };
@@ -70,6 +76,13 @@ export function computeStepStatuses(
   // Device flow appears only when the AS advertises a device endpoint.
   const deviceEndpoint =
     typeof state.discoveryMetadata?.device_authorization_endpoint === "string";
+  // JWT Bearer rides the shared token_endpoint, so it's gated on the grant
+  // being advertised — but stays lenient when grant_types_supported is absent.
+  const jwtBearerGrants = state.discoveryMetadata?.grant_types_supported;
+  const jwtBearerSupported =
+    typeof state.discoveryMetadata?.token_endpoint === "string" &&
+    (!Array.isArray(jwtBearerGrants) ||
+      jwtBearerGrants.includes(JWT_BEARER_GRANT_TYPE));
 
   // A get-token step shows only when its flow is the selected one — the flows
   // are alternatives, so the rail shows one at a time rather than all at once.
@@ -139,6 +152,14 @@ export function computeStepStatuses(
         : !(discoveryDone && clientValid)
           ? "locked"
           : state.device.status === "success"
+            ? "done"
+            : "ready",
+    "jwt-bearer":
+      !jwtBearerSupported || state.flow !== "jwt-bearer"
+        ? "hidden"
+        : !(discoveryDone && clientValid)
+          ? "locked"
+          : state.jwtBearer.status === "success"
             ? "done"
             : "ready",
     // Inspector is passive — unlock as soon as JWKS is available (i.e.

@@ -34,6 +34,7 @@ import {
   DEFAULT_DCR_REGISTER,
   DEFAULT_FEDERATION_REGISTER,
   DEFAULT_GRANT_MANAGEMENT,
+  DEFAULT_JWT_BEARER,
   DEFAULT_INSPECTOR,
   DEFAULT_INTROSPECT,
   DEFAULT_PAR,
@@ -56,6 +57,7 @@ import {
   type DiscoveryState,
   type FederationRegisterState,
   type GrantManagementState,
+  type JwtBearerState,
   type InspectorState,
   type IntrospectState,
   type ManualEndpoints,
@@ -97,6 +99,7 @@ interface State {
   token: TokenState;
   ciba: CibaState;
   device: DeviceState;
+  jwtBearer: JwtBearerState;
   inspector: InspectorState;
   userInfo: UserInfoState;
   introspect: IntrospectState;
@@ -134,6 +137,8 @@ type Action =
   | { type: "ciba-reset" }
   | { type: "device-update"; patch: Partial<DeviceState> }
   | { type: "device-reset" }
+  | { type: "jwt-bearer-update"; patch: Partial<JwtBearerState> }
+  | { type: "jwt-bearer-reset" }
   | { type: "inspector-update"; patch: Partial<InspectorState> }
   | { type: "userinfo-update"; patch: Partial<UserInfoState> }
   | { type: "introspect-update"; patch: Partial<IntrospectState> }
@@ -299,6 +304,7 @@ const initialState: State = {
     token: "locked",
     ciba: "hidden",
     device: "hidden",
+    "jwt-bearer": "hidden",
     inspect: "locked",
     userinfo: "locked",
     introspect: "locked",
@@ -328,6 +334,7 @@ const initialState: State = {
   token: DEFAULT_TOKEN,
   ciba: DEFAULT_CIBA,
   device: DEFAULT_DEVICE,
+  jwtBearer: DEFAULT_JWT_BEARER,
   inspector: DEFAULT_INSPECTOR,
   userInfo: DEFAULT_USERINFO,
   introspect: DEFAULT_INTROSPECT,
@@ -445,6 +452,10 @@ function reducer(state: State, action: Action): State {
       return { ...state, device: { ...state.device, ...action.patch } };
     case "device-reset":
       return { ...state, device: DEFAULT_DEVICE };
+    case "jwt-bearer-update":
+      return { ...state, jwtBearer: { ...state.jwtBearer, ...action.patch } };
+    case "jwt-bearer-reset":
+      return { ...state, jwtBearer: DEFAULT_JWT_BEARER };
     case "inspector-update":
       return { ...state, inspector: { ...state.inspector, ...action.patch } };
     case "userinfo-update":
@@ -497,6 +508,8 @@ interface PlaygroundContextValue {
   cibaReset: () => void;
   deviceUpdate: (patch: Partial<DeviceState>) => void;
   deviceReset: () => void;
+  jwtBearerUpdate: (patch: Partial<JwtBearerState>) => void;
+  jwtBearerReset: () => void;
   inspectorUpdate: (patch: Partial<InspectorState>) => void;
   userInfoUpdate: (patch: Partial<UserInfoState>) => void;
   introspectUpdate: (patch: Partial<IntrospectState>) => void;
@@ -851,6 +864,7 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
       token: state.token,
       ciba: state.ciba,
       device: state.device,
+      jwtBearer: state.jwtBearer,
       userInfo: state.userInfo,
       introspect: state.introspect,
       grantManagement: state.grantManagement,
@@ -875,6 +889,7 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
     state.token,
     state.ciba,
     state.device,
+    state.jwtBearer,
     state.userInfo,
     state.introspect,
     state.grantManagement,
@@ -1004,6 +1019,15 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
     [],
   );
   const deviceReset = useCallback(() => dispatch({ type: "device-reset" }), []);
+  const jwtBearerUpdate = useCallback(
+    (patch: Partial<JwtBearerState>) =>
+      dispatch({ type: "jwt-bearer-update", patch }),
+    [],
+  );
+  const jwtBearerReset = useCallback(
+    () => dispatch({ type: "jwt-bearer-reset" }),
+    [],
+  );
   const inspectorUpdate = useCallback(
     (patch: Partial<InspectorState>) =>
       dispatch({ type: "inspector-update", patch }),
@@ -1067,6 +1091,8 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
       cibaReset,
       deviceUpdate,
       deviceReset,
+      jwtBearerUpdate,
+      jwtBearerReset,
       inspectorUpdate,
       userInfoUpdate,
       introspectUpdate,
@@ -1102,6 +1128,8 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
       cibaReset,
       deviceUpdate,
       deviceReset,
+      jwtBearerUpdate,
+      jwtBearerReset,
       inspectorUpdate,
       userInfoUpdate,
       introspectUpdate,

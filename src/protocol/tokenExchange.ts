@@ -64,6 +64,48 @@ export function parseTokenSuccessBody(
   };
 }
 
+/** A /token HTTP response → TokenExchangeResult. Shared by the code exchange
+ * and the JWT bearer grant — identical success/error mapping. */
+export function parseTokenResponse(
+  response: Response,
+  responseBody: string,
+): TokenExchangeResult {
+  let parsed: Record<string, unknown>;
+  try {
+    parsed = JSON.parse(responseBody) as Record<string, unknown>;
+  } catch {
+    return {
+      ok: false,
+      message: "/token response was not JSON.",
+      status: response.status,
+      body: responseBody,
+    };
+  }
+  if (!response.ok) {
+    return {
+      ok: false,
+      message: `AS returned ${response.status} from /token.`,
+      status: response.status,
+      body: responseBody,
+      error: typeof parsed.error === "string" ? parsed.error : undefined,
+      errorDescription:
+        typeof parsed.error_description === "string"
+          ? parsed.error_description
+          : undefined,
+    };
+  }
+  const success = parseTokenSuccessBody(parsed);
+  if (!success) {
+    return {
+      ok: false,
+      message: "/token response is missing `access_token`.",
+      status: response.status,
+      body: responseBody,
+    };
+  }
+  return { ok: true, ...success };
+}
+
 /** Exchange result → TokenState patch. Shared by the manual Exchange button
  * and the auto-pilot so both land identical state. */
 export function tokenStatePatchFromResult(
@@ -176,43 +218,5 @@ export async function exchangeCode(
           : String(err),
   });
   if (!sent.ok) return { ok: false, message: sent.message };
-  const { response, bodyText: responseBody } = sent;
-
-  let parsed: Record<string, unknown>;
-  try {
-    parsed = JSON.parse(responseBody) as Record<string, unknown>;
-  } catch {
-    return {
-      ok: false,
-      message: "/token response was not JSON.",
-      status: response.status,
-      body: responseBody,
-    };
-  }
-
-  if (!response.ok) {
-    return {
-      ok: false,
-      message: `AS returned ${response.status} from /token.`,
-      status: response.status,
-      body: responseBody,
-      error: typeof parsed.error === "string" ? parsed.error : undefined,
-      errorDescription:
-        typeof parsed.error_description === "string"
-          ? parsed.error_description
-          : undefined,
-    };
-  }
-
-  const success = parseTokenSuccessBody(parsed);
-  if (!success) {
-    return {
-      ok: false,
-      message: "/token response is missing `access_token`.",
-      status: response.status,
-      body: responseBody,
-    };
-  }
-
-  return { ok: true, ...success };
+  return parseTokenResponse(sent.response, sent.bodyText);
 }

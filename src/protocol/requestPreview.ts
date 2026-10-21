@@ -7,6 +7,7 @@
 import { buildAuthorizeParams, buildJarParams } from "./authorizeUrl";
 import { buildBackchannelParams } from "./cibaAuth";
 import { buildDeviceParams } from "./deviceAuth";
+import { buildJwtBearerParams } from "./jwtBearerGrant";
 import type { AuthRequestState, CibaState, ClientConfigState } from "../types";
 
 // Shown only before a valid signing key exists; normally the real signed JWT
@@ -133,6 +134,36 @@ export function previewDevice(
   return {
     method: "POST",
     url: endpoint,
+    headers,
+    body: body.toString(),
+    notes: notes.length ? notes : undefined,
+  };
+}
+
+export function previewJwtBearer(
+  tokenEndpoint: string,
+  client: ClientConfigState,
+  authRequest: AuthRequestState,
+  assertion: string | null,
+  dpopEnabled: boolean,
+): PreviewBlock {
+  const body = buildJwtBearerParams(authRequest);
+  // The real, live-signed grant assertion goes on the wire; it's re-signed
+  // (fresh iat/exp/jti) at send time but the shape is exactly this.
+  body.set("assertion", assertion ?? "…");
+  const headers: Array<[string, string]> = [
+    ["Content-Type", "application/x-www-form-urlencoded"],
+    ["Accept", "application/json"],
+  ];
+  // Client auth is the OTHER JWT: private_key_jwt adds client_assertion.
+  const notes: string[] = [];
+  applyClientAuthPreview(client, headers, body, notes);
+  if (dpopEnabled) {
+    headers.push(["DPoP", "<signed proof — created at send time>"]);
+  }
+  return {
+    method: "POST",
+    url: tokenEndpoint,
     headers,
     body: body.toString(),
     notes: notes.length ? notes : undefined,

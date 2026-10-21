@@ -9,6 +9,7 @@ export type StepId =
   | "token"
   | "ciba"
   | "device"
+  | "jwt-bearer"
   | "inspect"
   | "userinfo"
   | "introspect"
@@ -51,7 +52,13 @@ export const STEP_PHASES: PhaseDef[] = [
 /** A token-acquisition flow. These are alternatives — you pick ONE — so they
  * are a choice in the rail's "Get a token" zone, not a stack of steps. Each is
  * offered only when the AS advertises its endpoint. */
-export type Flow = "authorization-code" | "device" | "ciba";
+export type Flow = "authorization-code" | "device" | "ciba" | "jwt-bearer";
+
+// RFC 7523 §2.1 — the grant_type URN for presenting a JWT as an authorization
+// grant (distinct from the identically-suffixed client-assertion-type used for
+// private_key_jwt client auth).
+export const JWT_BEARER_GRANT_TYPE =
+  "urn:ietf:params:oauth:grant-type:jwt-bearer";
 
 export interface FlowDef {
   id: Flow;
@@ -61,6 +68,10 @@ export interface FlowDef {
   endpoint: keyof OidcMetadata;
   /** Where the rail lands when this flow is selected. */
   entryStep: StepId;
+  /** When set, also require grant_types_supported to advertise this value —
+   * used by flows (JWT Bearer) that ride the shared token_endpoint and so have
+   * no dedicated endpoint of their own to gate on. */
+  requiresGrantType?: string;
 }
 
 export const FLOWS: FlowDef[] = [
@@ -82,7 +93,32 @@ export const FLOWS: FlowDef[] = [
     endpoint: "backchannel_authentication_endpoint",
     entryStep: "ciba",
   },
+  {
+    id: "jwt-bearer",
+    label: "JWT Bearer Grant",
+    endpoint: "token_endpoint",
+    entryStep: "jwt-bearer",
+    requiresGrantType: JWT_BEARER_GRANT_TYPE,
+  },
 ];
+
+/** Whether a flow should be offered for a given AS. Beyond the endpoint being
+ * present, a `requiresGrantType` flow is shown only when the AS advertises that
+ * grant in grant_types_supported — but when the AS omits the list entirely we
+ * stay lenient and still offer it (many ASes don't publish grant_types). */
+export function isFlowAvailable(
+  flow: FlowDef,
+  metadata?: OidcMetadata,
+): boolean {
+  if (typeof metadata?.[flow.endpoint] !== "string") return false;
+  if (flow.requiresGrantType) {
+    const grants = metadata?.grant_types_supported;
+    if (Array.isArray(grants) && !grants.includes(flow.requiresGrantType)) {
+      return false;
+    }
+  }
+  return true;
+}
 
 export interface StepDef {
   id: StepId;
@@ -141,6 +177,12 @@ export const STEPS: StepDef[] = [
     flow: "ciba",
   },
   { id: "device", name: "Device flow", phase: "get-token", flow: "device" },
+  {
+    id: "jwt-bearer",
+    name: "JWT Bearer Grant",
+    phase: "get-token",
+    flow: "jwt-bearer",
+  },
 
   // Use the token — a menu, any order, once a token exists.
   { id: "resource", name: "Resource call", phase: "use-token" },
@@ -222,6 +264,9 @@ export interface OidcMetadata {
   // DPoP (RFC 9449) — the proof-JWT signing algs the AS accepts. Present ⇒
   // sender-constrained tokens are available.
   dpop_signing_alg_values_supported?: string[];
+  // RFC 8414 — the grant types the AS supports. Used to gate the JWT Bearer
+  // grant flow, which has no dedicated endpoint to detect it by.
+  grant_types_supported?: string[];
   [key: string]: unknown;
 }
 
@@ -588,6 +633,54 @@ export interface DeviceState {
 }
 
 export const DEFAULT_DEVICE: DeviceState = { status: "idle" };
+
+// JWT Bearer authorization grant (RFC 7523 §2.1): the client presents a signed
+// JWT (the `assertion`) at /token for a token. Only the assertion's own inputs
+// live here; scope / resource / authorization_details come from AuthRequestState
+// and issued tokens land in TokenState.
+export type JwtBearerStatus = "idle" | "loading" | "success" | "error";
+
+// aud identifies the AS (RFC 7523 §3) — either its issuer identifier or the
+// token endpoint URL; both are spec-valid.
+export type JwtBearerAudMode = "issuer" | "token";
+
+// Who issues the assertion. "client" (default): the client is the issuer —
+// iss = client_id, signed with the client's key. "external": a different
+// trusted issuer, identified and keyed below (iss ≠ client).
+export type JwtBearerIssuer = "client" | "external";
+
+export interface JwtBearerState {
+  status: JwtBearerStatus;
+  issuerMode: JwtBearerIssuer;
+  /** `iss` and its signing key, used when issuerMode is "external". The AS must
+   * trust this issuer's public key. In-memory only. */
+  externalIssuer: string;
+  externalJwk: string;
+  /** `sub` — the user the client acts for. Opaque; auto-seeded so the step is
+   * ready without a forced click. */
+  subject: string;
+  audMode: JwtBearerAudMode;
+  /** Assertion lifetime in seconds; `exp` = `iat` + this. */
+  lifetimeSecs: number;
+  includeNbf: boolean;
+  includeJti: boolean;
+  exchangedAt?: number;
+  errorMessage?: string;
+  errorStatus?: number;
+  errorBody?: string;
+}
+
+export const DEFAULT_JWT_BEARER: JwtBearerState = {
+  status: "idle",
+  issuerMode: "client",
+  externalIssuer: "",
+  externalJwk: "",
+  subject: "",
+  audMode: "issuer",
+  lifetimeSecs: 60,
+  includeNbf: false,
+  includeJti: true,
+};
 
 export type InspectorSource = "access" | "id" | "refresh" | "paste";
 

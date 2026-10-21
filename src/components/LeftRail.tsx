@@ -5,6 +5,7 @@ import {
   FLOWS,
   STEPS,
   STEP_PHASES,
+  isFlowAvailable,
   type Flow,
   type StepDef,
   type StepId,
@@ -72,9 +73,7 @@ export function LeftRail() {
   // The flows the AS actually supports (authorization-code is always offered
   // once discovery runs). The picker only appears when there's a choice.
   const metadata = state.discovery.metadata;
-  const availableFlows = FLOWS.filter(
-    (f) => typeof metadata?.[f.endpoint] === "string",
-  );
+  const availableFlows = FLOWS.filter((f) => isFlowAvailable(f, metadata));
 
   // Number only the path TO a token (Connection + Get a token). Use/Manage/
   // Tools are menus and utilities — no sequence to imply, so no numbers.

@@ -12,6 +12,7 @@ import { Button } from "../components/ui/Button";
 import { Textarea } from "../components/ui/Textarea";
 import {
   Banner,
+  Choice,
   ErrorPanel,
   InfoCard,
   JwtPanel,
@@ -134,16 +135,11 @@ export function FederationRegisterStep({
         description={MODES.find((m) => m.id === reg.mode)?.hint}
         className="mt-4"
       >
-        <div className="flex gap-2">
-          {MODES.map((m) => (
-            <ModeTab
-              key={m.id}
-              active={reg.mode === m.id}
-              label={m.label}
-              onClick={() => federationRegisterUpdate({ mode: m.id })}
-            />
-          ))}
-        </div>
+        <Choice
+          value={reg.mode}
+          options={MODES}
+          onChange={(mode) => federationRegisterUpdate({ mode })}
+        />
         <Textarea
           className="mt-3 font-mono text-[12px]"
           rows={8}
@@ -237,31 +233,6 @@ function SuccessPanel({
 
       <JwtPanel jwt={parsed} />
     </div>
-  );
-}
-
-function ModeTab({
-  active,
-  label,
-  onClick,
-}: {
-  active: boolean;
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className={
-        active
-          ? "rounded-md border border-[var(--playground-accent)] bg-[color-mix(in_oklch,var(--playground-accent)_10%,transparent)] px-3 py-1.5 text-[12.5px] font-medium"
-          : "rounded-md border border-border bg-card/40 px-3 py-1.5 text-[12.5px] text-muted-foreground hover:bg-accent/40 hover:text-foreground transition-colors"
-      }
-    >
-      {label}
-    </button>
   );
 }
 
