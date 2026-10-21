@@ -21,6 +21,7 @@ interface LivePreviewProps {
   authRequest: AuthRequestState;
   parEnabled: boolean;
   parPushed: boolean;
+  dpopProof: string | null;
   copied: "url" | "curl" | null;
   onCopy: (kind: "url" | "curl") => void;
   onContinue: () => void;
@@ -64,7 +65,12 @@ export function LivePreview(props: LivePreviewProps) {
           {showPar && parEndpoint ? (
             <RequestPreview
               variant="plain"
-              block={previewPar(parEndpoint, props.client, props.authRequest)}
+              block={previewPar(
+                parEndpoint,
+                props.client,
+                props.authRequest,
+                props.dpopProof,
+              )}
             />
           ) : showJar && authEndpoint ? (
             <RequestPreview

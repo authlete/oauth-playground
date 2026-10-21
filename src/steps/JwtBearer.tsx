@@ -32,6 +32,7 @@ import {
 } from "../protocol/jwtBearerGrant";
 import { tokenStatePatchFromResult } from "../protocol/tokenExchange";
 import { dpopContextFrom } from "../protocol/dpop";
+import { useDpopProof } from "./parts/useDpopProof";
 
 export function JwtBearerStep() {
   const {
@@ -110,6 +111,8 @@ export function JwtBearerStep() {
     jwtBearer.includeNbf,
     jwtBearer.includeJti,
   ]);
+
+  const dpopProof = useDpopProof(state.dpop, "POST", tokenEndpoint);
 
   const clientValid = validateClientConfig(client).ok;
   // A produced assertion means the key imported and the claims resolved — the
@@ -343,7 +346,7 @@ export function JwtBearerStep() {
               client,
               state.authRequest,
               assertionJwt,
-              state.dpop.enabled,
+              dpopProof,
             )}
           />
 

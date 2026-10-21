@@ -23,6 +23,7 @@ import { previewPar } from "../protocol/requestPreview";
 import { pushPar } from "../protocol/parClient";
 import { dpopContextFrom } from "../protocol/dpop";
 import { jarReadiness } from "../protocol/requestObject";
+import { useDpopProof } from "./parts/useDpopProof";
 
 export function ParStep() {
   const {
@@ -53,6 +54,7 @@ export function ParStep() {
 
   const parEndpoint =
     state.discovery.metadata?.pushed_authorization_request_endpoint;
+  const dpopProof = useDpopProof(state.dpop, "POST", parEndpoint);
   const jarReady = jarReadiness(state.client, state.authRequest);
   const canPush =
     par.enabled &&
@@ -161,7 +163,12 @@ export function ParStep() {
         <>
           <RequestPreview
             className="mt-5"
-            block={previewPar(parEndpoint, state.client, state.authRequest)}
+            block={previewPar(
+              parEndpoint,
+              state.client,
+              state.authRequest,
+              dpopProof,
+            )}
           />
 
           <div className="mt-5 flex flex-wrap gap-2">

@@ -42,6 +42,7 @@ export function previewPar(
   endpoint: string,
   client: ClientConfigState,
   authRequest: AuthRequestState,
+  dpopProof?: string | null,
 ): PreviewBlock {
   const body = authRequest.jarEnabled
     ? buildJarParams(client, authRequest, jarRequestValue(authRequest))
@@ -53,6 +54,7 @@ export function previewPar(
   const notes: string[] = [];
   if (authRequest.jarEnabled)
     notes.push(jarNote(client, !!authRequest.requestObjectJwt));
+  applyDpopPreview(headers, dpopProof, notes);
   applyClientAuthPreview(client, headers, body, notes);
   return {
     method: "POST",
@@ -145,7 +147,7 @@ export function previewJwtBearer(
   client: ClientConfigState,
   authRequest: AuthRequestState,
   assertion: string | null,
-  dpopEnabled: boolean,
+  dpopProof: string | null,
 ): PreviewBlock {
   const body = buildJwtBearerParams(authRequest);
   // The real, live-signed grant assertion goes on the wire; it's re-signed
@@ -157,10 +159,8 @@ export function previewJwtBearer(
   ];
   // Client auth is the OTHER JWT: private_key_jwt adds client_assertion.
   const notes: string[] = [];
+  applyDpopPreview(headers, dpopProof, notes);
   applyClientAuthPreview(client, headers, body, notes);
-  if (dpopEnabled) {
-    headers.push(["DPoP", "<signed proof — created at send time>"]);
-  }
   return {
     method: "POST",
     url: tokenEndpoint,
@@ -168,6 +168,19 @@ export function previewJwtBearer(
     body: body.toString(),
     notes: notes.length ? notes : undefined,
   };
+}
+
+// The DPoP proof is a real signed JWT, live-signed from the client's key with
+// the same htm/htu the request will use. It's re-signed (fresh jti/iat) at send
+// time, so add a note mirroring how the grant assertion is handled.
+function applyDpopPreview(
+  headers: Array<[string, string]>,
+  dpopProof: string | null | undefined,
+  notes: string[],
+): void {
+  if (!dpopProof) return;
+  headers.push(["DPoP", dpopProof]);
+  notes.push("DPoP: proof is re-signed with a fresh jti/iat on each send.");
 }
 
 function applyClientAuthPreview(

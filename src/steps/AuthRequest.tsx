@@ -7,6 +7,7 @@ import {
 } from "react";
 import { Loader2, RotateCw } from "lucide-react";
 import { LivePreview } from "./parts/LivePreview";
+import { useDpopProof } from "./parts/useDpopProof";
 import { usePlayground } from "../store/playground";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
@@ -58,6 +59,12 @@ export function AuthRequestStep() {
   const metadata = state.discovery.metadata;
   const client = state.client;
   const parEnabled = state.par.enabled;
+  // The PAR step POSTs to /par; when DPoP is on, that request carries a proof.
+  const dpopProof = useDpopProof(
+    state.dpop,
+    "POST",
+    metadata?.pushed_authorization_request_endpoint,
+  );
   const parSupported = !!metadata?.pushed_authorization_request_endpoint;
   const [pkceRegenerating, setPkceRegenerating] = useState(false);
   const [copied, setCopied] = useState<"url" | "curl" | null>(null);
@@ -420,6 +427,7 @@ export function AuthRequestStep() {
           authRequest={req}
           parEnabled={parEnabled}
           parPushed={!!parRequestUri}
+          dpopProof={dpopProof}
           copied={copied}
           onCopy={onCopy}
           onContinue={() => setActiveStep(parEnabled ? "par" : "authorize")}
