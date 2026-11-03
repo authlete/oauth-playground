@@ -210,6 +210,13 @@ function applyClientAuthPreview(
         "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
       );
       body.set("client_assertion", "<signed JWT — created at send time>");
+      notes.push(
+        `client_assertion: aud = ${
+          client.assertionAudience === "issuer"
+            ? "the AS issuer (FAPI 2.0)"
+            : "this endpoint"
+        }; signed at send time with a fresh jti/iat/exp.`,
+      );
       return;
   }
 }

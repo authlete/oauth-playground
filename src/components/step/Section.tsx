@@ -78,7 +78,7 @@ export function Section({
         ) : (
           <div className="hidden @4xl:block" />
         )}
-        <div className="min-w-0">{children}</div>
+        <div className="@container min-w-0">{children}</div>
       </div>
     </details>
   );

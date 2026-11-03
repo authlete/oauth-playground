@@ -20,6 +20,9 @@ export interface SendInput {
   headers: Headers;
   body?: string;
   dpop?: DpopSend;
+  /** Mutate the headers just before the request is logged and sent — e.g. an
+   * RFC 9421 request signature, applied after DPoP so it covers that header. */
+  signRequest?: (headers: Headers) => Promise<void>;
   onStart: (entry: NetworkEntry) => void;
   onFinish: (id: string, patch: Partial<NetworkEntry>) => void;
   /** Per-endpoint message when fetch throws (e.g. a CORS hint). */
@@ -27,7 +30,7 @@ export interface SendInput {
 }
 
 export type SendResult =
-  | { ok: true; response: Response; bodyText: string }
+  | { ok: true; response: Response; bodyText: string; requestHeaders: Headers }
   | { ok: false; message: string };
 
 export async function send(input: SendInput): Promise<SendResult> {
@@ -43,6 +46,8 @@ export async function send(input: SendInput): Promise<SendResult> {
         },
       );
     }
+    // After DPoP, so a request signature covers the dpop/authorization headers.
+    if (input.signRequest) await input.signRequest(input.headers);
     const id = crypto.randomUUID();
     const startedAt = performance.now();
     input.onStart({
@@ -88,7 +93,7 @@ export async function send(input: SendInput): Promise<SendResult> {
       responseHeaders: respHeaders,
       responseBody: bodyText,
     });
-    return { ok: true, response, bodyText };
+    return { ok: true, response, bodyText, requestHeaders: input.headers };
   };
 
   let result = await attempt(input.dpop?.ctx.nonce);

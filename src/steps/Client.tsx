@@ -22,6 +22,7 @@ import { Input } from "../components/ui/Input";
 import { Select } from "../components/ui/Select";
 import { Textarea } from "../components/ui/Textarea";
 import {
+  Choice,
   Disclosure,
   Section,
   StatusPill,
@@ -41,6 +42,7 @@ import { DcrRegisterStep } from "./DcrRegister";
 import { FederationRegisterStep } from "./FederationRegister";
 import {
   DEFAULT_CLIENT_CONFIG,
+  type ClientAssertionAudience,
   type ClientAuthMethod,
   type DpopState,
 } from "../types";
@@ -461,8 +463,46 @@ export function ClientStep() {
             onRegenerate={regenerateDpopKey}
           />
         )}
+
+        {state.client.authMethod === "private_key_jwt" && (
+          <AudienceSection
+            value={state.client.assertionAudience}
+            onChange={(assertionAudience) =>
+              clientUpdate({ assertionAudience })
+            }
+          />
+        )}
       </div>
     </div>
+  );
+}
+
+// client_assertion audience (private_key_jwt): RFC 7523 / OIDC classically use
+// the called endpoint; FAPI 2.0 requires the AS issuer.
+function AudienceSection({
+  value,
+  onChange,
+}: {
+  value: ClientAssertionAudience;
+  onChange: (value: ClientAssertionAudience) => void;
+}) {
+  return (
+    <Disclosure
+      title="Client assertion audience"
+      hint="private_key_jwt"
+      description="The aud claim of the client_assertion JWT. Classic OIDC/RFC 7523 use the endpoint being called; FAPI 2.0 requires the AS issuer — it protects against replay across endpoints."
+      summaryRight={value === "issuer" ? "issuer" : "endpoint"}
+      defaultOpen={false}
+    >
+      <Choice
+        value={value}
+        onChange={onChange}
+        options={[
+          { id: "endpoint", label: "Endpoint (token / PAR URL)" },
+          { id: "issuer", label: "Issuer (FAPI 2.0)" },
+        ]}
+      />
+    </Disclosure>
   );
 }
 

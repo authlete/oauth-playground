@@ -1,5 +1,13 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { ArrowRight, Check, Copy, Loader2, RotateCw } from "lucide-react";
+import {
+  ArrowRight,
+  Check,
+  Copy,
+  Loader2,
+  RotateCw,
+  ShieldAlert,
+  ShieldCheck,
+} from "lucide-react";
 import { usePlayground } from "../store/playground";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
@@ -19,22 +27,36 @@ import { cn } from "../protocol/cn";
 import { resourceCall } from "../protocol/resourceCall";
 import { dpopContextFrom } from "../protocol/dpop";
 import { parseBearerChallenge } from "../protocol/bearerChallenge";
-import type { HttpMethod } from "../types";
+import { fetchPrm } from "../protocol/prm";
+import { fetchOpenApiOperations } from "../protocol/openapi";
+import {
+  RESOURCE_SERVERS,
+  DEFAULT_RESOURCE_SERVER,
+} from "../protocol/resourceServers";
+import type { HttpMethod, PrmDocument, SignatureVerification } from "../types";
 
 const METHODS: HttpMethod[] = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD"];
+const CUSTOM_RS = "__custom__";
 
 export function ResourceStep() {
   const {
     state,
     resourceCallUpdate,
+    resourceUpdate,
     authRequestUpdate,
     setActiveStep,
     networkAdd,
     networkUpdate,
     setStepStatus,
     dpopUpdate,
+    messageSignatureUpdate,
   } = usePlayground();
   const rc = state.resourceCall;
+  const msig = state.messageSignature;
+  // Request signing reuses the client's private_key_jwt key.
+  const canSignRequests =
+    state.client.authMethod === "private_key_jwt" &&
+    state.client.privateKey.status === "valid";
   const [copied, setCopied] = useState(false);
 
   // When the flow started at a protected resource, prefill the target with
@@ -53,6 +75,49 @@ export function ResourceStep() {
     }
   }, [rc.url, prmResource, resourceCallUpdate]);
 
+  const [rsInput, setRsInput] = useState(
+    state.resource.url || DEFAULT_RESOURCE_SERVER,
+  );
+  const rsLoading = state.resource.status === "loading";
+  const rsIsCustom = !RESOURCE_SERVERS.includes(rsInput);
+
+  // Point the step at a resource server and pull its operations from the
+  // published OpenAPI document (and its PRM for the signing JWKS), so the same
+  // one-click-call view appears regardless of how the user reached this step.
+  const loadResourceServer = async (url: string) => {
+    const base = url.trim().replace(/\/+$/, "");
+    if (!base) return;
+    setRsInput(base);
+    resourceUpdate({
+      status: "loading",
+      url: base,
+      prm: undefined,
+      operations: undefined,
+      errorMessage: undefined,
+    });
+    resourceCallUpdate({ url: `${base}/` });
+    const prmResult = await fetchPrm(base, {
+      onStart: networkAdd,
+      onFinish: networkUpdate,
+    });
+    // A missing PRM is fine — synthesize a minimal context so operations and the
+    // response-verify JWKS fallback still work.
+    resourceUpdate(
+      prmResult.ok
+        ? {
+            status: "success",
+            prm: prmResult.prm,
+            metadataUrl: prmResult.metadataUrl,
+          }
+        : { status: "success", prm: { resource: base } as PrmDocument },
+    );
+    const ops = await fetchOpenApiOperations(base, {
+      onStart: networkAdd,
+      onFinish: networkUpdate,
+    });
+    if (ops) resourceUpdate({ operations: ops });
+  };
+
   // Step-up: add the scope the RS demanded and jump back into authorization.
   const stepUpScope = (scope: string) => {
     const scopes = state.authRequest.scopes.includes(scope)
@@ -62,21 +127,38 @@ export function ResourceStep() {
     setActiveStep(state.par.enabled ? "par" : "authorize");
   };
 
-  const onCall = async () => {
+  // An operation row calls directly: it passes its own method/url/body so the
+  // call doesn't wait on a state round-trip, and mirrors them into the builder.
+  const onCall = async (override?: {
+    method: HttpMethod;
+    url: string;
+    bodyText: string;
+  }) => {
+    const method = override?.method ?? (rc.method as HttpMethod);
+    const url = override?.url ?? rc.url;
+    const bodyText = override?.bodyText ?? rc.bodyText;
     resourceCallUpdate({
       status: "loading",
       response: undefined,
       errorMessage: undefined,
+      ...(override ? { method, url, bodyText } : {}),
     });
     const result = await resourceCall({
-      url: rc.url,
-      method: rc.method as HttpMethod,
+      url,
+      method,
       headersText: rc.headersText,
-      bodyText: rc.bodyText,
+      bodyText,
       attachBearer: rc.attachBearer,
       accessToken: state.token.accessToken,
       dpop: dpopContextFrom(state.dpop),
       onDpopNonce: (nonce) => dpopUpdate({ nonce }),
+      requestSigning:
+        msig.requestSigning && canSignRequests
+          ? { signingKeyJwk: state.client.privateKey.jwkText }
+          : undefined,
+      responseVerify: msig.responseVerify
+        ? { jwksUri: resolveJwksUri(prm?.jwks_uri, url) }
+        : undefined,
       onStart: networkAdd,
       onFinish: networkUpdate,
     });
@@ -89,6 +171,7 @@ export function ResourceStep() {
           headers: result.headers,
           body: result.body,
           durationMs: result.durationMs,
+          signatureVerification: result.signatureVerification,
         },
       });
       setStepStatus("resource", "done");
@@ -120,6 +203,57 @@ export function ResourceStep() {
       <StepHeader step="resource" right={renderPill(rc.status)} />
 
       <div className="mt-5 space-y-4">
+        <Section
+          title="Resource server"
+          description="Load the API's operations from its OpenAPI document — pick a preset or type a URL."
+        >
+          <div className="flex flex-wrap items-center gap-2">
+            <Select
+              className={rsIsCustom ? "w-40 shrink-0" : "min-w-0 flex-1"}
+              value={rsIsCustom ? CUSTOM_RS : rsInput}
+              disabled={rsLoading}
+              onChange={(e) =>
+                setRsInput(e.target.value === CUSTOM_RS ? "" : e.target.value)
+              }
+            >
+              {RESOURCE_SERVERS.map((u) => (
+                <option key={u} value={u}>
+                  {u}
+                </option>
+              ))}
+              <option value={CUSTOM_RS}>Custom…</option>
+            </Select>
+            {rsIsCustom && (
+              <Input
+                mono
+                className="min-w-0 flex-1"
+                value={rsInput}
+                onChange={(e) => setRsInput(e.target.value)}
+                placeholder={DEFAULT_RESOURCE_SERVER}
+                disabled={rsLoading}
+                autoComplete="off"
+                spellCheck={false}
+              />
+            )}
+            <Button
+              size="sm"
+              variant="secondary"
+              className="shrink-0"
+              onClick={() => loadResourceServer(rsInput)}
+              disabled={rsLoading || !rsInput.trim()}
+            >
+              {rsLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading…
+                </>
+              ) : (
+                "Load operations"
+              )}
+            </Button>
+          </div>
+        </Section>
+
         {operations && operations.length > 0 ? (
           <Section
             title="Operations"
@@ -154,13 +288,9 @@ export function ResourceStep() {
                     ))}
                     <Button
                       size="sm"
-                      variant="secondary"
+                      variant="ghost"
                       className="shrink-0"
-                      title={
-                        missing.length > 0
-                          ? "Fills the request — the call will get an insufficient-scope challenge until you step up"
-                          : undefined
-                      }
+                      title="Fill the request builder without calling"
                       onClick={() =>
                         resourceCallUpdate({
                           method: op.method,
@@ -169,7 +299,27 @@ export function ResourceStep() {
                         })
                       }
                     >
-                      Use →
+                      Fill
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      className="shrink-0"
+                      disabled={rc.status === "loading"}
+                      title={
+                        missing.length > 0
+                          ? "Calls now — expect an insufficient-scope challenge until you step up"
+                          : "Fill and call this operation"
+                      }
+                      onClick={() =>
+                        onCall({
+                          method: op.method,
+                          url: `${prmResource ?? ""}${op.filledPath}`,
+                          bodyText: op.requestBodyExample ?? "",
+                        })
+                      }
+                    >
+                      Call →
                     </Button>
                   </div>
                 );
@@ -290,6 +440,33 @@ export function ResourceStep() {
                 resourceCallUpdate({ attachBearer: e.target.checked })
               }
             />
+
+            <div className="border-t border-border/50 pt-3">
+              <div className="mb-2 text-[10.5px] uppercase tracking-wide text-muted-foreground">
+                HTTP Message Signatures (RFC 9421 · FAPI 2.0)
+              </div>
+              <div className="flex flex-col items-start gap-2">
+                <Checkbox
+                  label={
+                    canSignRequests
+                      ? "Sign the request (tag fapi-2-request)"
+                      : "Sign the request — needs a private_key_jwt client"
+                  }
+                  checked={msig.requestSigning && canSignRequests}
+                  disabled={!canSignRequests}
+                  onChange={(e) =>
+                    messageSignatureUpdate({ requestSigning: e.target.checked })
+                  }
+                />
+                <Checkbox
+                  label="Verify the response signature (against the resource's JWKS)"
+                  checked={msig.responseVerify}
+                  onChange={(e) =>
+                    messageSignatureUpdate({ responseVerify: e.target.checked })
+                  }
+                />
+              </div>
+            </div>
           </div>
         </Section>
       </div>
@@ -303,14 +480,14 @@ export function ResourceStep() {
         ) : rc.status === "success" ? (
           <Button
             variant="secondary"
-            onClick={onCall}
+            onClick={() => onCall()}
             disabled={!rc.url.trim()}
           >
             <RotateCw className="h-4 w-4" />
             Re-call
           </Button>
         ) : (
-          <Button onClick={onCall} disabled={!rc.url.trim()}>
+          <Button onClick={() => onCall()} disabled={!rc.url.trim()}>
             <ArrowRight className="h-4 w-4" />
             Call resource →
           </Button>
@@ -500,6 +677,9 @@ function ResponsePanel({
           )}
         </Button>
       </div>
+      {response.signatureVerification && (
+        <SignatureVerificationView result={response.signatureVerification} />
+      )}
       <div>
         <div className="mb-1 text-[10.5px] uppercase tracking-wide text-muted-foreground">
           Response headers
@@ -540,6 +720,76 @@ function Field({
       )}
     </div>
   );
+}
+
+// Verdict on a signed response: whether it verified against the resource's JWKS,
+// plus the keyid/tag and an independent body-vs-Content-Digest check.
+function SignatureVerificationView({
+  result,
+}: {
+  result: SignatureVerification;
+}) {
+  if (!result.signed) {
+    return (
+      <div className="rounded-sm border border-border/60 bg-background/40 p-2.5 text-[11.5px] text-muted-foreground">
+        No HTTP message signature on the response.
+      </div>
+    );
+  }
+  const ok = result.verified && result.digestMatches !== false;
+  return (
+    <div
+      className={cn(
+        "rounded-sm border p-2.5",
+        ok
+          ? "border-[var(--status-success)]/40 bg-[color-mix(in_oklch,var(--status-success)_8%,transparent)]"
+          : "border-[var(--status-warn)]/50 bg-[color-mix(in_oklch,var(--status-warn)_8%,transparent)]",
+      )}
+    >
+      <div className="flex items-center gap-1.5 text-[12.5px] font-medium">
+        {ok ? (
+          <ShieldCheck className="h-3.5 w-3.5 text-[var(--status-success)]" />
+        ) : (
+          <ShieldAlert className="h-3.5 w-3.5 text-[var(--status-warn)]" />
+        )}
+        {ok
+          ? "Response signature verified"
+          : "Response signature did not verify"}
+      </div>
+      <div className="mt-1.5 space-y-0.5 font-mono text-[11px] text-muted-foreground">
+        {result.keyid && <div>keyid: {result.keyid}</div>}
+        {result.tag && <div>tag: {result.tag}</div>}
+        {result.digestMatches !== undefined && (
+          <div>
+            content-digest:{" "}
+            {result.digestMatches ? "matches body" : "MISMATCH with body"}
+          </div>
+        )}
+        {result.reason && !result.verified && (
+          <div className="text-[var(--status-warn)]">{result.reason}</div>
+        )}
+        {result.signatureInput && (
+          <div className="break-all">
+            Signature-Input: {result.signatureInput}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// The resource's JWKS: from its metadata when advertised, else the /api/jwks
+// convention on the resource's own origin.
+function resolveJwksUri(
+  advertised: string | undefined,
+  resourceUrl: string,
+): string {
+  if (advertised) return advertised;
+  try {
+    return `${new URL(resourceUrl).origin}/api/jwks`;
+  } catch {
+    return "";
+  }
 }
 
 function prettyJsonOrText(s: string): string {

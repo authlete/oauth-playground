@@ -5,7 +5,17 @@
 
 import { send } from "./dpopHttp";
 import type { DpopContext } from "./dpop";
-import type { HttpMethod, NetworkEntry } from "../types";
+import {
+  applyRequestSignature,
+  contentDigest,
+  verifyResponseSignature,
+} from "./messageSignature";
+import type {
+  HttpMethod,
+  Jwks,
+  NetworkEntry,
+  SignatureVerification,
+} from "../types";
 
 export interface ResourceCallInput {
   url: string;
@@ -16,6 +26,10 @@ export interface ResourceCallInput {
   accessToken?: string;
   dpop?: DpopContext;
   onDpopNonce?: (nonce: string) => void;
+  /** Sign the outbound request (FAPI 2.0) with the client's private_key_jwt key. */
+  requestSigning?: { signingKeyJwk: string };
+  /** Verify the resource's signed response against its JWKS. */
+  responseVerify?: { jwksUri: string };
   onStart: (entry: NetworkEntry) => void;
   onFinish: (id: string, patch: Partial<NetworkEntry>) => void;
 }
@@ -28,6 +42,7 @@ export type ResourceCallResult =
       headers: Record<string, string>;
       body: string;
       durationMs: number;
+      signatureVerification?: SignatureVerification;
     }
   | { ok: false; message: string };
 
@@ -95,6 +110,18 @@ export async function resourceCall(
 
   // DPoP only applies when we're presenting the token: the proof binds to it.
   const useDpop = input.dpop && input.attachBearer && input.accessToken;
+  // Sign the request after DPoP so the signature covers the dpop/authorization
+  // headers; Content-Digest must be present when there's a body.
+  const signRequest = input.requestSigning
+    ? async (h: Headers) => {
+        if (bodyText) h.set("Content-Digest", await contentDigest(bodyText));
+        await applyRequestSignature(h, {
+          signingKeyJwk: input.requestSigning!.signingKeyJwk,
+          method: input.method,
+          url: trimmedUrl,
+        });
+      }
+    : undefined;
   const startedAt = performance.now();
   const sent = await send({
     method: input.method,
@@ -108,6 +135,7 @@ export async function resourceCall(
           onNonce: input.onDpopNonce,
         }
       : undefined,
+    signRequest,
     onStart: input.onStart,
     onFinish: input.onFinish,
     networkErrorMessage: (err) =>
@@ -118,12 +146,26 @@ export async function resourceCall(
           : String(err),
   });
   if (!sent.ok) return { ok: false, message: sent.message };
-  const { response, bodyText: body } = sent;
+  const { response, bodyText: body, requestHeaders } = sent;
   const durationMs = Math.round(performance.now() - startedAt);
   const respHeaders: Record<string, string> = {};
   response.headers.forEach((v, k) => {
     respHeaders[k] = v;
   });
+
+  let signatureVerification: SignatureVerification | undefined;
+  if (input.responseVerify) {
+    signatureVerification = await runResponseVerify({
+      jwksUri: input.responseVerify.jwksUri,
+      status: response.status,
+      responseHeaders: response.headers,
+      bodyText: body,
+      method: input.method,
+      url: trimmedUrl,
+      requestHeaders,
+    });
+  }
+
   return {
     ok: true,
     status: response.status,
@@ -131,5 +173,58 @@ export async function resourceCall(
     headers: respHeaders,
     body,
     durationMs,
+    signatureVerification,
   };
+}
+
+// Fetch the resource's JWKS and verify the response signature. A response with
+// no signature short-circuits before the JWKS is fetched.
+async function runResponseVerify(opts: {
+  jwksUri: string;
+  status: number;
+  responseHeaders: Headers;
+  bodyText: string;
+  method: HttpMethod;
+  url: string;
+  requestHeaders: Headers;
+}): Promise<SignatureVerification> {
+  if (!opts.responseHeaders.has("signature")) {
+    return {
+      signed: false,
+      verified: false,
+      reason: "The response carried no Signature.",
+    };
+  }
+  let jwks: Jwks;
+  try {
+    const res = await fetch(opts.jwksUri, {
+      mode: "cors",
+      credentials: "omit",
+    });
+    if (!res.ok) {
+      return {
+        signed: true,
+        verified: false,
+        reason: `Could not fetch the resource JWKS (HTTP ${res.status}).`,
+      };
+    }
+    jwks = (await res.json()) as Jwks;
+  } catch (e) {
+    return {
+      signed: true,
+      verified: false,
+      reason: `Could not fetch the resource JWKS: ${e instanceof Error ? e.message : String(e)}`,
+    };
+  }
+  return verifyResponseSignature({
+    status: opts.status,
+    responseHeaders: opts.responseHeaders,
+    bodyText: opts.bodyText,
+    request: {
+      method: opts.method,
+      url: opts.url,
+      headers: opts.requestHeaders,
+    },
+    jwks,
+  });
 }

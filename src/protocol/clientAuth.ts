@@ -16,7 +16,11 @@ import type { ClientConfigState } from "../types";
 
 export interface ApplyAuthOptions {
   client: ClientConfigState;
-  audience: string; // e.g. token_endpoint or par_endpoint or issuer
+  /** The endpoint being called (token/par/...), used as the client_assertion
+   * `aud` unless the client opts into issuer-as-audience (FAPI 2.0). */
+  audience: string;
+  /** The AS issuer, used as `aud` when assertionAudience === "issuer". */
+  issuer?: string;
   headers: Headers;
   body: URLSearchParams;
 }
@@ -75,9 +79,14 @@ export async function applyClientAuth(
           message: `Private key JWK is invalid: ${validated.message}`,
         };
       }
+      // FAPI 2.0 wants aud = issuer; classic OIDC/RFC 7523 use the endpoint.
+      const audience =
+        client.assertionAudience === "issuer" && opts.issuer
+          ? opts.issuer
+          : opts.audience;
       const jwt = await signClientAssertion({
         clientId: client.clientId,
-        audience: opts.audience,
+        audience,
         cryptoKey: validated.cryptoKey,
         alg: validated.alg,
         kid: validated.kid,

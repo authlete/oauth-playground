@@ -1,6 +1,7 @@
-import { defineConfig, type Plugin } from "vite";
+import { defineConfig, loadEnv, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwind from "@tailwindcss/vite";
+import basicSsl from "@vitejs/plugin-basic-ssl";
 import path from "node:path";
 import { buildClientMetadata } from "./src/protocol/cimd";
 
@@ -18,9 +19,12 @@ function cimdDocument(): Plugin {
         if ((req.url ?? "").split("?")[0] !== "/client-metadata.json") {
           return next();
         }
+        const scheme = (req.socket as { encrypted?: boolean }).encrypted
+          ? "https"
+          : "http";
         const host = req.headers.host ?? "localhost:5173";
         res.setHeader("content-type", "application/json");
-        res.end(json(`http://${host}`));
+        res.end(json(`${scheme}://${host}`));
       });
     },
     generateBundle() {
@@ -34,14 +38,25 @@ function cimdDocument(): Plugin {
   };
 }
 
-export default defineConfig({
-  plugins: [react(), tailwind(), cimdDocument()],
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
+export default defineConfig(({ mode }) => {
+  // Opt-in HTTPS (VITE_HTTPS=1). FAPI clients require https redirect URIs, so the
+  // callback must be https even in local dev; basic-ssl serves a self-signed cert.
+  const env = loadEnv(mode, process.cwd(), "");
+  const httpsEnabled = Boolean(env.VITE_HTTPS);
+  return {
+    plugins: [
+      react(),
+      tailwind(),
+      cimdDocument(),
+      ...(httpsEnabled ? [basicSsl()] : []),
+    ],
+    resolve: {
+      alias: {
+        "@": path.resolve(__dirname, "./src"),
+      },
     },
-  },
-  server: {
-    port: 5173,
-  },
+    server: {
+      port: 5173,
+    },
+  };
 });

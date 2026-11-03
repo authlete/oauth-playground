@@ -233,7 +233,7 @@ export function DcrRegisterStep({ embedded = false }: { embedded?: boolean }) {
                   />
                 </Field>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-4 @2xl:grid-cols-2">
                   <Field
                     label="token_endpoint_auth_method"
                     hint="How the registered client authenticates at /token."

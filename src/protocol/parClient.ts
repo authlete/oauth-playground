@@ -75,6 +75,7 @@ export async function pushPar(input: PushParInput): Promise<PushParResult> {
   const auth = await applyClientAuth({
     client: input.client,
     audience: parEndpoint,
+    issuer: input.metadata.issuer,
     headers,
     body,
   });

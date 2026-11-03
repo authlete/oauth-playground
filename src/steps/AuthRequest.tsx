@@ -240,7 +240,7 @@ export function AuthRequestStep() {
               </div>
             </Field>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-4 @2xl:grid-cols-2">
               <Field
                 label="response_type"
                 hint="What the AS returns at the callback."
@@ -616,7 +616,7 @@ function GrantManagementSection({
       defaultOpen={!!action || required}
     >
       <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid gap-4 @2xl:grid-cols-2">
           <Field
             label="grant_management_action"
             hint={
@@ -749,7 +749,7 @@ function AdvancedExpander({
       description="Rarely-needed request parameters — sent only when non-empty."
     >
       <div className="space-y-4">
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid gap-3 @2xl:grid-cols-3">
           <Field label="prompt" hint="none, login, consent, select_account">
             <Input
               mono

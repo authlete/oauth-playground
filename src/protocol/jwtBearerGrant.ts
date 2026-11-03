@@ -159,6 +159,7 @@ export async function requestJwtBearerToken(
   const auth = await applyClientAuth({
     client: input.client,
     audience: endpoint,
+    issuer: input.metadata.issuer,
     headers,
     body,
   });

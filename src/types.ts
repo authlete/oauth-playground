@@ -301,6 +301,9 @@ export interface PrmDocument {
   bearer_methods_supported?: string[];
   resource_name?: string;
   resource_documentation?: string;
+  /** JWK Set of the resource's response-signing keys (FAPI 2.0 Message Signing). */
+  jwks_uri?: string;
+  resource_signing_alg_values_supported?: string[];
   [key: string]: unknown;
 }
 
@@ -374,6 +377,11 @@ export const EMPTY_MANUAL_ENDPOINTS: ManualEndpoints = {
 export type ClientAuthMethod =
   "none" | "client_secret_basic" | "client_secret_post" | "private_key_jwt";
 
+// Audience of the private_key_jwt client_assertion. RFC 7523 / OIDC classically
+// use the token endpoint; FAPI 2.0 requires the AS issuer (cross-endpoint replay
+// protection). Exposed so both can be demonstrated.
+export type ClientAssertionAudience = "endpoint" | "issuer";
+
 export interface PrivateKeyState {
   jwkText: string;
   status: "empty" | "valid" | "invalid";
@@ -388,6 +396,8 @@ export interface ClientConfigState {
   clientSecret: string;
   redirectUri: string;
   privateKey: PrivateKeyState;
+  /** Audience of the private_key_jwt client_assertion (endpoint vs issuer). */
+  assertionAudience: ClientAssertionAudience;
 }
 
 export const DEFAULT_CLIENT_CONFIG: ClientConfigState = {
@@ -396,6 +406,7 @@ export const DEFAULT_CLIENT_CONFIG: ClientConfigState = {
   clientSecret: "",
   redirectUri: "",
   privateKey: { jwkText: "", status: "empty" },
+  assertionAudience: "endpoint",
 };
 
 // DPoP (RFC 9449): sender-constrained tokens. When enabled, the client signs a
@@ -414,6 +425,19 @@ export const DEFAULT_DPOP: DpopState = {
   enabled: false,
   privateJwk: "",
   alg: "ES256",
+};
+
+// FAPI 2.0 Message Signing (RFC 9421): sign the request to the resource, and/or
+// verify the resource's signed response. Request signing reuses the client's
+// private_key_jwt key; response verification uses the resource's published JWKS.
+export interface MessageSignatureState {
+  requestSigning: boolean;
+  responseVerify: boolean;
+}
+
+export const DEFAULT_MESSAGE_SIGNATURE: MessageSignatureState = {
+  requestSigning: false,
+  responseVerify: false,
 };
 
 export type ResponseMode = "query" | "fragment" | "form_post";
@@ -757,6 +781,20 @@ export const DEFAULT_GRANT_MANAGEMENT: GrantManagementState = {
 
 export type ResourceCallStatus = "idle" | "loading" | "success" | "error";
 
+// Outcome of verifying a resource's signed response (FAPI 2.0 Message Signing).
+export interface SignatureVerification {
+  /** Did the response carry a Signature at all? */
+  signed: boolean;
+  /** Did the signature verify against the resource's JWKS? */
+  verified: boolean;
+  keyid?: string;
+  tag?: string;
+  /** Does the response body actually hash to its Content-Digest? */
+  digestMatches?: boolean;
+  signatureInput?: string;
+  reason?: string;
+}
+
 export interface ResourceCallState {
   status: ResourceCallStatus;
   url: string;
@@ -770,6 +808,7 @@ export interface ResourceCallState {
     headers: Record<string, string>;
     body: string;
     durationMs: number;
+    signatureVerification?: SignatureVerification;
   };
   errorMessage?: string;
 }

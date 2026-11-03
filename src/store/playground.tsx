@@ -37,6 +37,7 @@ import {
   DEFAULT_JWT_BEARER,
   DEFAULT_INSPECTOR,
   DEFAULT_INTROSPECT,
+  DEFAULT_MESSAGE_SIGNATURE,
   DEFAULT_PAR,
   DEFAULT_REFRESH,
   DEFAULT_RESOURCE_CALL,
@@ -54,6 +55,7 @@ import {
   type ClientConfigState,
   type DcrRegisterState,
   type DpopState,
+  type MessageSignatureState,
   type DiscoveryState,
   type FederationRegisterState,
   type GrantManagementState,
@@ -91,6 +93,7 @@ interface State {
   resource: ResourceContextState;
   client: ClientConfigState;
   dpop: DpopState;
+  messageSignature: MessageSignatureState;
   dcrRegister: DcrRegisterState;
   federationRegister: FederationRegisterState;
   authRequest: AuthRequestState;
@@ -124,6 +127,10 @@ type Action =
   | { type: "resource-update"; patch: Partial<ResourceContextState> }
   | { type: "client-update"; patch: Partial<ClientConfigState> }
   | { type: "dpop-update"; patch: Partial<DpopState> }
+  | {
+      type: "message-signature-update";
+      patch: Partial<MessageSignatureState>;
+    }
   | { type: "dcr-register-update"; patch: Partial<DcrRegisterState> }
   | {
       type: "federation-register-update";
@@ -326,6 +333,7 @@ const initialState: State = {
   resource: DEFAULT_RESOURCE_CONTEXT,
   client: DEFAULT_CLIENT_CONFIG,
   dpop: DEFAULT_DPOP,
+  messageSignature: DEFAULT_MESSAGE_SIGNATURE,
   dcrRegister: DEFAULT_DCR_REGISTER,
   federationRegister: DEFAULT_FEDERATION_REGISTER,
   authRequest: DEFAULT_AUTH_REQUEST,
@@ -423,6 +431,11 @@ function reducer(state: State, action: Action): State {
       return { ...state, client: { ...state.client, ...action.patch } };
     case "dpop-update":
       return { ...state, dpop: { ...state.dpop, ...action.patch } };
+    case "message-signature-update":
+      return {
+        ...state,
+        messageSignature: { ...state.messageSignature, ...action.patch },
+      };
     case "dcr-register-update":
       return {
         ...state,
@@ -498,6 +511,7 @@ interface PlaygroundContextValue {
   resourceUpdate: (patch: Partial<ResourceContextState>) => void;
   clientUpdate: (patch: Partial<ClientConfigState>) => void;
   dpopUpdate: (patch: Partial<DpopState>) => void;
+  messageSignatureUpdate: (patch: Partial<MessageSignatureState>) => void;
   dcrRegisterUpdate: (patch: Partial<DcrRegisterState>) => void;
   federationRegisterUpdate: (patch: Partial<FederationRegisterState>) => void;
   authRequestUpdate: (patch: Partial<AuthRequestState>) => void;
@@ -981,6 +995,11 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
     (patch: Partial<DpopState>) => dispatch({ type: "dpop-update", patch }),
     [],
   );
+  const messageSignatureUpdate = useCallback(
+    (patch: Partial<MessageSignatureState>) =>
+      dispatch({ type: "message-signature-update", patch }),
+    [],
+  );
   const dcrRegisterUpdate = useCallback(
     (patch: Partial<DcrRegisterState>) =>
       dispatch({ type: "dcr-register-update", patch }),
@@ -1081,6 +1100,7 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
       resourceUpdate,
       clientUpdate,
       dpopUpdate,
+      messageSignatureUpdate,
       dcrRegisterUpdate,
       federationRegisterUpdate,
       authRequestUpdate,
@@ -1118,6 +1138,7 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
       resourceUpdate,
       clientUpdate,
       dpopUpdate,
+      messageSignatureUpdate,
       dcrRegisterUpdate,
       federationRegisterUpdate,
       authRequestUpdate,
