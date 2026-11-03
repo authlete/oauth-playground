@@ -3,7 +3,7 @@
 // Host overridable with VITE_MAKECLIENT_URL.
 
 export const MAKECLIENT_URL = (
-  import.meta.env.VITE_MAKECLIENT_URL ?? "https://makeclient.vercel.app"
+  import.meta.env.VITE_MAKECLIENT_URL ?? "https://makeclient.dev"
 ).replace(/\/+$/, "");
 
 export interface ConfidentialClient {
