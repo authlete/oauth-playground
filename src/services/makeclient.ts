@@ -22,6 +22,8 @@ export async function createConfidentialClient(
     body: JSON.stringify({
       token_endpoint_auth_method: "private_key_jwt",
       redirect_uris: [redirectUri],
+      scope:
+        "openid profile email accounts:read transactions:read payments:write",
     }),
   });
   if (!res.ok) {
