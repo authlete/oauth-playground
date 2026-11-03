@@ -3,8 +3,9 @@
 A client-side, developer-focused OAuth 2.1 / OIDC / FAPI 2.0 playground and
 debugger — inspired by [Google's OAuth 2.0 Playground][google-pg] but built
 for the modern protocol surface (PKCE, PAR, JAR, RAR, CIMD, DPoP,
-`private_key_jwt`, RFC 9207 issuer identification, Grant Management, CIBA,
-Device, JWT introspection of access tokens, and more).
+`private_key_jwt`, RFC 9207 issuer identification, HTTP message signatures
+(RFC 9421 / FAPI 2.0 Message Signing), Grant Management, CIBA, Device, JWT
+introspection of access tokens, and more).
 
 It lets you drive the full OAuth lifecycle against a real Authorization
 Server from your browser, with every wire-level detail surfaced: the URLs,
@@ -21,6 +22,8 @@ below.
 [google-pg]: https://developers.google.com/oauthplayground/
 [java-as]: https://github.com/authlete/java-oauth-server
 [ts-as]: https://github.com/authlete/typescript-oauth-server
+[fapi-ms]: https://openid.bitbucket.io/fapi/fapi-2_0-message-signing.html
+[fms]: https://github.com/panva/fetch-message-signatures
 
 ## How it's organised
 
@@ -38,7 +41,10 @@ is a live network log of every HTTP call.
     and **OpenID Federation** live under "Other ways to identify the client".
     When the AS advertises `dpop_signing_alg_values_supported`, a
     **Sender-constrained tokens (DPoP)** control appears here: enable it once and
-    every relevant request carries a fresh proof (see below).
+    every relevant request carries a fresh proof (see below). With
+    `private_key_jwt`, a **Client assertion audience** control sets the
+    assertion's `aud` — the called endpoint (classic OIDC / RFC 7523) or the AS
+    issuer (FAPI 2.0).
 
 - **Get a token** — pick one flow; only its steps show.
   - **Authorization Code** — Auth request (scopes, `response_type`/`response_mode`,
@@ -51,7 +57,11 @@ is a live network log of every HTTP call.
   - **Backchannel (CIBA)** — poll-mode backchannel authentication with `login_hint`.
 
 - **Use the token** — a menu, any order, once you hold a token.
-  - **Resource call** — a generic HTTP client that attaches the access token.
+  - **Resource call** — call your resource server. Pick it from a dropdown (the
+    presets or a custom URL) to load its operations from the published OpenAPI
+    document — each is one click to fill or call — attach the access token as
+    Bearer or DPoP, and optionally **sign the request** and **verify the signed
+    response** per FAPI 2.0 Message Signing (see below).
   - **UserInfo** · **Introspection** (RFC 7662) · **Grant Management**.
 
 - **Manage** — **Refresh** (`grant_type=refresh_token`, optional downscope,
@@ -74,6 +84,21 @@ is a live network log of every HTTP call.
   handles the `DPoP-Nonce` challenge (one retry) automatically. The Token
   exchange panel confirms the binding — `token_type=DPoP` and the access
   token's `cnf.jkt` matched against your key's thumbprint.
+- **HTTP message signatures** (RFC 9421 / [FAPI 2.0 Message Signing][fapi-ms]) —
+  on the Resource call, two independent toggles:
+  - **Sign the request** — signs the outbound call with the client's
+    `private_key_jwt` key, covering `@method`, `@target-uri` and `authorization`
+    (plus `dpop` and `content-digest` when present), `tag="fapi-2-request"`. The
+    authorization server verifies it.
+  - **Verify the response signature** — fetches the resource's JWKS (its
+    `jwks_uri` from the RFC 9728 metadata, else `/api/jwks`) and verifies the
+    `Signature` / `Signature-Input` the resource returned, plus an independent
+    `Content-Digest` (RFC 9530) check that the body matches. The result — keyid,
+    tag, and digest match — is shown inline.
+
+  Built on [`fetch-message-signatures`][fms]; the covered components and the
+  `Content-Digest` are computed in the browser.
+
 - **All cryptography happens in the browser** (Web Crypto). Tokens, private
   keys, JWKS, code verifiers, and the network log are held **in memory only** —
   never `localStorage`, `sessionStorage`, or any server.
@@ -98,10 +123,19 @@ to the target Authorization Server, so the AS **must send
   on the token endpoint, so the token exchange and downstream calls hit a CORS error.
 - **Your own AS** — enable CORS for the playground origin on `/token`, `/par`,
   `/introspect`, `/revoke`, `/userinfo` and it will work.
+- **Your resource server** — the Resource call also goes directly from the
+  browser, so the RS must allow CORS for the playground origin. To verify a
+  signed response, it must additionally expose `Signature`, `Signature-Input`
+  and `Content-Digest` via `Access-Control-Expose-Headers`.
 
 CIMD note: the AS fetches the `client_id` URL server-side (no CORS needed), but
 the URL must be reachable by the AS and, per the draft, HTTPS (loopback is
 allowed for local development).
+
+FAPI note: FAPI 2.0 requires `https` redirect URIs — there is no `http` loopback
+exception as with plain native clients. To run a FAPI flow locally, serve the
+playground over https with **`VITE_HTTPS=1`** (a self-signed cert) and register
+the resulting `https://localhost:5173/callback`.
 
 ## Architecture
 
@@ -167,6 +201,15 @@ Deploy `dist/` to any static host. The build also emits a static
 origin (e.g. `https://oauth-playground.example`) so the document's `client_id`
 and `redirect_uris` match the URL it's served from. Without it, the file falls
 back to `http://localhost:5173`.
+
+Environment variables (all optional; see `.env.example`):
+
+| Var                     | Meaning                                                           |
+| ----------------------- | ----------------------------------------------------------------- |
+| `VITE_AUTH_SERVERS`     | Discovery "From issuer" presets (comma-separated; first default). |
+| `VITE_RESOURCE_SERVERS` | Resource-server presets (comma-separated; first default).         |
+| `VITE_HTTPS`            | Serve dev over https with a self-signed cert (needed for FAPI).   |
+| `VITE_PUBLIC_ORIGIN`    | Deploy origin baked into the static CIMD document at build.       |
 
 ## Roadmap
 
