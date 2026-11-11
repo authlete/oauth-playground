@@ -29,6 +29,7 @@ import {
 import { computeCodeChallenge, generateCodeVerifier } from "../protocol/pkce";
 import { randomBase64Url } from "../protocol/random";
 import { buildAuthorizeUrl } from "../protocol/authorizeUrl";
+import { resourceError } from "../protocol/resourceIndicator";
 import { cn } from "../protocol/cn";
 import { jarReadiness } from "../protocol/requestObject";
 import { parseJwt } from "../protocol/jwt";
@@ -53,7 +54,7 @@ const RESPONSE_MODES: Array<{ value: ResponseMode; label: string }> = [
 ];
 
 export function AuthRequestStep() {
-  const { state, authRequestUpdate, parUpdate, resourceUpdate, setActiveStep } =
+  const { state, authRequestUpdate, parUpdate, setActiveStep } =
     usePlayground();
   const req = state.authRequest;
   const metadata = state.discovery.metadata;
@@ -279,26 +280,6 @@ export function AuthRequestStep() {
                 </Select>
               </Field>
             </div>
-
-            {state.resource.status === "success" && state.resource.prm && (
-              <div>
-                <Checkbox
-                  label="resource indicator (RFC 8707)"
-                  checked={state.resource.indicatorEnabled}
-                  onChange={(e) =>
-                    resourceUpdate({ indicatorEnabled: e.target.checked })
-                  }
-                />
-                <p className="mt-1 pl-6 font-mono text-[11.5px] text-muted-foreground">
-                  resource={state.resource.prm.resource}
-                </p>
-                <p className="mt-1 pl-6 text-[12px] text-muted-foreground">
-                  Audience-restricts the token to the protected resource
-                  discovered in step 1; sent on the authorize and token
-                  requests.
-                </p>
-              </div>
-            )}
           </div>
         </Section>
 
@@ -402,6 +383,16 @@ export function AuthRequestStep() {
           </div>
         </Section>
 
+        <ResourceIndicatorsSection
+          req={req}
+          update={authRequestUpdate}
+          discovered={
+            state.resource.status === "success"
+              ? state.resource.prm?.resource
+              : undefined
+          }
+        />
+
         <AuthorizationDetailsSection
           req={req}
           update={authRequestUpdate}
@@ -475,6 +466,107 @@ function Field({
         <p className="mt-1.5 text-[12px] text-muted-foreground">{hint}</p>
       )}
     </div>
+  );
+}
+
+// RFC 8707 resource indicators. A repeatable list of absolute-URI targets; each
+// goes on the wire as its own `resource` param on the authorize and token
+// requests. Multiple values ask for a token usable at all of them (the AS
+// audience-restricts accordingly). A discovered RFC 9728 resource is offered as
+// a one-click add.
+function ResourceIndicatorsSection({
+  req,
+  update,
+  discovered,
+}: {
+  req: AuthRequestState;
+  update: (patch: Partial<AuthRequestState>) => void;
+  discovered?: string;
+}) {
+  const resources = req.resources;
+  const nonEmpty = resources.filter((r) => r.trim());
+
+  const setAt = (i: number, value: string) =>
+    update({ resources: resources.map((r, idx) => (idx === i ? value : r)) });
+  const removeAt = (i: number) =>
+    update({ resources: resources.filter((_, idx) => idx !== i) });
+  const add = (value = "") => update({ resources: [...resources, value] });
+
+  const canSuggest = !!discovered && !resources.includes(discovered);
+
+  return (
+    <Disclosure
+      title="Resource indicators"
+      hint="(RFC 8707)"
+      description="Absolute-URI target resources. Each is sent as a repeated resource parameter on the authorize and token requests, audience-restricting the token."
+      summaryRight={
+        nonEmpty.length
+          ? `${nonEmpty.length} ${nonEmpty.length === 1 ? "resource" : "resources"}`
+          : "none"
+      }
+      defaultOpen={nonEmpty.length > 0}
+    >
+      <div className="space-y-3">
+        {resources.length === 0 && (
+          <p className="text-[12px] text-muted-foreground">
+            No resources — the parameter is omitted and the AS issues a token
+            for its default audience.
+          </p>
+        )}
+
+        {resources.map((value, i) => {
+          const err = resourceError(value);
+          return (
+            <div key={i}>
+              <div className="flex items-center gap-2">
+                <Input
+                  mono
+                  value={value}
+                  onChange={(e) => setAt(i, e.target.value)}
+                  placeholder="https://api.example.com/"
+                  className="h-9"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => removeAt(i)}
+                >
+                  Remove
+                </Button>
+              </div>
+              {err && (
+                <p className="mt-1 text-[11.5px] text-[var(--status-warn)]">
+                  {err}
+                </p>
+              )}
+            </div>
+          );
+        })}
+
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => add()}
+          >
+            Add resource
+          </Button>
+          {canSuggest && (
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              title="Resource discovered from RFC 9728 metadata in step 1"
+              onClick={() => add(discovered)}
+            >
+              + discovered {discovered}
+            </Button>
+          )}
+        </div>
+      </div>
+    </Disclosure>
   );
 }
 

@@ -189,9 +189,43 @@ describe("Resource indicator (RFC 8707)", () => {
   test("resource.authorize-param: resource carried when set", () => {
     const p = buildAuthorizeParams(
       client(),
-      authReq({ resource: "https://api.example/" }),
+      authReq({ resources: ["https://api.example/"] }),
     );
     expect(p.get("resource")).toBe("https://api.example/");
+  });
+
+  test("resource.authorize-multiple: each value is a repeated resource param", () => {
+    const p = buildAuthorizeParams(
+      client(),
+      authReq({
+        resources: ["https://cal.example/", "https://contacts.example/"],
+      }),
+    );
+    expect(p.getAll("resource")).toEqual([
+      "https://cal.example/",
+      "https://contacts.example/",
+    ]);
+  });
+
+  test("resource.token-param: token request repeats each resource", async () => {
+    const body = await captureTokenBody(
+      client(),
+      authReq({
+        resources: ["https://cal.example/", "https://contacts.example/"],
+      }),
+    );
+    expect(body.getAll("resource")).toEqual([
+      "https://cal.example/",
+      "https://contacts.example/",
+    ]);
+  });
+
+  test("resource.authorize-param: blank entries are dropped", () => {
+    const p = buildAuthorizeParams(
+      client(),
+      authReq({ resources: ["  ", "https://api.example/", ""] }),
+    );
+    expect(p.getAll("resource")).toEqual(["https://api.example/"]);
   });
 });
 

@@ -82,12 +82,13 @@ export function previewAuthorize(
       authRequest,
       jarRequestValue(authRequest),
     )) {
-      params.set(k, v);
+      params.append(k, v);
     }
     notes.push(jarNote(client, !!authRequest.requestObjectJwt));
   } else {
+    // append, not set — RFC 8707 `resource` can repeat and set would collapse it.
     for (const [k, v] of buildAuthorizeParams(client, authRequest)) {
-      params.set(k, v);
+      params.append(k, v);
     }
   }
   const sep = endpoint.includes("?") ? "&" : "?";

@@ -3,6 +3,7 @@
 
 import { applyClientAuth } from "./clientAuth";
 import { authorizationDetailsWireValue } from "./authorizationDetails";
+import { resourceValues } from "./resourceIndicator";
 import type {
   AuthRequestState,
   CibaState,
@@ -45,8 +46,8 @@ export function buildBackchannelParams(
     body.set("binding_message", ciba.bindingMessage.trim());
   if (ciba.requestedExpiry.trim())
     body.set("requested_expiry", ciba.requestedExpiry.trim());
-  if (authRequest.resource.trim())
-    body.set("resource", authRequest.resource.trim());
+  for (const r of resourceValues(authRequest.resources))
+    body.append("resource", r);
   if (
     authRequest.authorizationDetailsEnabled &&
     authRequest.authorizationDetails.trim()

@@ -121,6 +121,30 @@ export const REQUIREMENTS: Requirement[] = [
     capability: "resource-indicator",
     text: "When set, the resource indicator is carried on the authorization request.",
   },
+  {
+    id: "resource.authorize-multiple",
+    level: "MAY",
+    spec: "RFC 8707",
+    section: "2",
+    capability: "resource-indicator",
+    text: "Multiple resource indicators are each carried as a repeated resource parameter on the authorization request.",
+  },
+  {
+    id: "resource.token-param",
+    level: "SHOULD",
+    spec: "RFC 8707",
+    section: "2.2",
+    capability: "resource-indicator",
+    text: "The resource indicator(s) are repeated on the token request so the issued token is audience-restricted.",
+  },
+  {
+    id: "resource.refresh-param",
+    level: "SHOULD",
+    spec: "RFC 8707",
+    section: "2.2",
+    capability: "resource-indicator",
+    text: "A single resource indicator is carried on the refresh_token request to bind the new access token to one audience.",
+  },
 
   // ── CIMD (draft-ietf-oauth-client-id-metadata-document) ──────────────────
   {
@@ -253,4 +277,4 @@ export const REQUIREMENTS: Requirement[] = [
 
 /** Deliberately fixed so a dropped or silently-added requirement fails the
  * meta-test. Update it only when you mean to change the index. */
-export const EXPECTED_REQUIREMENT_COUNT = 28;
+export const EXPECTED_REQUIREMENT_COUNT = 31;

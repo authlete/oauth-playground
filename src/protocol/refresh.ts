@@ -34,6 +34,9 @@ export interface RefreshInput {
   client: ClientConfigState;
   refreshToken: string;
   downscope?: string;
+  /** RFC 8707: a single resource indicator — binds the new access token to one
+   * audience (typically a subset of what the refresh token was granted). */
+  resource?: string;
   dpop?: DpopContext;
   onDpopNonce?: (nonce: string) => void;
   onStart: (entry: NetworkEntry) => void;
@@ -51,6 +54,7 @@ export async function refreshTokens(
   body.set("grant_type", "refresh_token");
   body.set("refresh_token", input.refreshToken);
   if (input.downscope?.trim()) body.set("scope", input.downscope.trim());
+  if (input.resource?.trim()) body.set("resource", input.resource.trim());
 
   const headers = new Headers({
     "Content-Type": "application/x-www-form-urlencoded",

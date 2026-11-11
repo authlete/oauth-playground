@@ -4,6 +4,7 @@
 //  - Authorize (the URL it navigates to, optionally with request_uri from PAR).
 
 import { authorizationDetailsWireValue } from "./authorizationDetails";
+import { resourceValues } from "./resourceIndicator";
 import type {
   AuthRequestState,
   ClientConfigState,
@@ -36,9 +37,10 @@ export function buildAuthorizeParams(
     params.set("code_challenge", req.codeChallenge);
     params.set("code_challenge_method", "S256");
   }
-  // RFC 8707 resource indicator — set from Protected Resource Metadata when
-  // the flow started at a resource (RFC 9728); audience-restricts the token.
-  if (req.resource.trim()) params.set("resource", req.resource.trim());
+  // RFC 8707 resource indicators — one repeated `resource` param per target,
+  // audience-restricting the token. Multiple values request a token usable at
+  // all of them.
+  for (const r of resourceValues(req.resources)) params.append("resource", r);
   // Rich Authorization Requests — fine-grained access as a JSON array.
   if (req.authorizationDetailsEnabled && req.authorizationDetails.trim()) {
     params.set(

@@ -32,6 +32,7 @@ export interface SharePayload {
   prompt?: string;
   loginHint?: string;
   maxAge?: string;
+  resources?: string[];
 }
 
 export const SHARE_PARAM = "cfg";
@@ -101,5 +102,8 @@ export function buildPayloadFromState(state: {
     prompt: state.authRequest.prompt || undefined,
     loginHint: state.authRequest.loginHint || undefined,
     maxAge: state.authRequest.maxAge || undefined,
+    resources: state.authRequest.resources.length
+      ? state.authRequest.resources
+      : undefined,
   };
 }

@@ -71,6 +71,20 @@ describe("Refresh (RFC 6749 §6)", () => {
     expect(req.body?.get("grant_type")).toBe("refresh_token");
     expect(req.body?.get("refresh_token")).toBe("rt-abc");
   });
+
+  test("resource.refresh-param: a single resource binds the new token's audience", async () => {
+    const req = await capture(() =>
+      refreshTokens({
+        metadata,
+        client,
+        refreshToken: "rt-abc",
+        resource: "https://contacts.example/",
+        onStart: noop,
+        onFinish: noop,
+      }),
+    );
+    expect(req.body?.getAll("resource")).toEqual(["https://contacts.example/"]);
+  });
 });
 
 describe("Revocation (RFC 7009)", () => {

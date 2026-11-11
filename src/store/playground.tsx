@@ -218,6 +218,7 @@ interface PersistedAuthRequest {
   prompt: string;
   loginHint: string;
   maxAge: string;
+  resources?: string[];
   authorizationDetailsEnabled?: boolean;
   authorizationDetails?: string;
 }
@@ -285,6 +286,7 @@ function persistAuthRequest(state: AuthRequestState) {
       prompt: state.prompt,
       loginHint: state.loginHint,
       maxAge: state.maxAge,
+      resources: state.resources,
       authorizationDetailsEnabled: state.authorizationDetailsEnabled,
       authorizationDetails: state.authorizationDetails,
     };
@@ -369,6 +371,7 @@ function applyShareToAuthRequest(share: SharePayload | null) {
   if (share.prompt !== undefined) out.prompt = share.prompt;
   if (share.loginHint !== undefined) out.loginHint = share.loginHint;
   if (share.maxAge !== undefined) out.maxAge = share.maxAge;
+  if (share.resources) out.resources = share.resources;
   return out;
 }
 
@@ -594,6 +597,7 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
               prompt: persistedAuthRequest.prompt,
               loginHint: persistedAuthRequest.loginHint,
               maxAge: persistedAuthRequest.maxAge,
+              resources: persistedAuthRequest.resources ?? [],
               authorizationDetailsEnabled:
                 persistedAuthRequest.authorizationDetailsEnabled ?? false,
               authorizationDetails:
@@ -643,6 +647,7 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
     state.authRequest.prompt,
     state.authRequest.loginHint,
     state.authRequest.maxAge,
+    state.authRequest.resources,
     state.authRequest.authorizationDetailsEnabled,
     state.authRequest.authorizationDetails,
   ]);
@@ -729,25 +734,26 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
     state.dpop,
   ]);
 
-  // Derive the RFC 8707 resource indicator from the resource context: set
-  // when a PRM was loaded and the toggle is on, cleared otherwise. Downstream
-  // (authorize URL, PAR, JAR, token exchange) all read authRequest.resource.
+  // Seed the RFC 8707 resource list from an RFC 9728 discovery: when the flow
+  // starts at a protected resource, add that resource once so the common case is
+  // zero-click. Seeded per-resource (a ref), so the user can then freely edit or
+  // remove it in Auth request without it springing back. Downstream (authorize
+  // URL, PAR, JAR, token exchange) all read authRequest.resources.
+  const seededPrmResourceRef = useRef<string | null>(null);
   useEffect(() => {
-    const next =
-      state.resource.status === "success" &&
-      state.resource.indicatorEnabled &&
-      state.resource.prm
+    const prmResource =
+      state.resource.status === "success" && state.resource.prm
         ? state.resource.prm.resource
         : "";
-    if (state.authRequest.resource !== next) {
-      dispatch({ type: "auth-request-update", patch: { resource: next } });
+    if (!prmResource || seededPrmResourceRef.current === prmResource) return;
+    seededPrmResourceRef.current = prmResource;
+    if (!state.authRequest.resources.includes(prmResource)) {
+      dispatch({
+        type: "auth-request-update",
+        patch: { resources: [...state.authRequest.resources, prmResource] },
+      });
     }
-  }, [
-    state.resource.status,
-    state.resource.indicatorEnabled,
-    state.resource.prm,
-    state.authRequest.resource,
-  ]);
+  }, [state.resource.status, state.resource.prm, state.authRequest.resources]);
 
   // Seed state, nonce, and PKCE globally so the Authorize URL is complete
   // even when the user jumps straight from Discovery to Authorize.

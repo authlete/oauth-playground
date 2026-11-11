@@ -334,8 +334,6 @@ export interface ResourceContextState {
   url: string;
   metadataUrl?: string;
   prm?: PrmDocument;
-  /** Send the RFC 8707 resource parameter in authorize/PAR/token requests. */
-  indicatorEnabled: boolean;
   /** Operations advertised by the resource's OpenAPI document (probed at
    * {resource}/openapi.json after a PRM fetch; absent when it has none). */
   operations?: ResourceOperation[];
@@ -347,7 +345,6 @@ export interface ResourceContextState {
 export const DEFAULT_RESOURCE_CONTEXT: ResourceContextState = {
   status: "idle",
   url: "",
-  indicatorEnabled: true,
 };
 
 export interface ManualEndpoints {
@@ -467,10 +464,11 @@ export interface AuthRequestState {
   // intermediates, Trust Anchor entity configuration). Sent verbatim as the
   // value of the `trust_chain` request parameter.
   trustChain: string;
-  // RFC 8707 resource indicator. Derived by the store from the resource
-  // context (never persisted, never edited directly) — empty means "don't
-  // send the parameter".
-  resource: string;
+  // RFC 8707 resource indicators — zero or more absolute-URI target resources,
+  // edited directly in Auth request. Each becomes a repeated `resource`
+  // parameter on the authorize and token requests, audience-restricting the
+  // issued token. Empty array = parameter not sent.
+  resources: string[];
   // Rich Authorization Requests: when enabled, `authorization_details` (raw
   // JSON text, edited directly) rides on authorize / PAR / token — and inside
   // the JAR request object when JAR is on. Off = parameter not sent.
@@ -507,7 +505,7 @@ export const DEFAULT_AUTH_REQUEST: AuthRequestState = {
   loginHint: "",
   maxAge: "",
   trustChain: "",
-  resource: "",
+  resources: [],
   authorizationDetailsEnabled: false,
   authorizationDetails: "",
   grantManagementAction: "",
@@ -827,13 +825,21 @@ export type RefreshStatus = "idle" | "loading" | "success" | "error";
 export interface RefreshState {
   status: RefreshStatus;
   downscope: string;
+  // RFC 8707: a single resource indicator for the refresh request. Unlike the
+  // authorization request this is one value only — the refresh use case is
+  // minting an access token bound to one audience (a subset of the grant).
+  resource: string;
   refreshedAt?: number;
   errorMessage?: string;
   errorStatus?: number;
   errorBody?: string;
 }
 
-export const DEFAULT_REFRESH: RefreshState = { status: "idle", downscope: "" };
+export const DEFAULT_REFRESH: RefreshState = {
+  status: "idle",
+  downscope: "",
+  resource: "",
+};
 
 export type RevokeStatus = "idle" | "loading" | "success" | "error";
 

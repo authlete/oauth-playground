@@ -17,6 +17,7 @@ import {
 } from "../components/step";
 import { shorten } from "../protocol/format";
 import { refreshTokens } from "../protocol/refresh";
+import { resourceError } from "../protocol/resourceIndicator";
 import { dpopContextFrom } from "../protocol/dpop";
 
 export function RefreshStep() {
@@ -34,6 +35,8 @@ export function RefreshStep() {
   const refreshToken = state.token.refreshToken;
   const endpoint = state.discovery.metadata?.token_endpoint;
   const canRefresh = !!endpoint && !!refreshToken;
+  const resourceErr = resourceError(ref.resource);
+  const grantedResources = state.authRequest.resources.filter((r) => r.trim());
   const [diff, setDiff] = useState<TokenDiff | null>(null);
 
   const onRefresh = async () => {
@@ -52,6 +55,7 @@ export function RefreshStep() {
       client: state.client,
       refreshToken,
       downscope: ref.downscope,
+      resource: ref.resource,
       dpop: dpopContextFrom(state.dpop),
       onDpopNonce: (nonce) => dpopUpdate({ nonce }),
       onStart: networkAdd,
@@ -150,6 +154,46 @@ export function RefreshStep() {
                 The AS may issue a narrower access token. Leave blank to keep
                 the original scopes.
               </p>
+            </div>
+            <div>
+              <label className="mb-1.5 block text-[12.5px] font-medium">
+                Resource (RFC 8707, optional)
+              </label>
+              <Input
+                mono
+                value={ref.resource}
+                onChange={(e) => refreshUpdate({ resource: e.target.value })}
+                placeholder="https://api.example.com/"
+              />
+              {resourceErr ? (
+                <p className="mt-1 text-[11.5px] text-[var(--status-warn)]">
+                  {resourceErr}
+                </p>
+              ) : (
+                <p className="mt-1 text-[12px] text-muted-foreground">
+                  A single target — the new access token is bound to this
+                  audience (<code className="font-mono">aud</code>). One value
+                  only; the authorization request is where you send several.
+                </p>
+              )}
+              {grantedResources.length > 0 && (
+                <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                  <span className="text-[11.5px] text-muted-foreground">
+                    From the grant
+                  </span>
+                  {grantedResources.map((r) => (
+                    <button
+                      type="button"
+                      key={r}
+                      onClick={() => refreshUpdate({ resource: r })}
+                      className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/50 px-2 py-0.5 font-mono text-[11px] hover:bg-muted"
+                      title="Use this resource"
+                    >
+                      {r}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </InfoCard>
 

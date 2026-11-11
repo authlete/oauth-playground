@@ -6,6 +6,7 @@
 
 import { applyClientAuth } from "./clientAuth";
 import { authorizationDetailsWireValue } from "./authorizationDetails";
+import { resourceValues } from "./resourceIndicator";
 import { send } from "./dpopHttp";
 import type { DpopContext } from "./dpop";
 import { validateAndImportJwk } from "./jwk";
@@ -106,8 +107,8 @@ export function buildJwtBearerParams(
   body.set("grant_type", JWT_BEARER_GRANT_TYPE);
   if (authRequest.scopes.length)
     body.set("scope", authRequest.scopes.join(" "));
-  if (authRequest.resource.trim())
-    body.set("resource", authRequest.resource.trim());
+  for (const r of resourceValues(authRequest.resources))
+    body.append("resource", r);
   if (
     authRequest.authorizationDetailsEnabled &&
     authRequest.authorizationDetails.trim()

@@ -4,6 +4,7 @@
 
 import { applyClientAuth } from "./clientAuth";
 import { authorizationDetailsWireValue } from "./authorizationDetails";
+import { resourceValues } from "./resourceIndicator";
 import { send } from "./dpopHttp";
 import type { DpopContext } from "./dpop";
 import type {
@@ -169,10 +170,10 @@ export async function exchangeCode(
   if (input.authRequest.pkceEnabled && input.authRequest.codeVerifier) {
     body.set("code_verifier", input.authRequest.codeVerifier);
   }
-  // RFC 8707: repeat the resource indicator at the token endpoint so the
-  // issued access token is audience-restricted to it.
-  if (input.authRequest.resource.trim()) {
-    body.set("resource", input.authRequest.resource.trim());
+  // RFC 8707: repeat the resource indicator(s) at the token endpoint so the
+  // issued access token is audience-restricted to them.
+  for (const r of resourceValues(input.authRequest.resources)) {
+    body.append("resource", r);
   }
   // RAR: repeat authorization_details at the token endpoint so the issued
   // access token carries the fine-grained grant.

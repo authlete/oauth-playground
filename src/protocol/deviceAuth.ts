@@ -4,6 +4,7 @@
 
 import { applyClientAuth } from "./clientAuth";
 import { authorizationDetailsWireValue } from "./authorizationDetails";
+import { resourceValues } from "./resourceIndicator";
 import type {
   AuthRequestState,
   ClientConfigState,
@@ -42,8 +43,8 @@ export function buildDeviceParams(
   // when they authenticate at the verification URI.
   if (authRequest.scopes.length)
     body.set("scope", authRequest.scopes.join(" "));
-  if (authRequest.resource.trim())
-    body.set("resource", authRequest.resource.trim());
+  for (const r of resourceValues(authRequest.resources))
+    body.append("resource", r);
   if (
     authRequest.authorizationDetailsEnabled &&
     authRequest.authorizationDetails.trim()
