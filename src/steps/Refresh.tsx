@@ -11,13 +11,13 @@ import {
   KVGrid,
   KVList,
   KVRow,
+  ResourceIndicators,
   StatusPill,
   StepHeader,
   type StatusTone,
 } from "../components/step";
 import { shorten } from "../protocol/format";
 import { refreshTokens } from "../protocol/refresh";
-import { resourceError } from "../protocol/resourceIndicator";
 import { dpopContextFrom } from "../protocol/dpop";
 
 export function RefreshStep() {
@@ -35,7 +35,6 @@ export function RefreshStep() {
   const refreshToken = state.token.refreshToken;
   const endpoint = state.discovery.metadata?.token_endpoint;
   const canRefresh = !!endpoint && !!refreshToken;
-  const resourceErr = resourceError(ref.resource);
   const grantedResources = state.authRequest.resources.filter((r) => r.trim());
   const [diff, setDiff] = useState<TokenDiff | null>(null);
 
@@ -55,7 +54,7 @@ export function RefreshStep() {
       client: state.client,
       refreshToken,
       downscope: ref.downscope,
-      resource: ref.resource,
+      resources: ref.resources,
       dpop: dpopContextFrom(state.dpop),
       onDpopNonce: (nonce) => dpopUpdate({ nonce }),
       onStart: networkAdd,
@@ -157,43 +156,19 @@ export function RefreshStep() {
             </div>
             <div>
               <label className="mb-1.5 block text-[12.5px] font-medium">
-                Resource (RFC 8707, optional)
+                Resource indicators (RFC 8707, optional)
               </label>
-              <Input
-                mono
-                value={ref.resource}
-                onChange={(e) => refreshUpdate({ resource: e.target.value })}
-                placeholder="https://api.example.com/"
+              <p className="mb-2 text-[12px] text-muted-foreground">
+                The new access token is bound to these audiences (
+                <code className="font-mono">aud</code>) — typically a subset of
+                the grant. One is encouraged; add more to span several.
+              </p>
+              <ResourceIndicators
+                resources={ref.resources}
+                onChange={(resources) => refreshUpdate({ resources })}
+                suggestions={grantedResources}
+                suggestionLabel="From the grant"
               />
-              {resourceErr ? (
-                <p className="mt-1 text-[11.5px] text-[var(--status-warn)]">
-                  {resourceErr}
-                </p>
-              ) : (
-                <p className="mt-1 text-[12px] text-muted-foreground">
-                  A single target — the new access token is bound to this
-                  audience (<code className="font-mono">aud</code>). One value
-                  only; the authorization request is where you send several.
-                </p>
-              )}
-              {grantedResources.length > 0 && (
-                <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                  <span className="text-[11.5px] text-muted-foreground">
-                    From the grant
-                  </span>
-                  {grantedResources.map((r) => (
-                    <button
-                      type="button"
-                      key={r}
-                      onClick={() => refreshUpdate({ resource: r })}
-                      className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/50 px-2 py-0.5 font-mono text-[11px] hover:bg-muted"
-                      title="Use this resource"
-                    >
-                      {r}
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
           </InfoCard>
 

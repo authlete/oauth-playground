@@ -3,6 +3,7 @@
 // (one-time-use refresh tokens are common in FAPI / OAuth 2.1).
 
 import { applyClientAuth } from "./clientAuth";
+import { resourceValues } from "./resourceIndicator";
 import { send } from "./dpopHttp";
 import type { DpopContext } from "./dpop";
 import type { ClientConfigState, NetworkEntry, OidcMetadata } from "../types";
@@ -34,9 +35,9 @@ export interface RefreshInput {
   client: ClientConfigState;
   refreshToken: string;
   downscope?: string;
-  /** RFC 8707: a single resource indicator — binds the new access token to one
-   * audience (typically a subset of what the refresh token was granted). */
-  resource?: string;
+  /** RFC 8707: resource indicator(s) — bind the new access token to these
+   * audiences (typically a subset of what the refresh token was granted). */
+  resources?: string[];
   dpop?: DpopContext;
   onDpopNonce?: (nonce: string) => void;
   onStart: (entry: NetworkEntry) => void;
@@ -54,7 +55,9 @@ export async function refreshTokens(
   body.set("grant_type", "refresh_token");
   body.set("refresh_token", input.refreshToken);
   if (input.downscope?.trim()) body.set("scope", input.downscope.trim());
-  if (input.resource?.trim()) body.set("resource", input.resource.trim());
+  for (const r of resourceValues(input.resources ?? [])) {
+    body.append("resource", r);
+  }
 
   const headers = new Headers({
     "Content-Type": "application/x-www-form-urlencoded",

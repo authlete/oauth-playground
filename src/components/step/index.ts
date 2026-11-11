@@ -18,3 +18,7 @@ export {
   AuthorizationDetailChips,
   AuthorizationDetailsBlock,
 } from "./AuthorizationDetailsView";
+export {
+  ResourceIndicators,
+  type ResourceIndicatorsProps,
+} from "./ResourceIndicators";

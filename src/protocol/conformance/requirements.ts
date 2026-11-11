@@ -138,12 +138,20 @@ export const REQUIREMENTS: Requirement[] = [
     text: "The resource indicator(s) are repeated on the token request so the issued token is audience-restricted.",
   },
   {
+    id: "resource.token-subset",
+    level: "MAY",
+    spec: "RFC 8707",
+    section: "2.2",
+    capability: "resource-indicator",
+    text: "The token request may carry a subset of the authorized resources to down-scope the access token's audience.",
+  },
+  {
     id: "resource.refresh-param",
     level: "SHOULD",
     spec: "RFC 8707",
     section: "2.2",
     capability: "resource-indicator",
-    text: "A single resource indicator is carried on the refresh_token request to bind the new access token to one audience.",
+    text: "Resource indicator(s) are carried on the refresh_token request to bind the new access token's audience.",
   },
 
   // ── CIMD (draft-ietf-oauth-client-id-metadata-document) ──────────────────
@@ -277,4 +285,4 @@ export const REQUIREMENTS: Requirement[] = [
 
 /** Deliberately fixed so a dropped or silently-added requirement fails the
  * meta-test. Update it only when you mean to change the index. */
-export const EXPECTED_REQUIREMENT_COUNT = 31;
+export const EXPECTED_REQUIREMENT_COUNT = 32;

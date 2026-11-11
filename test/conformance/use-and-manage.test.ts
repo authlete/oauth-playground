@@ -72,18 +72,21 @@ describe("Refresh (RFC 6749 §6)", () => {
     expect(req.body?.get("refresh_token")).toBe("rt-abc");
   });
 
-  test("resource.refresh-param: a single resource binds the new token's audience", async () => {
+  test("resource.refresh-param: resources bind the new token's audience (repeatable)", async () => {
     const req = await capture(() =>
       refreshTokens({
         metadata,
         client,
         refreshToken: "rt-abc",
-        resource: "https://contacts.example/",
+        resources: ["https://contacts.example/", "https://cal.example/"],
         onStart: noop,
         onFinish: noop,
       }),
     );
-    expect(req.body?.getAll("resource")).toEqual(["https://contacts.example/"]);
+    expect(req.body?.getAll("resource")).toEqual([
+      "https://contacts.example/",
+      "https://cal.example/",
+    ]);
   });
 });
 

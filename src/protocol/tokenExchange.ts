@@ -145,6 +145,10 @@ export interface TokenExchangeInput {
   client: ClientConfigState;
   authRequest: AuthRequestState;
   code: string;
+  /** RFC 8707 §2.2: resources to send at the token endpoint. A subset of the
+   * authorized resources narrows the access token's audience (the refresh token
+   * stays bound to the full grant). Omit to send all authorized resources. */
+  resources?: string[];
   dpop?: DpopContext;
   onDpopNonce?: (nonce: string) => void;
   onStart: (entry: NetworkEntry) => void;
@@ -171,8 +175,11 @@ export async function exchangeCode(
     body.set("code_verifier", input.authRequest.codeVerifier);
   }
   // RFC 8707: repeat the resource indicator(s) at the token endpoint so the
-  // issued access token is audience-restricted to them.
-  for (const r of resourceValues(input.authRequest.resources)) {
+  // issued access token is audience-restricted to them. A caller-supplied subset
+  // (Token step) wins over the full authorized set (§2.2 down-scoping).
+  for (const r of resourceValues(
+    input.resources ?? input.authRequest.resources,
+  )) {
     body.append("resource", r);
   }
   // RAR: repeat authorization_details at the token endpoint so the issued

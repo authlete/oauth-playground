@@ -562,6 +562,10 @@ export type TokenStatus = "idle" | "loading" | "success" | "error";
 
 export interface TokenState {
   status: TokenStatus;
+  // RFC 8707 §2.2 request input: the resource indicators to send at the token
+  // endpoint — defaults to the authorized set (seeded by the store), narrow it
+  // to down-scope the access token's audience.
+  resources: string[];
   accessToken?: string;
   tokenType?: string;
   expiresIn?: number;
@@ -584,7 +588,7 @@ export interface TokenState {
   errorStatus?: number;
 }
 
-export const DEFAULT_TOKEN: TokenState = { status: "idle" };
+export const DEFAULT_TOKEN: TokenState = { status: "idle", resources: [] };
 
 // CIBA, poll mode. login_hint / scopes / resource / authorization_details come
 // from AuthRequestState; only CIBA-specific inputs and transaction state live
@@ -825,10 +829,11 @@ export type RefreshStatus = "idle" | "loading" | "success" | "error";
 export interface RefreshState {
   status: RefreshStatus;
   downscope: string;
-  // RFC 8707: a single resource indicator for the refresh request. Unlike the
-  // authorization request this is one value only — the refresh use case is
-  // minting an access token bound to one audience (a subset of the grant).
-  resource: string;
+  // RFC 8707: resource indicators for the refresh request. The spec allows
+  // several (each a repeated `resource` param) but encourages a single value,
+  // so the UI defaults to one row. Typically a subset of the original grant —
+  // the new access token is audience-restricted to these.
+  resources: string[];
   refreshedAt?: number;
   errorMessage?: string;
   errorStatus?: number;
@@ -838,7 +843,7 @@ export interface RefreshState {
 export const DEFAULT_REFRESH: RefreshState = {
   status: "idle",
   downscope: "",
-  resource: "",
+  resources: [],
 };
 
 export type RevokeStatus = "idle" | "loading" | "success" | "error";

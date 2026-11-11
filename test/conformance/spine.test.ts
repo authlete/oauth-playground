@@ -220,6 +220,18 @@ describe("Resource indicator (RFC 8707)", () => {
     ]);
   });
 
+  test("resource.token-subset: token request can send a subset of the authorized resources", async () => {
+    const body = await captureTokenBody(
+      client(),
+      authReq({
+        resources: ["https://cal.example/", "https://contacts.example/"],
+      }),
+      "code",
+      ["https://contacts.example/"],
+    );
+    expect(body.getAll("resource")).toEqual(["https://contacts.example/"]);
+  });
+
   test("resource.authorize-param: blank entries are dropped", () => {
     const p = buildAuthorizeParams(
       client(),
@@ -248,6 +260,7 @@ async function captureTokenBody(
   c: ClientConfigState,
   req: AuthRequestState,
   code = "code",
+  resources?: string[],
 ): Promise<URLSearchParams> {
   let captured: URLSearchParams | undefined;
   const realFetch = globalThis.fetch;
@@ -271,6 +284,7 @@ async function captureTokenBody(
       client: c,
       authRequest: req,
       code,
+      resources,
       onStart: () => {},
       onFinish: () => {},
     });

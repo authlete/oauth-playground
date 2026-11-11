@@ -18,6 +18,7 @@ import {
   InfoCard,
   KVGrid,
   KVRow,
+  ResourceIndicators,
   StatusPill,
   StepHeader,
   type StatusTone,
@@ -48,6 +49,14 @@ export function TokenStep() {
     null,
   );
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
+
+  // RFC 8707 §2.2: the token request may name a subset of the authorized
+  // resources to narrow the access token's audience. Held in the store
+  // (token.resources) and seeded from the authorized set there, mirroring how
+  // Refresh holds its own resources.
+  const authorizedResources = state.authRequest.resources.filter((r) =>
+    r.trim(),
+  );
 
   useEffect(() => {
     if (tok.status !== "success" || !tok.expiresAt) {
@@ -82,6 +91,7 @@ export function TokenStep() {
       client: state.client,
       authRequest: state.authRequest,
       code,
+      resources: tok.resources,
       dpop: dpopContextFrom(state.dpop),
       onDpopNonce: (nonce) => dpopUpdate({ nonce }),
       onStart: networkAdd,
@@ -165,6 +175,24 @@ export function TokenStep() {
             <KVRow label="redirect_uri">{state.client.redirectUri}</KVRow>
             <KVRow label="client auth">{state.client.authMethod}</KVRow>
           </KVGrid>
+
+          {(authorizedResources.length > 0 || tok.resources.length > 0) && (
+            <div className="mt-4">
+              <p className="text-[12.5px] font-medium">
+                Resource indicators (RFC 8707)
+              </p>
+              <p className="mt-1 mb-2 text-[12px] text-muted-foreground">
+                A subset of the authorized resources narrows the access token's
+                audience. The refresh token stays bound to the full grant.
+              </p>
+              <ResourceIndicators
+                resources={tok.resources}
+                onChange={(resources) => tokenUpdate({ resources })}
+                suggestions={authorizedResources}
+                suggestionLabel="Authorized"
+              />
+            </div>
+          )}
         </InfoCard>
       )}
 

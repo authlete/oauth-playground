@@ -734,6 +734,23 @@ export function PlaygroundProvider({ children }: { children: ReactNode }) {
     state.dpop,
   ]);
 
+  // Keep the token-endpoint resource subset (RFC 8707 §2.2) defaulting to the
+  // authorized set: reset it whenever Auth request's resources change. The user
+  // then narrows it in Token exchange to down-scope the access token's audience.
+  // Dispatch-based (not component setState) so it mirrors the other seeds.
+  useEffect(() => {
+    const authorized = state.authRequest.resources.filter((r) => r.trim());
+    const same =
+      authorized.length === state.token.resources.length &&
+      authorized.every((r, i) => r === state.token.resources[i]);
+    if (!same) {
+      dispatch({ type: "token-update", patch: { resources: authorized } });
+    }
+    // Keyed on the authorized set only; token.resources is read to diff, not to
+    // react to the user's own edits (those change token.resources, not this dep).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.authRequest.resources]);
+
   // Seed the RFC 8707 resource list from an RFC 9728 discovery: when the flow
   // starts at a protected resource, add that resource once so the common case is
   // zero-click. Seeded per-resource (a ref), so the user can then freely edit or

@@ -18,6 +18,7 @@ import {
   AuthorizationDetailChips,
   Disclosure,
   JwtPanel,
+  ResourceIndicators,
   Section,
   StatusPill,
   StepHeader,
@@ -29,7 +30,6 @@ import {
 import { computeCodeChallenge, generateCodeVerifier } from "../protocol/pkce";
 import { randomBase64Url } from "../protocol/random";
 import { buildAuthorizeUrl } from "../protocol/authorizeUrl";
-import { resourceError } from "../protocol/resourceIndicator";
 import { cn } from "../protocol/cn";
 import { jarReadiness } from "../protocol/requestObject";
 import { parseJwt } from "../protocol/jwt";
@@ -483,22 +483,12 @@ function ResourceIndicatorsSection({
   update: (patch: Partial<AuthRequestState>) => void;
   discovered?: string;
 }) {
-  const resources = req.resources;
-  const nonEmpty = resources.filter((r) => r.trim());
-
-  const setAt = (i: number, value: string) =>
-    update({ resources: resources.map((r, idx) => (idx === i ? value : r)) });
-  const removeAt = (i: number) =>
-    update({ resources: resources.filter((_, idx) => idx !== i) });
-  const add = (value = "") => update({ resources: [...resources, value] });
-
-  const canSuggest = !!discovered && !resources.includes(discovered);
-
+  const nonEmpty = req.resources.filter((r) => r.trim());
   return (
     <Disclosure
       title="Resource indicators"
       hint="(RFC 8707)"
-      description="Absolute-URI target resources. Each is sent as a repeated resource parameter on the authorize and token requests, audience-restricting the token."
+      description="Absolute-URI target resources. Each is sent as a repeated resource parameter on the authorize and token requests, audience-restricting the token. Leave empty to omit."
       summaryRight={
         nonEmpty.length
           ? `${nonEmpty.length} ${nonEmpty.length === 1 ? "resource" : "resources"}`
@@ -506,66 +496,12 @@ function ResourceIndicatorsSection({
       }
       defaultOpen={nonEmpty.length > 0}
     >
-      <div className="space-y-3">
-        {resources.length === 0 && (
-          <p className="text-[12px] text-muted-foreground">
-            No resources — the parameter is omitted and the AS issues a token
-            for its default audience.
-          </p>
-        )}
-
-        {resources.map((value, i) => {
-          const err = resourceError(value);
-          return (
-            <div key={i}>
-              <div className="flex items-center gap-2">
-                <Input
-                  mono
-                  value={value}
-                  onChange={(e) => setAt(i, e.target.value)}
-                  placeholder="https://api.example.com/"
-                  className="h-9"
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => removeAt(i)}
-                >
-                  Remove
-                </Button>
-              </div>
-              {err && (
-                <p className="mt-1 text-[11.5px] text-[var(--status-warn)]">
-                  {err}
-                </p>
-              )}
-            </div>
-          );
-        })}
-
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={() => add()}
-          >
-            Add resource
-          </Button>
-          {canSuggest && (
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              title="Resource discovered from RFC 9728 metadata in step 1"
-              onClick={() => add(discovered)}
-            >
-              + discovered {discovered}
-            </Button>
-          )}
-        </div>
-      </div>
+      <ResourceIndicators
+        resources={req.resources}
+        onChange={(resources) => update({ resources })}
+        suggestions={discovered ? [discovered] : []}
+        suggestionLabel="Discovered"
+      />
     </Disclosure>
   );
 }
