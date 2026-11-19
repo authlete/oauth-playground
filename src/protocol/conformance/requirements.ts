@@ -206,6 +206,14 @@ export const REQUIREMENTS: Requirement[] = [
     text: "Introspection POSTs the token to the introspection endpoint.",
   },
   {
+    id: "introspect.client-auth",
+    level: "MAY",
+    spec: "RFC 7662",
+    section: "2.1",
+    capability: "introspect",
+    text: "The introspection caller may authenticate as an OAuth client (its own client credentials) instead of a bearer credential.",
+  },
+  {
     id: "userinfo.bearer",
     level: "MUST",
     spec: "OpenID Connect Core",
@@ -285,4 +293,4 @@ export const REQUIREMENTS: Requirement[] = [
 
 /** Deliberately fixed so a dropped or silently-added requirement fails the
  * meta-test. Update it only when you mean to change the index. */
-export const EXPECTED_REQUIREMENT_COUNT = 32;
+export const EXPECTED_REQUIREMENT_COUNT = 33;

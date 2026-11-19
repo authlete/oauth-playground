@@ -124,6 +124,24 @@ describe("Introspection (RFC 7662)", () => {
     expect(req.method).toBe("POST");
     expect(req.body?.get("token")).toBe("tok-2");
   });
+
+  test("introspect.client-auth: the caller can authenticate as an OAuth client", async () => {
+    const req = await capture(() =>
+      introspect({
+        metadata,
+        token: "tok-3",
+        client: {
+          ...client,
+          authMethod: "client_secret_post",
+          clientSecret: "s3cret",
+        },
+        onStart: noop,
+        onFinish: noop,
+      }),
+    );
+    expect(req.body?.get("client_id")).toBe("c1");
+    expect(req.body?.get("client_secret")).toBe("s3cret");
+  });
 });
 
 describe("UserInfo (OIDC Core §5.3)", () => {

@@ -738,10 +738,14 @@ export type IntrospectStatus = "idle" | "loading" | "success" | "error";
 export interface IntrospectState {
   status: IntrospectStatus;
   tokenSource: "access" | "refresh";
-  /** Sent verbatim as the Authorization header — RFC 7662, Section 2.1
-   * requires the introspection caller (typically the resource server) to
-   * authenticate, separately from OAuth client auth. Defaults to a demo
-   * value that satisfies test servers which only check the header exists. */
+  /** How the introspection caller authenticates (RFC 7662 §2.1 requires it to).
+   * "bearer" sends `callerAuthorization` verbatim (an access token or other
+   * credential the RS holds). "client" authenticates as a registered OAuth
+   * client via Client config — the same machinery as /revoke, which many
+   * Authlete-style ASes require on /introspect. */
+  authMode: "bearer" | "client";
+  /** Sent verbatim as the Authorization header in "bearer" mode. Defaults to a
+   * demo value that satisfies test servers which only check the header exists. */
   callerAuthorization: string;
   result?: { active: boolean } & Record<string, unknown>;
   fetchedAt?: number;
@@ -753,6 +757,7 @@ export interface IntrospectState {
 export const DEFAULT_INTROSPECT: IntrospectState = {
   status: "idle",
   tokenSource: "access",
+  authMode: "bearer",
   callerAuthorization: "Bearer playground-demo-rs",
 };
 

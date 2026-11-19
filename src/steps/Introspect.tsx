@@ -6,6 +6,7 @@ import { Input } from "../components/ui/Input";
 import { Select } from "../components/ui/Select";
 import {
   Banner,
+  Choice,
   ErrorPanel,
   InfoCard,
   StatusPill,
@@ -53,6 +54,7 @@ export function IntrospectStep() {
       token: selectedToken,
       tokenHint:
         intro.tokenSource === "access" ? "access_token" : "refresh_token",
+      client: intro.authMode === "client" ? state.client : undefined,
       callerAuthorization: intro.callerAuthorization,
       onStart: networkAdd,
       onFinish: networkUpdate,
@@ -132,24 +134,44 @@ export function IntrospectStep() {
             </div>
             <div>
               <label className="mb-1.5 block text-[12.5px] font-medium">
-                Caller credential (Authorization header)
+                Caller authentication
               </label>
-              <Input
-                mono
-                value={intro.callerAuthorization}
-                onChange={(e) =>
-                  introspectUpdate({ callerAuthorization: e.target.value })
-                }
-                placeholder="Bearer …"
-                autoComplete="off"
-                spellCheck={false}
+              <Choice
+                value={intro.authMode}
+                onChange={(authMode) => introspectUpdate({ authMode })}
+                options={[
+                  { id: "bearer", label: "Bearer token" },
+                  { id: "client", label: "OAuth client auth" },
+                ]}
               />
-              <p className="mt-1 text-[12px] text-muted-foreground">
-                The AS protects this endpoint itself (RFC 7662, Section 2.1):
-                the caller — typically a resource server — presents its own
-                credential, separate from the OAuth client authentication used
-                at /token. This demo value satisfies test servers; a production
-                AS must validate a real credential here.
+              {intro.authMode === "bearer" ? (
+                <div className="mt-2">
+                  <Input
+                    mono
+                    value={intro.callerAuthorization}
+                    onChange={(e) =>
+                      introspectUpdate({ callerAuthorization: e.target.value })
+                    }
+                    placeholder="Bearer …"
+                    autoComplete="off"
+                    spellCheck={false}
+                  />
+                </div>
+              ) : (
+                <p className="mt-2 text-muted-foreground">
+                  Authenticating with{" "}
+                  <span className="font-mono text-foreground">
+                    {state.client.authMethod}
+                  </span>{" "}
+                  (from Client config).
+                </p>
+              )}
+              <p className="mt-2 text-[12px] text-muted-foreground">
+                RFC 7662 §2.1 requires the caller — typically a resource server
+                — to authenticate itself, separate from the OAuth client auth at
+                /token. It may present a credential it holds (a Bearer access
+                token), or, if it's a registered client, its own OAuth client
+                credentials.
               </p>
             </div>
           </InfoCard>
